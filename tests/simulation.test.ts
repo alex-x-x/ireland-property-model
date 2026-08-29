@@ -73,4 +73,42 @@ describe('Simulation Engine', () => {
       );
     }
   });
+
+  it('pro-rates bonus payout in March when salary increases before March', () => {
+    // Start date: 2026-08-01 (Aug 2026).
+    // Baseline salary: €180,000 base, 15% bonus (€27,000/yr).
+    // Step-up at 2026-11-01 (Month 3 / Nov 2026): Base increases to €210,000, 20% bonus (€42,000/yr).
+    // Bonus cycle runs 12 months up to March 2027:
+    // - Prior to Aug (April-Aug = 5 mos) + Aug-Oct (3 mos) = 8 months at €27k/yr = 8/12 * 27,000 = €18,000
+    // - Nov-March (4 months) = 4 months at €42k/yr = 4/12 * 42,000 = €14,000
+    // Total gross pro-rated bonus = €18,000 + €14,000 = €32,000.
+    // Net after 52% tax = €32,000 * 0.48 = €15,360.
+    const configWithStepUp = {
+      ...DEFAULT_CONFIG,
+      meta: {
+        ...DEFAULT_CONFIG.meta,
+        start_date: '2026-08-01',
+      },
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        buyer_gross_annual_base_salary_eur: 180000,
+        buyer_annual_bonus_pct: 0.15,
+        buyer_annual_bonus_eur: 27000,
+        salary_adjustments: [
+          {
+            id: 'promo_nov',
+            effective_date: '2026-11-01',
+            base_salary_eur: 210000,
+            bonus_pct: 0.20,
+            bonus_eur: 42000,
+          },
+        ],
+      },
+    };
+
+    const sim = runSimulation(configWithStepUp);
+    const march2027 = sim.find((p) => p.date === '2027-03');
+    expect(march2027).toBeDefined();
+    expect(march2027!.netBonusReceivedEur).toBeCloseTo(32000 * 0.48, 1);
+  });
 });

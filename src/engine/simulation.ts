@@ -60,6 +60,14 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   let currentRent = macro.current_monthly_rent_eur;
   let cumulativeRent = 0;
 
+  // Pro-rated Bonus Accrual Initialization
+  const startMonth = parseInt(meta.start_date.split('-')[1], 10); // 1-12
+  const bonusPayoutMonth = mortgage.bonus_payout_month ?? 3;
+  const monthsUntilFirstPayout = (bonusPayoutMonth - startMonth + 12) % 12 || 12;
+  const priorAccruedMonths = 12 - monthsUntilFirstPayout;
+  const initialSalary = getSalaryAtDate(meta.start_date.slice(0, 7), mortgage);
+  let accumulatedBonusEur = (priorAccruedMonths / 12) * initialSalary.bonusEur;
+
   for (let m = 0; m <= meta.forecast_months; m++) {
     const currentDate = addMonthsToDate(meta.start_date, m);
     const dateStr = currentDate.toISOString().slice(0, 7); // YYYY-MM
@@ -74,14 +82,17 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       currentRent *= rentMonthlyMult;
       cumulativeRent += currentRent;
 
+      // Pro-rated monthly bonus accrual based on active compensation at date
+      const activeSalary = getSalaryAtDate(dateStr, mortgage);
+      accumulatedBonusEur += activeSalary.bonusEur / 12;
+
       // Annual bonus payout in March (or configured payout month)
-      const monthOfYear = currentDate.getMonth() + 1; // 1 = Jan, 2 = Feb, 3 = Mar, ...
-      const bonusPayoutMonth = mortgage.bonus_payout_month ?? 3;
+      const monthOfYear = currentDate.getUTCMonth() + 1; // 1 = Jan, 2 = Feb, 3 = Mar, ...
       if (monthOfYear === bonusPayoutMonth) {
-        const activeSalary = getSalaryAtDate(dateStr, mortgage);
-        const grossBonus = activeSalary.bonusEur;
+        const grossBonus = accumulatedBonusEur;
         netBonusReceivedEur = grossBonus * (1 - equity_engine.marginal_tax_rate_ireland);
         currentCash += netBonusReceivedEur;
+        accumulatedBonusEur = 0;
       }
     }
 
