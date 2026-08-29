@@ -5,6 +5,7 @@ import { PersonalProfileHeader } from './components/PersonalProfileHeader';
 import { ProjectionChart } from './components/ProjectionChart';
 import { DecisionMatrix } from './components/DecisionMatrix';
 import { SensitivityMatrix } from './components/SensitivityMatrix';
+import { MonthlyCashflowWidget } from './components/MonthlyCashflowWidget';
 import { MarketDataModal } from './components/MarketDataModal';
 import { MonthlyTableModal } from './components/MonthlyTableModal';
 import { DEFAULT_CONFIG } from './engine/constants';
@@ -137,6 +138,9 @@ export const App: React.FC = () => {
 
             {/* 60-Month Trajectory Chart */}
             <ProjectionChart data={monthlyPoints} decision={decision} />
+
+            {/* Month-by-Month Cashflow & Wealth Breakdown Widget */}
+            <MonthlyCashflowWidget data={monthlyPoints} config={config} />
 
             {/* 2D Sensitivity Heatmap */}
             <SensitivityMatrix config={config} />
