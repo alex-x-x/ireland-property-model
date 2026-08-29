@@ -29,8 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
   };
 
   return (
-    <aside className="w-full lg:w-80 flex-shrink-0 space-y-4">
-      <div className="bg-slate-900 border-2 border-brand-500/40 rounded-2xl p-5 shadow-xl space-y-5 sticky top-20">
+    <aside className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20 space-y-4">
+      <div className="bg-slate-900 border-2 border-brand-500/40 rounded-2xl p-5 shadow-2xl space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -50,13 +50,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         </div>
 
         {/* Sliders Container */}
-        <div className="space-y-4 text-xs">
+        <div className="space-y-3.5 text-xs">
           {/* 1. Google GSU Stock Growth */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-purple-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 text-purple-300">
-                <span>Google Stock Growth (p.a.)</span>
-              </span>
+              <span className="text-purple-300">Google Stock Growth (p.a.)</span>
               <span className="font-mono font-bold text-sm text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
                 {(config.equity_engine.stock_yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -80,9 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 2. Dublin Property Inflation */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-brand-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 text-brand-300">
-                <span>Property Inflation (p.a.)</span>
-              </span>
+              <span className="text-brand-300">Property Inflation (p.a.)</span>
               <span className="font-mono font-bold text-sm text-brand-400 bg-brand-950/40 px-2 py-0.5 rounded border border-brand-500/30">
                 {(config.property.yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -106,9 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 3. Base Index Investments Return */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-sky-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 text-sky-300">
-                <span>Base Investment Yield (p.a.)</span>
-              </span>
+              <span className="text-sky-300">Base Investment Yield (p.a.)</span>
               <span className="font-mono font-bold text-sm text-sky-400 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-500/30">
                 {(config.liquid_assets.investments_yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -132,9 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 4. Mortgage Interest Rate */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-emerald-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 text-emerald-300">
-                <span>Mortgage Rate (AIB 2026)</span>
-              </span>
+              <span className="text-emerald-300">Mortgage Rate (AIB 2026)</span>
               <span className="font-mono font-bold text-sm text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
                 {(config.mortgage.mortgage_interest_rate * 100).toFixed(2)}%
               </span>
@@ -158,9 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 5. Dublin Rent Inflation (RPZ) */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-rose-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 text-rose-300">
-                <span>Rent Inflation (Dublin RPZ)</span>
-              </span>
+              <span className="text-rose-300">Rent Inflation (Dublin RPZ)</span>
               <span className="font-mono font-bold text-sm text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30">
                 {((config.macro.rent_yearly_growth_rate || 0) * 100).toFixed(1)}%
               </span>
