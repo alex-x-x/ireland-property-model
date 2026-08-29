@@ -288,11 +288,24 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                   step="25000"
                   disabled={isProfileLocked}
                   value={config.property.target_price_eur}
-                  onChange={(e) => updateProperty('target_price_eur', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const price = parseFloat(e.target.value) || 0;
+                    const pct = config.property.minimum_deposit_pct ?? 0.10;
+                    const depEur = Math.round(price * pct);
+                    onChange({
+                      ...config,
+                      property: {
+                        ...config.property,
+                        target_price_eur: price,
+                        deposit_eur: depEur,
+                      },
+                    });
+                  }}
                   className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
                 />
               </div>
 
+              {/* Dual Synchronized Deposit % and Deposit Sum (€) */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-slate-400 block mb-1">Deposit %</label>
@@ -300,11 +313,28 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     <input
                       type="number"
                       step="1"
-                      min="10"
-                      max="50"
+                      min="5"
+                      max="100"
                       disabled={isProfileLocked}
-                      value={Math.round(config.property.minimum_deposit_pct * 100)}
-                      onChange={(e) => updateProperty('minimum_deposit_pct', (parseFloat(e.target.value) || 10) / 100)}
+                      value={
+                        config.property.minimum_deposit_pct !== undefined
+                          ? Math.round(config.property.minimum_deposit_pct * 100)
+                          : config.property.target_price_eur > 0
+                          ? Math.round(((config.property.deposit_eur || 0) / config.property.target_price_eur) * 100)
+                          : 10
+                      }
+                      onChange={(e) => {
+                        const pct = (parseFloat(e.target.value) || 10) / 100;
+                        const depEur = Math.round(config.property.target_price_eur * pct);
+                        onChange({
+                          ...config,
+                          property: {
+                            ...config.property,
+                            minimum_deposit_pct: pct,
+                            deposit_eur: depEur,
+                          },
+                        });
+                      }}
                       className="w-full bg-transparent text-white font-bold focus:outline-none"
                     />
                     <span className="text-slate-400 font-medium">%</span>
@@ -312,16 +342,43 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-slate-400 block mb-1">Legal / Fees (€)</label>
+                  <label className="text-slate-400 block mb-1">Deposit Sum (€)</label>
                   <input
                     type="number"
-                    step="500"
+                    step="5000"
                     disabled={isProfileLocked}
-                    value={config.property.legal_and_closing_fees_eur}
-                    onChange={(e) => updateProperty('legal_and_closing_fees_eur', parseFloat(e.target.value) || 0)}
-                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                    value={Math.round(
+                      config.property.deposit_eur ??
+                        config.property.target_price_eur * (config.property.minimum_deposit_pct || 0.10)
+                    )}
+                    onChange={(e) => {
+                      const depEur = parseFloat(e.target.value) || 0;
+                      const price = config.property.target_price_eur || 0;
+                      const pct = price > 0 ? depEur / price : 0.10;
+                      onChange({
+                        ...config,
+                        property: {
+                          ...config.property,
+                          deposit_eur: depEur,
+                          minimum_deposit_pct: pct,
+                        },
+                      });
+                    }}
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 block mb-1">Legal / Fees (€)</label>
+                <input
+                  type="number"
+                  step="500"
+                  disabled={isProfileLocked}
+                  value={config.property.legal_and_closing_fees_eur}
+                  onChange={(e) => updateProperty('legal_and_closing_fees_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                />
               </div>
             </div>
 

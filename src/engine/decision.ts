@@ -64,7 +64,13 @@ function simulateTrajectoryForPurchaseMonth(
 
   const buyPoint = baseMonthlyPoints[buyMonth];
   const propertyPurchasePrice = buyPoint.propertyPrice;
-  const depositPaid = propertyPurchasePrice * property.minimum_deposit_pct + buyPoint.borrowingShortfall;
+  const effectiveDepositPct =
+    property.minimum_deposit_pct !== undefined && property.minimum_deposit_pct !== null
+      ? property.minimum_deposit_pct
+      : property.deposit_eur && property.target_price_eur > 0
+      ? property.deposit_eur / property.target_price_eur
+      : 0.10;
+  const depositPaid = propertyPurchasePrice * effectiveDepositPct + buyPoint.borrowingShortfall;
   const stampDutyPaid = buyPoint.stampDuty;
   const closingFeesPaid = property.legal_and_closing_fees_eur;
   const totalUpfrontPaid = depositPaid + stampDutyPaid + closingFeesPaid;

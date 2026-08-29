@@ -6,7 +6,8 @@ export interface StampDutyTier {
 export interface PropertyConfig {
   target_price_eur: number;
   yearly_growth_rate: number;
-  minimum_deposit_pct: number;
+  minimum_deposit_pct?: number;
+  deposit_eur?: number;
   stamp_duty_tiers: StampDutyTier[];
   legal_and_closing_fees_eur: number;
 }
