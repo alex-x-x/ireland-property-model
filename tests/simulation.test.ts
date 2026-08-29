@@ -172,4 +172,59 @@ describe('Simulation Engine', () => {
     const cashM1 = sim[1].cash;
     expect(cashM1 - cashM0).toBeCloseTo(4524.76, 0);
   });
+
+  it('handles extreme downturn / bear market scenarios without negative balances or NaN errors', () => {
+    const bearConfig = {
+      ...DEFAULT_CONFIG,
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        stock_yearly_growth_rate: -0.25, // -25% crash
+      },
+      property: {
+        ...DEFAULT_CONFIG.property,
+        yearly_growth_rate: -0.10, // -10% property decline
+      },
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        investments_yearly_growth_rate: -0.15,
+        monthly_salary_savings_eur: 500,
+      },
+    };
+
+    const sim = runSimulation(bearConfig);
+    expect(sim.length).toBe(61);
+    expect(sim[60].propertyPrice).toBeLessThan(sim[0].propertyPrice);
+    expect(sim[60].stockPriceUsd).toBeLessThan(sim[0].stockPriceUsd);
+    for (const p of sim) {
+      expect(Number.isFinite(p.totalLiquidWealth)).toBe(true);
+      expect(Number.isFinite(p.targetCapital)).toBe(true);
+      expect(Number.isFinite(p.surplus)).toBe(true);
+    }
+  });
+
+  it('correctly models immediate affordability at Month 0 when initial liquid wealth exceeds target capital', () => {
+    const richConfig = {
+      ...DEFAULT_CONFIG,
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 500000, // €500k cash
+      },
+    };
+
+    const sim = runSimulation(richConfig);
+    expect(sim[0].isAffordable).toBe(true);
+    expect(sim[0].surplus).toBeGreaterThan(0);
+  });
+
+  it('correctly reports continuous 61-month chronological date progression without date skips', () => {
+    const sim = runSimulation(DEFAULT_CONFIG);
+    expect(sim.length).toBe(61);
+    for (let i = 0; i < sim.length; i++) {
+      expect(sim[i].month).toBe(i);
+      expect(sim[i].date).toMatch(/^\d{4}-\d{2}$/);
+    }
+    // Verify start month to end month (60 months = 5 full years)
+    expect(sim[0].date).toBe('2026-08');
+    expect(sim[60].date).toBe('2031-08');
+  });
 });

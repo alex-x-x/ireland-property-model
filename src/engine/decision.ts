@@ -5,7 +5,7 @@ import {
   SimulationConfig,
 } from './types';
 import { calculateMortgageAmortization } from './mortgage';
-import { getVestingMilestonesForMonth } from './vesting';
+import { getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
 
 interface PostPurchaseSimulation {
   remainingLiquidWealthAtM60: number;
@@ -303,7 +303,6 @@ export function runDecisionAnalysis(
 }
 
 function baseMonthToDate(startDateStr: string, month: number): string {
-  const d = new Date(startDateStr);
-  d.setMonth(d.getMonth() + month);
+  const d = addMonthsToDate(startDateStr, month);
   return d.toISOString().slice(0, 7);
 }

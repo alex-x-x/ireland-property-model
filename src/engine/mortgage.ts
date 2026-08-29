@@ -117,7 +117,7 @@ export function calculateMortgageAmortization(
     balance -= principalPaid;
     cumulativeInterest += interest;
     cumulativePrincipal += principalPaid;
-    if (balance <= 0) {
+    if (balance <= 0.001) {
       balance = 0;
       break;
     }
@@ -125,7 +125,7 @@ export function calculateMortgageAmortization(
 
   return {
     monthlyPayment,
-    remainingBalance: balance,
+    remainingBalance: balance <= 0.001 ? 0 : balance,
     cumulativeInterestPaid: cumulativeInterest,
     cumulativePrincipalPaid: cumulativePrincipal,
   };

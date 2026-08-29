@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { reconcileHistoricalGrants, getVestingMilestonesForMonth } from '../src/engine/vesting';
+import {
+  reconcileHistoricalGrants,
+  getVestingMilestonesForMonth,
+  addMonthsToDate,
+  getCalendarMonthOffset,
+} from '../src/engine/vesting';
 import { Grant } from '../src/engine/types';
 
 describe('Vesting Engine', () => {
@@ -74,5 +79,40 @@ describe('Vesting Engine', () => {
     expect(eventsM1.length).toBe(1);
     expect(eventsM1[0].grossShares).toBeCloseTo(33, 1);
     expect(eventsM1[0].netShares).toBeCloseTo(33 * 0.48, 1); // 15.84 net retained shares
+  });
+
+  it('safely handles month-end dates and non-leap February dates without date overflow', () => {
+    // August 31st + 6 months -> February 28th (not March!)
+    const febDate = addMonthsToDate('2026-08-31', 6);
+    expect(febDate.getUTCMonth()).toBe(1); // 1 = February
+    expect(febDate.getUTCDate()).toBe(28);
+
+    // Calendar month offset should be strictly 6
+    const offset = getCalendarMonthOffset('2026-08-31', febDate);
+    expect(offset).toBe(6);
+  });
+
+  it('aggregates multiple simultaneous vesting events in a single month', () => {
+    const grantA: Grant = {
+      id: 'grant_A',
+      type: 'initial',
+      grant_date: '2026-08-01',
+      total_shares: 1200,
+      schedule_percents: [0.33, 0.33, 0.22, 0.12],
+      vest_frequency_months: 1, // 33 gross shs / mo
+    };
+    const grantB: Grant = {
+      id: 'grant_B',
+      type: 'refresher',
+      grant_date: '2026-08-01',
+      total_shares: 240,
+      schedule_percents: [0.25, 0.25, 0.25, 0.25],
+      vest_frequency_months: 1, // 5 gross shs / mo
+    };
+
+    const events = getVestingMilestonesForMonth(1, '2026-08-01', [grantA, grantB], 150, 0.91, 0.52);
+    expect(events.length).toBe(2);
+    const totalGross = events.reduce((sum, e) => sum + e.grossShares, 0);
+    expect(totalGross).toBeCloseTo(33 + 5, 1);
   });
 });
