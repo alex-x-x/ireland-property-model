@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { PersonalProfileHeader } from './components/PersonalProfileHeader';
 import { ProjectionChart } from './components/ProjectionChart';
 import { DecisionMatrix } from './components/DecisionMatrix';
-import { GrantsManager } from './components/GrantsManager';
 import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { MarketDataModal } from './components/MarketDataModal';
 import { MonthlyTableModal } from './components/MonthlyTableModal';
@@ -103,6 +103,7 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* Top Navigation */}
       <Navbar
         config={config}
         onUpdateConfig={setConfig}
@@ -115,32 +116,29 @@ export const App: React.FC = () => {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
-          {/* Left Column: Parameter Control Sidebar */}
-          <Sidebar
-            config={config}
-            onChange={setConfig}
-            isProfileLocked={isProfileLocked}
-            onToggleProfileLock={() => setIsProfileLocked((prev) => !prev)}
-          />
+        {/* 1. TOP SECTION: Personal Financial Profile & GSU Grants Baseline */}
+        <PersonalProfileHeader
+          config={config}
+          onChange={setConfig}
+          isProfileLocked={isProfileLocked}
+          onToggleProfileLock={() => setIsProfileLocked((prev) => !prev)}
+          onUpdateGrants={handleUpdateGrants}
+        />
 
-          {/* Right Column: Interactive Visualizations & Decision Analytics */}
+        {/* 2. MAIN 2-COLUMN MODELING WORKSPACE */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Left Column: Financial Modeling Sliders */}
+          <Sidebar config={config} onChange={setConfig} />
+
+          {/* Right Column: Decision Analytics & Projections */}
           <div className="flex-1 w-full space-y-6">
-            {/* 1. Core Recommendation & Opportunity Cost Matrix */}
+            {/* Core Recommendation & Opportunity Cost Matrix */}
             <DecisionMatrix decision={decision} config={config} />
 
-            {/* 2. Interactive 60-Month Trajectory Chart */}
+            {/* 60-Month Trajectory Chart */}
             <ProjectionChart data={monthlyPoints} decision={decision} />
 
-            {/* 3. GSU Grants Manager */}
-            <GrantsManager
-              config={config}
-              onUpdateGrants={handleUpdateGrants}
-              isProfileLocked={isProfileLocked}
-              onUnlockProfile={() => setIsProfileLocked(false)}
-            />
-
-            {/* 4. 2D Sensitivity Matrix */}
+            {/* 2D Sensitivity Heatmap */}
             <SensitivityMatrix config={config} />
           </div>
         </div>
