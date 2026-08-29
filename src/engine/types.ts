@@ -57,6 +57,7 @@ export interface EquityEngineConfig {
   stock_yearly_growth_rate: number;
   current_share_price_usd: number;
   marginal_tax_rate_ireland: number;
+  initial_vested_shares_held?: number; // Vested RSUs/company shares held at Model Start Date
   grants: Grant[];
 }
 

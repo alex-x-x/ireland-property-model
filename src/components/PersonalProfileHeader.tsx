@@ -210,7 +210,9 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
               </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
                 <span className="text-slate-400 text-[11px] font-sans">GSUs: </span>
-                <span className="font-bold text-purple-300">{totalGrantShares} shs</span>
+                <span className="font-bold text-purple-300">
+                  {config.equity_engine.initial_vested_shares_held ?? 0} held + {totalGrantShares} unvested shs
+                </span>
               </div>
             </div>
           )}
@@ -609,9 +611,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
               <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
                 <Wallet className="w-4 h-4 text-sky-400" />
-                <h4 className="font-bold text-slate-200">Cash & Investments</h4>
+                <h4 className="font-bold text-slate-200">Cash, Trading & Vested Shares</h4>
               </div>
 
+              {/* Liquid Cash */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-slate-400 block mb-1">Cash EUR (€)</label>
@@ -638,9 +641,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 </div>
               </div>
 
+              {/* Separate Trading Accounts (Mix of Instruments) */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-slate-400 block mb-1">Inv EUR (€)</label>
+                  <label className="text-slate-400 block mb-1">Trading Inv EUR (€)</label>
                   <input
                     type="number"
                     step="5000"
@@ -648,11 +652,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     value={config.liquid_assets.investments_eur}
                     onChange={(e) => updateLiquidAssets('investments_eur', parseFloat(e.target.value) || 0)}
                     className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                    title="Liquid funds & ETF investments in separate EUR trading account"
                   />
                 </div>
 
                 <div>
-                  <label className="text-slate-400 block mb-1">Inv USD ($)</label>
+                  <label className="text-slate-400 block mb-1">Trading Inv USD ($)</label>
                   <input
                     type="number"
                     step="5000"
@@ -660,8 +665,36 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     value={config.liquid_assets.investments_usd}
                     onChange={(e) => updateLiquidAssets('investments_usd', parseFloat(e.target.value) || 0)}
                     className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                    title="Liquid stocks & instruments in separate USD trading account"
                   />
                 </div>
+              </div>
+
+              {/* Currently Held Vested RSUs / GOOGL Shares at Model Start Date */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 block font-semibold text-purple-300">
+                    Vested {config.meta.stock_symbol || 'GOOGL'} Shares Held (at Start)
+                  </label>
+                  <span className="text-[10px] text-purple-300 font-mono">
+                    €{Math.round((config.equity_engine.initial_vested_shares_held ?? 0) * config.equity_engine.current_share_price_usd * config.macro.eur_usd_spot).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-purple-500/30">
+                  <input
+                    type="number"
+                    step="10"
+                    min="0"
+                    disabled={isProfileLocked}
+                    value={config.equity_engine.initial_vested_shares_held ?? 300}
+                    onChange={(e) => updateEquityEngine('initial_vested_shares_held', parseFloat(e.target.value) || 0)}
+                    className="w-full bg-transparent text-purple-200 font-bold focus:outline-none"
+                  />
+                  <span className="text-slate-400 text-[10px] ml-1">shares</span>
+                </div>
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  Shares already vested in Morgan Stanley/Schwab at Model Start Date
+                </span>
               </div>
 
               <div>
