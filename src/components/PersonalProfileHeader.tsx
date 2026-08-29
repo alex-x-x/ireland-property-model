@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { SimulationConfig, Grant } from '../engine/types';
 import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
+import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
 
 interface PersonalProfileHeaderProps {
   config: SimulationConfig;
@@ -38,6 +39,13 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
   const grants = config.equity_engine.grants;
   const totalGrantShares = grants.reduce((sum, g) => sum + g.total_shares, 0);
+  const totalSalary = getTotalGrossSalary(config.mortgage);
+  const cbiCalculatedLoan = totalSalary * config.mortgage.cbi_max_lti_multiple;
+  const effectiveMaxLoan = getEffectiveMaxMortgage(config.mortgage);
+  const hasCustomAip =
+    config.mortgage.approval_in_principle_amount_eur !== undefined &&
+    config.mortgage.approval_in_principle_amount_eur !== null &&
+    config.mortgage.approval_in_principle_amount_eur > 0;
 
   const updateProperty = (field: keyof SimulationConfig['property'], value: any) => {
     onChange({ ...config, property: { ...config.property, [field]: value } });
@@ -138,8 +146,16 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 <span className="font-bold text-white">€{(config.property.target_price_eur / 1000000).toFixed(2)}M</span>
               </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
-                <span className="text-slate-400 text-[11px] font-sans">Salary: </span>
-                <span className="font-bold text-emerald-400">€{Math.round(config.mortgage.buyer_gross_annual_salary_eur / 1000)}k</span>
+                <span className="text-slate-400 text-[11px] font-sans">Income: </span>
+                <span className="font-bold text-emerald-400">€{Math.round(totalSalary / 1000)}k</span>
+                <span className="text-[10px] text-slate-400 font-sans ml-1">
+                  (€{Math.round((config.mortgage.buyer_gross_annual_base_salary_eur ?? totalSalary) / 1000)}k + €{Math.round((config.mortgage.buyer_annual_bonus_eur ?? 0) / 1000)}k bonus)
+                </span>
+              </div>
+              <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
+                <span className="text-slate-400 text-[11px] font-sans">AIP Loan: </span>
+                <span className="font-bold text-emerald-300">€{Math.round(effectiveMaxLoan / 1000)}k</span>
+                {hasCustomAip && <span className="text-[9px] px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 ml-1">AIP</span>}
               </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
                 <span className="text-slate-400 text-[11px] font-sans">Rent: </span>
@@ -260,29 +276,99 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
               </div>
             </div>
 
-            {/* Column 2: Income & Borrowing (CBI) */}
+            {/* Column 2: Income Breakdown & AIP Borrowing Capacity */}
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
               <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
                 <Landmark className="w-4 h-4 text-emerald-400" />
-                <h4 className="font-bold text-slate-200">Income & CBI Borrowing</h4>
+                <h4 className="font-bold text-slate-200">Income & AIP Borrowing</h4>
               </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">Gross Annual Salary (€)</label>
-                <input
-                  type="number"
-                  step="5000"
-                  disabled={isProfileLocked}
-                  value={config.mortgage.buyer_gross_annual_salary_eur}
-                  onChange={(e) => updateMortgage('buyer_gross_annual_salary_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
-                />
-                <div className="flex justify-between text-[11px] text-slate-400 mt-1">
-                  <span>CBI 4.0x Max Loan:</span>
-                  <span className="text-emerald-400 font-semibold">
-                    €{(config.mortgage.buyer_gross_annual_salary_eur * config.mortgage.cbi_max_lti_multiple).toLocaleString()}
-                  </span>
+              {/* Base Salary and Bonus */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-400 block mb-1">Base Salary (€)</label>
+                  <input
+                    type="number"
+                    step="5000"
+                    disabled={isProfileLocked}
+                    value={config.mortgage.buyer_gross_annual_base_salary_eur ?? 190000}
+                    onChange={(e) => {
+                      const base = parseFloat(e.target.value) || 0;
+                      const bonus = config.mortgage.buyer_annual_bonus_eur || 0;
+                      onChange({
+                        ...config,
+                        mortgage: {
+                          ...config.mortgage,
+                          buyer_gross_annual_base_salary_eur: base,
+                          buyer_gross_annual_salary_eur: base + bonus,
+                        },
+                      });
+                    }}
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
+                  />
                 </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1">Bonus (€)</label>
+                  <input
+                    type="number"
+                    step="2500"
+                    disabled={isProfileLocked}
+                    value={config.mortgage.buyer_annual_bonus_eur ?? 35000}
+                    onChange={(e) => {
+                      const bonus = parseFloat(e.target.value) || 0;
+                      const base = config.mortgage.buyer_gross_annual_base_salary_eur || 0;
+                      onChange({
+                        ...config,
+                        mortgage: {
+                          ...config.mortgage,
+                          buyer_annual_bonus_eur: bonus,
+                          buyer_gross_annual_salary_eur: base + bonus,
+                        },
+                      });
+                    }}
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Income & CBI Summary */}
+              <div className="flex justify-between text-[11px] text-slate-400 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+                <span>Total: <strong className="text-white">€{totalSalary.toLocaleString()}</strong></span>
+                <span>CBI 4.0x: <strong className="text-emerald-400">€{cbiCalculatedLoan.toLocaleString()}</strong></span>
+              </div>
+
+              {/* Approval in Principle (AIP) Explicit Input */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 block">Approval in Principle (AIP) (€)</label>
+                  {!isProfileLocked && hasCustomAip && (
+                    <button
+                      onClick={() => updateMortgage('approval_in_principle_amount_eur', null)}
+                      className="text-[10px] text-brand-400 hover:text-brand-300 underline"
+                      title="Reset to automated CBI 4.0x loan"
+                    >
+                      Reset to CBI 4.0x
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="10000"
+                    disabled={isProfileLocked}
+                    placeholder={`CBI 4.0x: €${cbiCalculatedLoan.toLocaleString()}`}
+                    value={config.mortgage.approval_in_principle_amount_eur ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseFloat(e.target.value) : null;
+                      updateMortgage('approval_in_principle_amount_eur', val);
+                    }}
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-emerald-300 font-bold placeholder-slate-500 focus:outline-none"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  {hasCustomAip ? '✓ Using explicit bank AIP loan cap' : '✓ Defaults to CBI 4.0x loan limit'}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">

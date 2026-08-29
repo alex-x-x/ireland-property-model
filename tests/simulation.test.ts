@@ -32,8 +32,11 @@ describe('Simulation Engine', () => {
       ...DEFAULT_CONFIG,
       mortgage: {
         ...DEFAULT_CONFIG.mortgage,
+        buyer_gross_annual_base_salary_eur: 125000,
+        buyer_annual_bonus_eur: 25000,
         buyer_gross_annual_salary_eur: 150000,
         cbi_max_lti_multiple: 4.0,
+        approval_in_principle_amount_eur: null,
       },
     };
 
