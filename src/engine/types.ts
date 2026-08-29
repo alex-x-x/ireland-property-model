@@ -11,6 +11,15 @@ export interface PropertyConfig {
   legal_and_closing_fees_eur: number;
 }
 
+export interface SalaryAdjustment {
+  id: string;
+  effective_date: string; // YYYY-MM-DD
+  base_salary_eur: number;
+  bonus_pct?: number;
+  bonus_eur?: number;
+  note?: string;
+}
+
 export interface MortgageConfig {
   mortgage_interest_rate: number;
   mortgage_term_years: number;
@@ -21,6 +30,7 @@ export interface MortgageConfig {
   buyer_gross_annual_salary_eur?: number; // legacy fallback / total
   cbi_max_lti_multiple: number;
   approval_in_principle_amount_eur?: number | null; // explicit AIP loan limit
+  salary_adjustments?: SalaryAdjustment[]; // Planned future salary increases
 }
 
 export interface LiquidAssetsConfig {

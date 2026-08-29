@@ -5,6 +5,7 @@ import {
   calculateMaxBorrowingCapacity,
   getTotalGrossSalary,
   getEffectiveMaxMortgage,
+  getSalaryAtDate,
 } from '../src/engine/mortgage';
 
 describe('Mortgage Engine', () => {
@@ -69,5 +70,53 @@ describe('Mortgage Engine', () => {
     };
     expect(getTotalGrossSalary(mortgageWithPctBonus)).toBe(240000);
     expect(getEffectiveMaxMortgage(mortgageWithPctBonus)).toBe(960000); // 4.0 * €240k
+  });
+
+  it('correctly models planned salary step-ups starting from specific effective dates', () => {
+    const mortgageWithStepUps = {
+      mortgage_interest_rate: 0.035,
+      mortgage_term_years: 25,
+      yearly_maintenance_rate: 0.01,
+      buyer_gross_annual_base_salary_eur: 180000,
+      buyer_annual_bonus_pct: 0.15, // €27,000 bonus -> €207k total
+      cbi_max_lti_multiple: 4.0,
+      salary_adjustments: [
+        {
+          id: 'adj_1',
+          effective_date: '2027-04-01',
+          base_salary_eur: 210000,
+          bonus_pct: 0.20, // €42,000 bonus -> €252k total
+          note: 'L6 Promotion',
+        },
+        {
+          id: 'adj_2',
+          effective_date: '2028-04-01',
+          base_salary_eur: 230000,
+          bonus_pct: 0.25, // €57,500 bonus -> €287.5k total
+          note: 'Staff / L7 Promotion',
+        },
+      ],
+    };
+
+    // Before promo 1 (e.g. 2026-06-01)
+    const sal2026 = getSalaryAtDate('2026-06-01', mortgageWithStepUps);
+    expect(sal2026.baseSalary).toBe(180000);
+    expect(sal2026.bonusEur).toBe(27000);
+    expect(sal2026.totalGrossSalary).toBe(207000);
+    expect(getEffectiveMaxMortgage(mortgageWithStepUps, '2026-06-01')).toBe(828000); // 4.0 * €207,000
+
+    // After promo 1, before promo 2 (e.g. 2027-05-01)
+    const sal2027 = getSalaryAtDate('2027-05-01', mortgageWithStepUps);
+    expect(sal2027.baseSalary).toBe(210000);
+    expect(sal2027.bonusEur).toBe(42000);
+    expect(sal2027.totalGrossSalary).toBe(252000);
+    expect(getEffectiveMaxMortgage(mortgageWithStepUps, '2027-05-01')).toBe(1008000); // 4.0 * €252,000
+
+    // After promo 2 (e.g. 2028-06-01)
+    const sal2028 = getSalaryAtDate('2028-06-01', mortgageWithStepUps);
+    expect(sal2028.baseSalary).toBe(230000);
+    expect(sal2028.bonusEur).toBe(57500);
+    expect(sal2028.totalGrossSalary).toBe(287500);
+    expect(getEffectiveMaxMortgage(mortgageWithStepUps, '2028-06-01')).toBe(1150000); // 4.0 * €287,500
   });
 });
