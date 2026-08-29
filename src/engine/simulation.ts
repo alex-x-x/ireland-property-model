@@ -1,6 +1,6 @@
 import { MonthlyDataPoint, SimulationConfig, StampDutyTier } from './types';
 import { reconcileHistoricalGrants, getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
-import { getEffectiveMaxMortgage } from './mortgage';
+import { getEffectiveMaxMortgage, getSalaryAtDate } from './mortgage';
 
 export function calculateStampDuty(
   propertyPrice: number,
@@ -41,7 +41,6 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
 
   const propMonthlyMult = Math.pow(1 + property.yearly_growth_rate, 1 / 12);
   const invMonthlyMult = Math.pow(1 + liquid_assets.investments_yearly_growth_rate, 1 / 12);
-  const stockMonthlyMult = Math.pow(1 + equity_engine.stock_yearly_growth_rate, 1 / 12);
   const rentMonthlyMult = Math.pow(1 + (macro.rent_yearly_growth_rate || 0), 1 / 12);
 
   // Month 0 Initialization
@@ -56,13 +55,15 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   let currentFx = macro.eur_usd_spot;
   let currentCash = liquid_assets.cash_eur + liquid_assets.cash_usd * currentFx;
   let currentInv = liquid_assets.investments_eur + liquid_assets.investments_usd * currentFx;
-  let currentGsuPool = recon.totalRetainedVestedShares * currentStockPrice * currentFx;
+  let currentRetainedShares = recon.totalRetainedVestedShares;
+  let currentGsuPool = currentRetainedShares * currentStockPrice * currentFx;
   let currentRent = macro.current_monthly_rent_eur;
   let cumulativeRent = 0;
 
   for (let m = 0; m <= meta.forecast_months; m++) {
     const currentDate = addMonthsToDate(meta.start_date, m);
     const dateStr = currentDate.toISOString().slice(0, 7); // YYYY-MM
+    let netBonusReceivedEur = 0;
 
     if (m > 0) {
       currentPropPrice *= propMonthlyMult;
@@ -72,6 +73,16 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       currentCash += liquid_assets.monthly_salary_savings_eur;
       currentRent *= rentMonthlyMult;
       cumulativeRent += currentRent;
+
+      // Annual bonus payout in March (or configured payout month)
+      const monthOfYear = currentDate.getMonth() + 1; // 1 = Jan, 2 = Feb, 3 = Mar, ...
+      const bonusPayoutMonth = mortgage.bonus_payout_month ?? 3;
+      if (monthOfYear === bonusPayoutMonth) {
+        const activeSalary = getSalaryAtDate(dateStr, mortgage);
+        const grossBonus = activeSalary.bonusEur;
+        netBonusReceivedEur = grossBonus * (1 - equity_engine.marginal_tax_rate_ireland);
+        currentCash += netBonusReceivedEur;
+      }
     }
 
     const vestEvents = getVestingMilestonesForMonth(
@@ -83,14 +94,14 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       equity_engine.marginal_tax_rate_ireland
     );
 
-    const netVestEur = vestEvents.reduce((sum, e) => sum + e.netAmountEur, 0);
+    const newNetShares = vestEvents.reduce((sum, e) => sum + e.netShares, 0);
     if (m > 0) {
-      currentGsuPool = currentGsuPool * stockMonthlyMult + netVestEur;
+      currentRetainedShares += newNetShares;
     }
+    // Shares are retained in full without being sold; valued at current price & FX
+    currentGsuPool = currentRetainedShares * currentStockPrice * currentFx;
 
-    const retainedShares = currentStockPrice * currentFx > 0 ? currentGsuPool / (currentStockPrice * currentFx) : 0;
     const totalLiquidWealth = currentCash + currentInv + currentGsuPool;
-
     const maxMortgageAtMonth = getEffectiveMaxMortgage(mortgage, dateStr);
 
     const stampDuty = calculateStampDuty(currentPropPrice, property.stamp_duty_tiers);
@@ -111,7 +122,7 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       cash: currentCash,
       investments: currentInv,
       gsuPool: currentGsuPool,
-      retainedShares,
+      retainedShares: currentRetainedShares,
       stockPriceUsd: currentStockPrice,
       fxRate: currentFx,
       totalLiquidWealth,
@@ -122,6 +133,7 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       cumulativeRent,
       maxMortgageAvailable: maxMortgageAtMonth,
       borrowingShortfall,
+      netBonusReceivedEur,
     });
   }
 

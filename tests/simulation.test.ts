@@ -46,4 +46,31 @@ describe('Simulation Engine', () => {
     expect(sim[0].targetCapital).toBe(413000);
     expect(sim[0].borrowingShortfall).toBe(300000);
   });
+
+  it('models annual bonus payout in March into cash savings after Irish 52% tax', () => {
+    // Start date: 2026-08-29 -> March 2027 occurs at month index 7
+    const sim = runSimulation(DEFAULT_CONFIG);
+    const marchMonth = sim.find((p) => p.date.endsWith('-03'));
+    expect(marchMonth).toBeDefined();
+    expect(marchMonth!.netBonusReceivedEur).toBeGreaterThan(0);
+
+    // Target bonus: €35,000 * (1 - 0.52) = €16,800 net bonus injected into cash in March
+    expect(marchMonth!.netBonusReceivedEur).toBeCloseTo(35000 * 0.48, 0);
+  });
+
+  it('preserves and compounds retained GSU shares across monthly vests without selling', () => {
+    const sim = runSimulation(DEFAULT_CONFIG);
+    // Retained shares should monotonically increase as new monthly vests occur
+    expect(sim[0].retainedShares).toBeGreaterThan(0);
+    expect(sim[12].retainedShares).toBeGreaterThan(sim[0].retainedShares);
+    expect(sim[24].retainedShares).toBeGreaterThan(sim[12].retainedShares);
+
+    // GSU Pool value is strictly equal to retainedShares * currentStockPrice * currentFx
+    for (const point of sim) {
+      expect(point.gsuPool).toBeCloseTo(
+        point.retainedShares * point.stockPriceUsd * point.fxRate,
+        2
+      );
+    }
+  });
 });

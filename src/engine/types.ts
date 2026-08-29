@@ -31,6 +31,7 @@ export interface MortgageConfig {
   cbi_max_lti_multiple: number;
   approval_in_principle_amount_eur?: number | null; // explicit AIP loan limit
   salary_adjustments?: SalaryAdjustment[]; // Planned future salary increases
+  bonus_payout_month?: number; // Month of annual bonus payment (1-12, default: 3 for March)
 }
 
 export interface LiquidAssetsConfig {
@@ -110,6 +111,7 @@ export interface MonthlyDataPoint {
   cumulativeRent: number;
   maxMortgageAvailable: number;
   borrowingShortfall: number;
+  netBonusReceivedEur?: number;
 }
 
 export interface PurchaseScenario {

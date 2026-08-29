@@ -76,7 +76,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
       grant_date: config.meta.start_date,
       total_shares: 800,
       schedule_percents: [0.33, 0.33, 0.22, 0.12],
-      vest_frequency_months: 12,
+      vest_frequency_months: 1, // Monthly vesting
     };
     onUpdateGrants([...grants, newGrant]);
   };
@@ -89,7 +89,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
       grant_date: config.meta.start_date,
       total_shares: 200,
       schedule_percents: [0.25, 0.25, 0.25, 0.25],
-      vest_frequency_months: 3,
+      vest_frequency_months: 1, // Monthly vesting
     };
     onUpdateGrants([...grants, newGrant]);
   };

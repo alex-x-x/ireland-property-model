@@ -58,4 +58,21 @@ describe('Vesting Engine', () => {
     expect(eventsM8[0].grossShares).toBe(100);
     expect(eventsM8[0].netShares).toBe(48);
   });
+
+  it('correctly models monthly vesting schedule (12 vests/yr) for Google GSUs', () => {
+    const monthlyGrant: Grant = {
+      id: 'google_initial',
+      type: 'initial',
+      grant_date: '2026-08-01',
+      total_shares: 1200, // 33% = 396 shs in Yr 1 (33 shs/mo)
+      schedule_percents: [0.33, 0.33, 0.22, 0.12],
+      vest_frequency_months: 1, // Monthly
+    };
+
+    // Month 1 (Sept 2026): 33 gross shares vest
+    const eventsM1 = getVestingMilestonesForMonth(1, '2026-08-01', [monthlyGrant], 160, 0.90, 0.52);
+    expect(eventsM1.length).toBe(1);
+    expect(eventsM1[0].grossShares).toBeCloseTo(33, 1);
+    expect(eventsM1[0].netShares).toBeCloseTo(33 * 0.48, 1); // 15.84 net retained shares
+  });
 });

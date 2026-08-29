@@ -47,7 +47,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
         grant_date: '2024-08-01',
         total_shares: 1000,
         schedule_percents: [0.33, 0.33, 0.22, 0.12],
-        vest_frequency_months: 12,
+        vest_frequency_months: 1, // Monthly vesting (Google Standard)
       },
       {
         id: 'refresher_2025',
@@ -56,7 +56,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
         grant_date: '2025-08-01',
         total_shares: 200,
         schedule_percents: [0.25, 0.25, 0.25, 0.25],
-        vest_frequency_months: 3,
+        vest_frequency_months: 1, // Monthly vesting (Google Standard)
       },
     ],
   },
