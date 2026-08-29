@@ -1,6 +1,6 @@
 import { MonthlyDataPoint, SimulationConfig, StampDutyTier } from './types';
 import { reconcileHistoricalGrants, getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
-import { calculateMaxBorrowingCapacity } from './mortgage';
+import { getEffectiveMaxMortgage } from './mortgage';
 
 export function calculateStampDuty(
   propertyPrice: number,
@@ -60,10 +60,7 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   let currentRent = macro.current_monthly_rent_eur;
   let cumulativeRent = 0;
 
-  const maxMortgage = calculateMaxBorrowingCapacity(
-    mortgage.buyer_gross_annual_salary_eur,
-    mortgage.cbi_max_lti_multiple
-  );
+  const maxMortgage = getEffectiveMaxMortgage(mortgage);
 
   for (let m = 0; m <= meta.forecast_months; m++) {
     const currentDate = addMonthsToDate(meta.start_date, m);

@@ -1,8 +1,17 @@
+import { MortgageConfig } from './types';
+
 export interface AmortizationResult {
   monthlyPayment: number;
   remainingBalance: number;
   cumulativeInterestPaid: number;
   cumulativePrincipalPaid: number;
+}
+
+export function getTotalGrossSalary(mortgage: MortgageConfig): number {
+  if (mortgage.buyer_gross_annual_base_salary_eur !== undefined) {
+    return (mortgage.buyer_gross_annual_base_salary_eur || 0) + (mortgage.buyer_annual_bonus_eur || 0);
+  }
+  return mortgage.buyer_gross_annual_salary_eur || 0;
 }
 
 export function calculateMonthlyMortgagePayment(
@@ -68,4 +77,16 @@ export function calculateMaxBorrowingCapacity(
   cbiMaxLtiMultiple: number = 4.0
 ): number {
   return Math.max(0, grossAnnualSalaryEur * cbiMaxLtiMultiple);
+}
+
+export function getEffectiveMaxMortgage(mortgage: MortgageConfig): number {
+  if (
+    mortgage.approval_in_principle_amount_eur !== undefined &&
+    mortgage.approval_in_principle_amount_eur !== null &&
+    mortgage.approval_in_principle_amount_eur > 0
+  ) {
+    return mortgage.approval_in_principle_amount_eur;
+  }
+  const totalSalary = getTotalGrossSalary(mortgage);
+  return calculateMaxBorrowingCapacity(totalSalary, mortgage.cbi_max_lti_multiple);
 }

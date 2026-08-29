@@ -20,8 +20,11 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     mortgage_interest_rate: 0.035, // AIB 2026 Benchmark (~3.50%)
     mortgage_term_years: 25,
     yearly_maintenance_rate: 0.01,
+    buyer_gross_annual_base_salary_eur: 190000,
+    buyer_annual_bonus_eur: 35000,
     buyer_gross_annual_salary_eur: 225000,
     cbi_max_lti_multiple: 4.0, // Central Bank of Ireland FTB LTI rule
+    approval_in_principle_amount_eur: null, // null defaults to CBI 4.0x calculation (4.0 * €225k = €900k)
   },
   liquid_assets: {
     cash_eur: 50000,
