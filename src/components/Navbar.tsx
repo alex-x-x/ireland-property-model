@@ -40,12 +40,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handlePresetChange = (presetId: string) => {
     const preset = PRESET_SCENARIOS.find((p) => p.id === presetId);
-    if (preset) {
+    if (preset && preset.config) {
       onUpdateConfig({
         ...config,
-        property: { ...config.property, ...(preset.config.property || {}) },
-        equity_engine: { ...config.equity_engine, ...(preset.config.equity_engine || {}) },
-        macro: { ...config.macro, ...(preset.config.macro || {}) },
+        property: {
+          ...config.property,
+          yearly_growth_rate: preset.config.property?.yearly_growth_rate ?? config.property.yearly_growth_rate,
+        },
+        equity_engine: {
+          ...config.equity_engine,
+          stock_yearly_growth_rate: preset.config.equity_engine?.stock_yearly_growth_rate ?? config.equity_engine.stock_yearly_growth_rate,
+        },
+        liquid_assets: {
+          ...config.liquid_assets,
+          investments_yearly_growth_rate: preset.config.liquid_assets?.investments_yearly_growth_rate ?? config.liquid_assets.investments_yearly_growth_rate,
+        },
+        macro: {
+          ...config.macro,
+          rent_yearly_growth_rate: preset.config.macro?.rent_yearly_growth_rate ?? config.macro.rent_yearly_growth_rate,
+          eur_usd_yearly_drift: preset.config.macro?.eur_usd_yearly_drift ?? config.macro.eur_usd_yearly_drift,
+        },
+        mortgage: {
+          ...config.mortgage,
+          mortgage_interest_rate: preset.config.mortgage?.mortgage_interest_rate ?? config.mortgage.mortgage_interest_rate,
+        },
       });
     }
   };
@@ -123,6 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onChange={(e) => handlePresetChange(e.target.value)}
               defaultValue="baseline"
               className="pl-8 pr-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer transition-colors"
+              title="Select economic scenario preset (updates macro rates, preserves personal financial profile)"
             >
               {PRESET_SCENARIOS.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -198,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => fileInputRef.current?.click()}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
-              title="Import JSON Config"
+              title="Import Personal JSON Config"
             >
               <Upload className="w-4 h-4 text-sky-400" />
             </button>
