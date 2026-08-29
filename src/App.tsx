@@ -26,6 +26,7 @@ export const App: React.FC = () => {
     return DEFAULT_CONFIG;
   });
 
+  const [isProfileLocked, setIsProfileLocked] = useState<boolean>(true);
   const [marketData, setMarketData] = useState<MarketDataResult | null>(null);
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -116,7 +117,12 @@ export const App: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Left Column: Parameter Control Sidebar */}
-          <Sidebar config={config} onChange={setConfig} />
+          <Sidebar
+            config={config}
+            onChange={setConfig}
+            isProfileLocked={isProfileLocked}
+            onToggleProfileLock={() => setIsProfileLocked((prev) => !prev)}
+          />
 
           {/* Right Column: Interactive Visualizations & Decision Analytics */}
           <div className="flex-1 w-full space-y-6">
@@ -127,7 +133,12 @@ export const App: React.FC = () => {
             <ProjectionChart data={monthlyPoints} decision={decision} />
 
             {/* 3. GSU Grants Manager */}
-            <GrantsManager config={config} onUpdateGrants={handleUpdateGrants} />
+            <GrantsManager
+              config={config}
+              onUpdateGrants={handleUpdateGrants}
+              isProfileLocked={isProfileLocked}
+              onUnlockProfile={() => setIsProfileLocked(false)}
+            />
 
             {/* 4. 2D Sensitivity Matrix */}
             <SensitivityMatrix config={config} />

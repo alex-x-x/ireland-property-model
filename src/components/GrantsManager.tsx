@@ -1,17 +1,27 @@
 import React from 'react';
-import { Plus, Trash2, Award, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Trash2, Award, CheckCircle2, Clock, Lock } from 'lucide-react';
 import { Grant, SimulationConfig } from '../engine/types';
 import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
 
 interface GrantsManagerProps {
   config: SimulationConfig;
   onUpdateGrants: (grants: Grant[]) => void;
+  isProfileLocked?: boolean;
+  onUnlockProfile?: () => void;
 }
 
-export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGrants }) => {
+export const GrantsManager: React.FC<GrantsManagerProps> = ({
+  config,
+  onUpdateGrants,
+  isProfileLocked = false,
+  onUnlockProfile,
+}) => {
   const grants = config.equity_engine.grants;
 
   const handleAddInitialGrant = () => {
+    if (isProfileLocked && onUnlockProfile) {
+      onUnlockProfile();
+    }
     const newGrant: Grant = {
       id: `grant_${Date.now()}`,
       name: `Initial Grant ${new Date().getFullYear()}`,
@@ -25,6 +35,9 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
   };
 
   const handleAddRefresherGrant = () => {
+    if (isProfileLocked && onUnlockProfile) {
+      onUnlockProfile();
+    }
     const newGrant: Grant = {
       id: `refresher_${Date.now()}`,
       name: `Refresher ${new Date().getFullYear()}`,
@@ -38,6 +51,9 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
   };
 
   const handleDeleteGrant = (id: string) => {
+    if (isProfileLocked && onUnlockProfile) {
+      onUnlockProfile();
+    }
     onUpdateGrants(grants.filter((g) => g.id !== id));
   };
 
@@ -56,7 +72,15 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white tracking-tight">Google Stock Unit (GSU) Grants</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white tracking-tight">Google Stock Unit (GSU) Grants</h3>
+              {isProfileLocked && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                  <Lock className="w-3 h-3 text-emerald-400" />
+                  Locked Baseline
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               Manage initial hire & refresher cliffs with 52% Irish marginal tax
             </p>
@@ -94,9 +118,10 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
                 <div className="flex-1">
                   <input
                     type="text"
+                    disabled={isProfileLocked}
                     value={grant.name || grant.id}
                     onChange={(e) => handleUpdateGrant(grant.id, { name: e.target.value })}
-                    className="bg-transparent font-semibold text-sm text-white focus:outline-none focus:border-b border-purple-500 w-full"
+                    className="bg-transparent font-semibold text-sm text-white focus:outline-none focus:border-b border-purple-500 w-full disabled:opacity-90"
                     placeholder="Grant Name"
                   />
                   <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
@@ -106,20 +131,23 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
                     <span>Grant Date:</span>
                     <input
                       type="date"
+                      disabled={isProfileLocked}
                       value={grant.grant_date}
                       onChange={(e) => handleUpdateGrant(grant.id, { grant_date: e.target.value })}
-                      className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 border border-slate-700 text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 border border-slate-700 text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none disabled:opacity-80"
                     />
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDeleteGrant(grant.id)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                  title="Remove grant"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!isProfileLocked && (
+                  <button
+                    onClick={() => handleDeleteGrant(grant.id)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    title="Remove grant"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               {/* Shares & Vest Frequency */}
@@ -129,9 +157,10 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <input
                       type="number"
+                      disabled={isProfileLocked}
                       value={grant.total_shares}
                       onChange={(e) => handleUpdateGrant(grant.id, { total_shares: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-slate-800 px-2 py-1 rounded text-sm font-bold text-white border border-slate-700 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      className="w-full bg-slate-800 px-2 py-1 rounded text-sm font-bold text-white border border-slate-700 focus:ring-1 focus:ring-purple-500 focus:outline-none disabled:bg-slate-900 disabled:text-slate-300"
                     />
                     <span className="text-xs text-slate-400 font-mono">shs</span>
                   </div>
@@ -143,9 +172,10 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({ config, onUpdateGr
                 <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
                   <span className="text-[11px] text-slate-400 block font-medium">Vesting Frequency</span>
                   <select
+                    disabled={isProfileLocked}
                     value={grant.vest_frequency_months}
                     onChange={(e) => handleUpdateGrant(grant.id, { vest_frequency_months: parseInt(e.target.value) || 12 })}
-                    className="w-full bg-slate-800 px-2 py-1 rounded text-xs font-semibold text-slate-200 border border-slate-700 focus:ring-1 focus:ring-purple-500 focus:outline-none mt-0.5"
+                    className="w-full bg-slate-800 px-2 py-1 rounded text-xs font-semibold text-slate-200 border border-slate-700 focus:ring-1 focus:ring-purple-500 focus:outline-none mt-0.5 disabled:bg-slate-900 disabled:text-slate-400"
                   >
                     <option value={12}>Annual (Every 12 Mo)</option>
                     <option value={6}>Semi-Annual (Every 6 Mo)</option>
