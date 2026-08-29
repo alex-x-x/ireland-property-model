@@ -23,7 +23,6 @@ export function reconcileHistoricalGrants(
   startDateStr: string,
   taxRate: number
 ): HistoricalReconciliation {
-  const startDate = new Date(startDateStr);
   let totalRetainedVestedShares = 0;
   let pastVestsCount = 0;
 
