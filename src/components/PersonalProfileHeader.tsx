@@ -15,8 +15,9 @@ import {
   Clock,
   Info,
   Edit3,
+  TrendingUp,
 } from 'lucide-react';
-import { SimulationConfig, Grant } from '../engine/types';
+import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
 import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
 
@@ -103,6 +104,43 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
     );
   };
 
+  const salaryAdjustments = config.mortgage.salary_adjustments || [];
+
+  const handleAddSalaryAdjustment = () => {
+    const nextYearDate = addMonthsToDate(config.meta.start_date, (salaryAdjustments.length + 1) * 12)
+      .toISOString()
+      .slice(0, 10);
+    const newAdjustment: SalaryAdjustment = {
+      id: `salary_adj_${Date.now()}`,
+      effective_date: nextYearDate,
+      base_salary_eur: Math.round((config.mortgage.buyer_gross_annual_base_salary_eur || 190000) * 1.1),
+      bonus_pct: config.mortgage.buyer_annual_bonus_pct ?? 0.20,
+      bonus_eur: Math.round(
+        (config.mortgage.buyer_gross_annual_base_salary_eur || 190000) * 1.1 * (config.mortgage.buyer_annual_bonus_pct ?? 0.20)
+      ),
+      note: 'Annual Review / Promo',
+    };
+    updateMortgage('salary_adjustments', [...salaryAdjustments, newAdjustment]);
+  };
+
+  const handleUpdateSalaryAdjustment = (id: string, updates: Partial<SalaryAdjustment>) => {
+    const updated = salaryAdjustments.map((a) => {
+      if (a.id !== id) return a;
+      const merged = { ...a, ...updates };
+      if (updates.base_salary_eur !== undefined || updates.bonus_pct !== undefined) {
+        const base = merged.base_salary_eur;
+        const pct = merged.bonus_pct ?? 0.20;
+        merged.bonus_eur = Math.round(base * pct);
+      }
+      return merged;
+    });
+    updateMortgage('salary_adjustments', updated);
+  };
+
+  const handleDeleteSalaryAdjustment = (id: string) => {
+    updateMortgage('salary_adjustments', salaryAdjustments.filter((a) => a.id !== id));
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden mb-6">
       {/* Top Banner Bar */}
@@ -155,6 +193,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                       : `€${Math.round((config.mortgage.buyer_annual_bonus_eur || 0) / 1000)}k`
                   } bonus)
                 </span>
+                {salaryAdjustments.length > 0 && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 ml-1 font-sans font-bold">
+                    +{salaryAdjustments.length} step-up{salaryAdjustments.length > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
                 <span className="text-slate-400 text-[11px] font-sans">AIP Loan: </span>
@@ -449,6 +492,116 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     <span className="text-slate-400 font-medium">%</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Planned Future Salary Increases & Step-Ups */}
+              <div className="pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[11px] font-bold text-slate-300">Future Salary Step-Ups ({salaryAdjustments.length})</span>
+                  </div>
+                  {!isProfileLocked && (
+                    <button
+                      onClick={handleAddSalaryAdjustment}
+                      className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1 border border-emerald-500/30"
+                    >
+                      <Plus className="w-3 h-3" /> Add Step-Up
+                    </button>
+                  )}
+                </div>
+
+                {salaryAdjustments.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">
+                    No future salary adjustments configured. Compensation remains steady at baseline.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {salaryAdjustments.map((adj) => {
+                      const offsetMonths = getCalendarMonthOffset(config.meta.start_date, new Date(adj.effective_date));
+                      const bonusEur = adj.bonus_eur ?? adj.base_salary_eur * (adj.bonus_pct ?? 0.20);
+                      const adjTotal = adj.base_salary_eur + bonusEur;
+                      const adjCbi = adjTotal * config.mortgage.cbi_max_lti_multiple;
+                      return (
+                        <div
+                          key={adj.id}
+                          className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono text-[10px]">
+                                {offsetMonths >= 0 ? `M${offsetMonths}` : 'Past'}
+                              </span>
+                              <input
+                                type="date"
+                                disabled={isProfileLocked}
+                                value={adj.effective_date}
+                                onChange={(e) => handleUpdateSalaryAdjustment(adj.id, { effective_date: e.target.value })}
+                                className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200 text-[10px] focus:outline-none"
+                              />
+                            </div>
+                            {!isProfileLocked && (
+                              <button
+                                onClick={() => handleDeleteSalaryAdjustment(adj.id)}
+                                className="text-slate-500 hover:text-rose-400 p-0.5"
+                                title="Delete Step-Up"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-1.5">
+                            <div>
+                              <label className="text-slate-500 block text-[9px]">Base (€)</label>
+                              <input
+                                type="number"
+                                step="5000"
+                                disabled={isProfileLocked}
+                                value={adj.base_salary_eur}
+                                onChange={(e) =>
+                                  handleUpdateSalaryAdjustment(adj.id, { base_salary_eur: parseFloat(e.target.value) || 0 })
+                                }
+                                className="w-full bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white font-bold text-[10px] focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-slate-500 block text-[9px]">Bonus %</label>
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                max="100"
+                                disabled={isProfileLocked}
+                                value={Math.round((adj.bonus_pct ?? 0.20) * 100)}
+                                onChange={(e) =>
+                                  handleUpdateSalaryAdjustment(adj.id, { bonus_pct: (parseFloat(e.target.value) || 0) / 100 })
+                                }
+                                className="w-full bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white font-bold text-[10px] focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-slate-500 block text-[9px]">Note / Event</label>
+                              <input
+                                type="text"
+                                disabled={isProfileLocked}
+                                placeholder="e.g. Promo"
+                                value={adj.note || ''}
+                                onChange={(e) => handleUpdateSalaryAdjustment(adj.id, { note: e.target.value })}
+                                className="w-full bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200 text-[10px] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/60">
+                            <span>Total: <strong className="text-white">€{Math.round(adjTotal).toLocaleString()}</strong></span>
+                            <span>New CBI 4.0x: <strong className="text-emerald-400">€{Math.round(adjCbi).toLocaleString()}</strong></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

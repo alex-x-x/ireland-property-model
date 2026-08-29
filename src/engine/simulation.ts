@@ -60,8 +60,6 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   let currentRent = macro.current_monthly_rent_eur;
   let cumulativeRent = 0;
 
-  const maxMortgage = getEffectiveMaxMortgage(mortgage);
-
   for (let m = 0; m <= meta.forecast_months; m++) {
     const currentDate = addMonthsToDate(meta.start_date, m);
     const dateStr = currentDate.toISOString().slice(0, 7); // YYYY-MM
@@ -93,10 +91,12 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
     const retainedShares = currentStockPrice * currentFx > 0 ? currentGsuPool / (currentStockPrice * currentFx) : 0;
     const totalLiquidWealth = currentCash + currentInv + currentGsuPool;
 
+    const maxMortgageAtMonth = getEffectiveMaxMortgage(mortgage, dateStr);
+
     const stampDuty = calculateStampDuty(currentPropPrice, property.stamp_duty_tiers);
     const baseRequiredDeposit = currentPropPrice * property.minimum_deposit_pct;
     const requiredLoan = currentPropPrice - baseRequiredDeposit;
-    const borrowingShortfall = Math.max(0, requiredLoan - maxMortgage);
+    const borrowingShortfall = Math.max(0, requiredLoan - maxMortgageAtMonth);
     const targetCapital = baseRequiredDeposit + stampDuty + property.legal_and_closing_fees_eur + borrowingShortfall;
 
     const surplus = totalLiquidWealth - targetCapital;
@@ -120,7 +120,7 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       vestEvents,
       monthlyRent: currentRent,
       cumulativeRent,
-      maxMortgageAvailable: maxMortgage,
+      maxMortgageAvailable: maxMortgageAtMonth,
       borrowingShortfall,
     });
   }

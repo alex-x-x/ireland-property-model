@@ -7,6 +7,52 @@ export interface AmortizationResult {
   cumulativePrincipalPaid: number;
 }
 
+export interface ActiveSalaryInfo {
+  baseSalary: number;
+  bonusEur: number;
+  bonusPct: number;
+  totalGrossSalary: number;
+}
+
+export function getSalaryAtDate(
+  currentDateStr: string,
+  mortgage: MortgageConfig
+): ActiveSalaryInfo {
+  let base = mortgage.buyer_gross_annual_base_salary_eur ?? mortgage.buyer_gross_annual_salary_eur ?? 0;
+  let bonusPct = mortgage.buyer_annual_bonus_pct ?? 0;
+  let bonusEur = mortgage.buyer_annual_bonus_eur ?? (base * bonusPct);
+
+  // If there are salary adjustments, sort chronologically and pick the latest one on or before currentDateStr
+  if (mortgage.salary_adjustments && mortgage.salary_adjustments.length > 0) {
+    const sortedAdjustments = [...mortgage.salary_adjustments].sort((a, b) =>
+      a.effective_date.localeCompare(b.effective_date)
+    );
+    for (const adj of sortedAdjustments) {
+      if (adj.effective_date <= currentDateStr) {
+        base = adj.base_salary_eur;
+        if (adj.bonus_pct !== undefined && adj.bonus_pct !== null) {
+          bonusPct = adj.bonus_pct;
+          bonusEur = base * bonusPct;
+        } else if (adj.bonus_eur !== undefined && adj.bonus_eur !== null) {
+          bonusEur = adj.bonus_eur;
+          bonusPct = base > 0 ? bonusEur / base : 0;
+        } else {
+          // preserve current bonus percentage
+          bonusEur = base * bonusPct;
+        }
+      }
+    }
+  }
+
+  const total = base + bonusEur;
+  return {
+    baseSalary: base,
+    bonusEur,
+    bonusPct,
+    totalGrossSalary: total,
+  };
+}
+
 export function getBonusAmountEur(mortgage: MortgageConfig): number {
   const base = mortgage.buyer_gross_annual_base_salary_eur || 0;
   if (mortgage.buyer_annual_bonus_pct !== undefined && mortgage.buyer_annual_bonus_pct !== null) {
@@ -92,7 +138,10 @@ export function calculateMaxBorrowingCapacity(
   return Math.max(0, grossAnnualSalaryEur * cbiMaxLtiMultiple);
 }
 
-export function getEffectiveMaxMortgage(mortgage: MortgageConfig): number {
+export function getEffectiveMaxMortgage(
+  mortgage: MortgageConfig,
+  currentDateStr?: string
+): number {
   if (
     mortgage.approval_in_principle_amount_eur !== undefined &&
     mortgage.approval_in_principle_amount_eur !== null &&
@@ -100,6 +149,8 @@ export function getEffectiveMaxMortgage(mortgage: MortgageConfig): number {
   ) {
     return mortgage.approval_in_principle_amount_eur;
   }
-  const totalSalary = getTotalGrossSalary(mortgage);
+  const totalSalary = currentDateStr
+    ? getSalaryAtDate(currentDateStr, mortgage).totalGrossSalary
+    : getTotalGrossSalary(mortgage);
   return calculateMaxBorrowingCapacity(totalSalary, mortgage.cbi_max_lti_multiple);
 }
