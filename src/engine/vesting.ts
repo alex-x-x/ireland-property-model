@@ -12,15 +12,25 @@ export interface ExpandedVestMilestone {
 }
 
 export function addMonthsToDate(dateStr: string, months: number): Date {
-  const d = new Date(dateStr);
-  const targetMonth = d.getMonth() + months;
-  d.setMonth(targetMonth);
+  const parts = dateStr.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed
+  const day = parseInt(parts[2] || '1', 10);
+
+  // Set to 1st of month first to prevent month overflow (e.g. Aug 31 -> Feb 28)
+  const d = new Date(Date.UTC(year, month + months, 1));
+  const maxDaysInTargetMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, maxDaysInTargetMonth));
   return d;
 }
 
 export function getCalendarMonthOffset(startDateStr: string, targetDate: Date): number {
-  const start = new Date(startDateStr);
-  return (targetDate.getFullYear() - start.getFullYear()) * 12 + (targetDate.getMonth() - start.getMonth());
+  const parts = startDateStr.split('-');
+  const startYear = parseInt(parts[0], 10);
+  const startMonth = parseInt(parts[1], 10) - 1;
+  const targetYear = targetDate.getUTCFullYear();
+  const targetMonth = targetDate.getUTCMonth();
+  return (targetYear - startYear) * 12 + (targetMonth - startMonth);
 }
 
 export function getGrantMilestones(grant: Grant): ExpandedVestMilestone[] {
