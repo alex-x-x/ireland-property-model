@@ -144,4 +144,32 @@ describe('Simulation Engine', () => {
     expect(sim[0].targetCapital).toBe(163000);
     expect(sim[0].borrowingShortfall).toBe(0);
   });
+
+  it('calculates monthly savings from Irish net take-home pay when savings_calculation_mode is net_pay_derived', () => {
+    // Base salary: €190,000.
+    // Net Monthly Take-Home (SRCOP €53k, credits €9k) = €9,524.76/mo
+    // Monthly Rent = €2,500/mo (RPZ 0% for simple comparison)
+    // Monthly Living Expenses = €2,500/mo
+    // Derived Monthly Savings = €9,524.76 - €2,500 - €2,500 = €4,524.76/mo
+    const configNetDerived = {
+      ...DEFAULT_CONFIG,
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        current_monthly_rent_eur: 2500,
+        rent_yearly_growth_rate: 0,
+      },
+      tax: {
+        standard_rate_cutoff_eur: 53000,
+        tax_credits_eur: 9000,
+        savings_calculation_mode: 'net_pay_derived' as const,
+        monthly_living_expenses_eur: 2500,
+      },
+    };
+
+    const sim = runSimulation(configNetDerived);
+    // At Month 1, cash should increase by derived monthly savings (~€4,524.76)
+    const cashM0 = sim[0].cash;
+    const cashM1 = sim[1].cash;
+    expect(cashM1 - cashM0).toBeCloseTo(4524.76, 0);
+  });
 });

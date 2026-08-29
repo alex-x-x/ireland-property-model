@@ -75,6 +75,13 @@ export interface MetaConfig {
   stock_symbol: string;
 }
 
+export interface IrishTaxConfig {
+  standard_rate_cutoff_eur: number; // e.g. €53,000 (married 1-earner) or €44,000 (single)
+  tax_credits_eur: number; // e.g. €9,000
+  savings_calculation_mode?: 'explicit' | 'net_pay_derived';
+  monthly_living_expenses_eur?: number; // Non-rent monthly living spend
+}
+
 export interface SimulationConfig {
   meta: MetaConfig;
   property: PropertyConfig;
@@ -82,6 +89,7 @@ export interface SimulationConfig {
   liquid_assets: LiquidAssetsConfig;
   equity_engine: EquityEngineConfig;
   macro: MacroConfig;
+  tax?: IrishTaxConfig;
 }
 
 export interface MonthlyVestEvent {

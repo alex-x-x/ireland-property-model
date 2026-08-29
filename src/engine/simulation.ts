@@ -1,6 +1,7 @@
 import { MonthlyDataPoint, SimulationConfig, StampDutyTier } from './types';
 import { reconcileHistoricalGrants, getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
 import { getEffectiveMaxMortgage, getSalaryAtDate } from './mortgage';
+import { calculateIrishTaxBreakdown } from './tax';
 
 export function calculateStampDuty(
   propertyPrice: number,
@@ -37,7 +38,7 @@ export function calculateStampDuty(
 
 export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   const points: MonthlyDataPoint[] = [];
-  const { meta, property, mortgage, liquid_assets, equity_engine, macro } = config;
+  const { meta, property, mortgage, liquid_assets, equity_engine, macro, tax } = config;
 
   const propMonthlyMult = Math.pow(1 + property.yearly_growth_rate, 1 / 12);
   const invMonthlyMult = Math.pow(1 + liquid_assets.investments_yearly_growth_rate, 1 / 12);
@@ -85,12 +86,23 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       currentStockPrice = equity_engine.current_share_price_usd * Math.pow(1 + equity_engine.stock_yearly_growth_rate, m / 12);
       currentFx = macro.eur_usd_spot * Math.pow(1 + (macro.eur_usd_yearly_drift || 0), m / 12);
       currentInv *= invMonthlyMult;
-      currentCash += liquid_assets.monthly_salary_savings_eur;
       currentRent *= rentMonthlyMult;
       cumulativeRent += currentRent;
 
-      // Pro-rated monthly bonus accrual based on active compensation at date
+      // Active base salary and step-up awareness
       const activeSalary = getSalaryAtDate(dateStr, mortgage);
+
+      // Monthly Savings from Base Salary: explicit or net-pay derived
+      let monthlySavings = liquid_assets.monthly_salary_savings_eur;
+      if (tax && tax.savings_calculation_mode === 'net_pay_derived') {
+        const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, tax);
+        const livingExpenses = tax.monthly_living_expenses_eur ?? 2500;
+        // Monthly Savings = Net Monthly Take-Home - Rent - Living Expenses
+        monthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - currentRent - livingExpenses);
+      }
+      currentCash += monthlySavings;
+
+      // Pro-rated monthly bonus accrual based on active compensation at date
       accumulatedBonusEur += activeSalary.bonusEur / 12;
 
       // Annual bonus payout in March (or configured payout month)

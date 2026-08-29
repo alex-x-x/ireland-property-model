@@ -68,4 +68,10 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     current_monthly_rent_eur: 2500,
     rent_yearly_growth_rate: 0.02, // Dublin RPZ statutory cap baseline
   },
+  tax: {
+    standard_rate_cutoff_eur: 53000, // Irish Standard Rate Cut-Off (e.g. Married 1-Earner €53k, Single €44k)
+    tax_credits_eur: 9000,           // Annual Tax Credits
+    savings_calculation_mode: 'explicit',
+    monthly_living_expenses_eur: 2500,
+  },
 };
