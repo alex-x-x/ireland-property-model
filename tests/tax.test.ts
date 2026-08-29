@@ -82,4 +82,25 @@ describe('Irish Progressive Tax Engine', () => {
     // Married profile has higher SRCOP (€53k vs €44k) and higher credits (€9k vs €4k), resulting in higher net take-home
     expect(married.netAnnualTakeHome).toBeGreaterThan(single.netAnnualTakeHome);
   });
+
+  it('handles zero, negative, and extreme edge case salary scenarios gracefully', () => {
+    const zeroBreakdown = calculateIrishTaxBreakdown(0);
+    expect(zeroBreakdown.totalTax).toBe(0);
+    expect(zeroBreakdown.netAnnualTakeHome).toBe(0);
+    expect(zeroBreakdown.netMonthlyTakeHome).toBe(0);
+
+    const negativeBreakdown = calculateIrishTaxBreakdown(-50000);
+    expect(negativeBreakdown.totalTax).toBe(0);
+    expect(negativeBreakdown.netAnnualTakeHome).toBe(0);
+
+    // Excess tax credits exceeding tax liability: netIncomeTax should clamp to 0
+    const lowIncomeBreakdown = calculateIrishTaxBreakdown(15000, {
+      standard_rate_cutoff_eur: 44000,
+      tax_credits_eur: 9000, // 20% of €15k = €3,000 gross tax; credits = €9k -> net = 0
+    });
+    expect(lowIncomeBreakdown.grossIncomeTax).toBe(3000);
+    expect(lowIncomeBreakdown.taxCreditsUsed).toBe(3000);
+    expect(lowIncomeBreakdown.netIncomeTax).toBe(0);
+    expect(lowIncomeBreakdown.totalTax).toBe(lowIncomeBreakdown.usc + lowIncomeBreakdown.prsi);
+  });
 });

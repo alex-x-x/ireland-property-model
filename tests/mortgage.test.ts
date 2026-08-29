@@ -119,4 +119,44 @@ describe('Mortgage Engine', () => {
     expect(sal2028.totalGrossSalary).toBe(287500);
     expect(getEffectiveMaxMortgage(mortgageWithStepUps, '2028-06-01')).toBe(1150000); // 4.0 * €287,500
   });
+
+  it('handles 0% interest rate, zero principal, and post-term amortization boundary cases', () => {
+    // Zero principal
+    expect(calculateMonthlyMortgagePayment(0, 0.035, 25)).toBe(0);
+    const zeroAmort = calculateMortgageAmortization(0, 0.035, 25, 12);
+    expect(zeroAmort.monthlyPayment).toBe(0);
+    expect(zeroAmort.remainingBalance).toBe(0);
+
+    // 0% Interest Rate: linear division (e.g. €300,000 / 300 months = €1,000/mo)
+    const zeroRatePayment = calculateMonthlyMortgagePayment(300000, 0, 25);
+    expect(zeroRatePayment).toBe(1000);
+
+    const zeroRateAmort = calculateMortgageAmortization(300000, 0, 25, 50);
+    expect(zeroRateAmort.remainingBalance).toBe(250000);
+    expect(zeroRateAmort.cumulativePrincipalPaid).toBe(50000);
+    expect(zeroRateAmort.cumulativeInterestPaid).toBe(0);
+
+    // Months elapsed beyond 25 years (e.g. 350 months > 300 months)
+    const fullyPaidAmort = calculateMortgageAmortization(500000, 0.035, 25, 350);
+    expect(fullyPaidAmort.remainingBalance).toBe(0);
+    expect(fullyPaidAmort.cumulativePrincipalPaid).toBeCloseTo(500000, 0);
+  });
+
+  it('correctly sorts out-of-order salary adjustments', () => {
+    const unSortedMortgage = {
+      buyer_gross_annual_base_salary_eur: 150000,
+      cbi_max_lti_multiple: 4.0,
+      mortgage_interest_rate: 0.035,
+      mortgage_term_years: 25,
+      yearly_maintenance_rate: 0.01,
+      salary_adjustments: [
+        { id: '2', effective_date: '2028-01-01', base_salary_eur: 220000 },
+        { id: '1', effective_date: '2027-01-01', base_salary_eur: 180000 },
+      ],
+    };
+
+    expect(getSalaryAtDate('2026-06-01', unSortedMortgage).baseSalary).toBe(150000);
+    expect(getSalaryAtDate('2027-06-01', unSortedMortgage).baseSalary).toBe(180000);
+    expect(getSalaryAtDate('2028-06-01', unSortedMortgage).baseSalary).toBe(220000);
+  });
 });
