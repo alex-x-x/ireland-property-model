@@ -39,6 +39,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     stock_yearly_growth_rate: 0.10,
     current_share_price_usd: 150.00,
     marginal_tax_rate_ireland: 0.52, // 40% PAYE + 8% USC + 4% PRSI
+    initial_vested_shares_held: 300, // Currently held vested shares at start date
     grants: [
       {
         id: 'initial_grant',

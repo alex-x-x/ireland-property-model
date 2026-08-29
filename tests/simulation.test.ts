@@ -111,4 +111,20 @@ describe('Simulation Engine', () => {
     expect(march2027).toBeDefined();
     expect(march2027!.netBonusReceivedEur).toBeCloseTo(32000 * 0.48, 1);
   });
+
+  it('initializes GSU equity pool with explicitly held vested shares at Model Start Date', () => {
+    const configWithHeldShares = {
+      ...DEFAULT_CONFIG,
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        initial_vested_shares_held: 500,
+        grants: [], // no future grants
+      },
+    };
+
+    const sim = runSimulation(configWithHeldShares);
+    expect(sim[0].retainedShares).toBe(500);
+    // At M0: 500 shares * $150 * 0.91 FX = €68,250
+    expect(sim[0].gsuPool).toBeCloseTo(500 * 150 * 0.91, 1);
+  });
 });

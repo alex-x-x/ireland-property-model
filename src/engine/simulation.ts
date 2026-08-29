@@ -55,7 +55,14 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   let currentFx = macro.eur_usd_spot;
   let currentCash = liquid_assets.cash_eur + liquid_assets.cash_usd * currentFx;
   let currentInv = liquid_assets.investments_eur + liquid_assets.investments_usd * currentFx;
-  let currentRetainedShares = recon.totalRetainedVestedShares;
+
+  const initialVestedShares =
+    equity_engine.initial_vested_shares_held !== undefined &&
+    equity_engine.initial_vested_shares_held !== null
+      ? equity_engine.initial_vested_shares_held
+      : recon.totalRetainedVestedShares;
+
+  let currentRetainedShares = initialVestedShares;
   let currentGsuPool = currentRetainedShares * currentStockPrice * currentFx;
   let currentRent = macro.current_monthly_rent_eur;
   let cumulativeRent = 0;
