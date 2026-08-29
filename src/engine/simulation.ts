@@ -123,7 +123,13 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
     const maxMortgageAtMonth = getEffectiveMaxMortgage(mortgage, dateStr);
 
     const stampDuty = calculateStampDuty(currentPropPrice, property.stamp_duty_tiers);
-    const baseRequiredDeposit = currentPropPrice * property.minimum_deposit_pct;
+    const effectiveDepositPct =
+      property.minimum_deposit_pct !== undefined && property.minimum_deposit_pct !== null
+        ? property.minimum_deposit_pct
+        : property.deposit_eur && property.target_price_eur > 0
+        ? property.deposit_eur / property.target_price_eur
+        : 0.10;
+    const baseRequiredDeposit = currentPropPrice * effectiveDepositPct;
     const requiredLoan = currentPropPrice - baseRequiredDeposit;
     const borrowingShortfall = Math.max(0, requiredLoan - maxMortgageAtMonth);
     const targetCapital = baseRequiredDeposit + stampDuty + property.legal_and_closing_fees_eur + borrowingShortfall;

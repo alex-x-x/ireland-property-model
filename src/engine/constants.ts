@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     target_price_eur: 1000000,
     yearly_growth_rate: 0.05,
     minimum_deposit_pct: 0.10,
+    deposit_eur: 100000,
     stamp_duty_tiers: [
       { up_to: 1000000, rate: 0.01 },
       { up_to: null, rate: 0.02 },

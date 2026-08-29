@@ -127,4 +127,21 @@ describe('Simulation Engine', () => {
     // At M0: 500 shares * $150 * 0.91 FX = €68,250
     expect(sim[0].gsuPool).toBeCloseTo(500 * 150 * 0.91, 1);
   });
+
+  it('correctly calculates target deposit from explicit deposit_eur when minimum_deposit_pct is undefined', () => {
+    const configWithDepositEur = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 1000000,
+        minimum_deposit_pct: undefined,
+        deposit_eur: 150000, // 15% deposit
+      },
+    };
+
+    const sim = runSimulation(configWithDepositEur as any);
+    // At M0: 15% deposit (€150k) + Stamp duty (€10k) + Fees (€3k) = €163,000
+    expect(sim[0].targetCapital).toBe(163000);
+    expect(sim[0].borrowingShortfall).toBe(0);
+  });
 });
