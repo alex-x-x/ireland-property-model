@@ -8,6 +8,7 @@ import {
   Sparkles,
   Radio,
   FileSpreadsheet,
+  Check,
 } from 'lucide-react';
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import { PRESET_SCENARIOS } from '../engine/presets';
@@ -22,6 +23,7 @@ interface NavbarProps {
   onOpenMarketDataModal: () => void;
   onOpenTableModal: () => void;
   monthlyPoints: MonthlyDataPoint[];
+  onSyncMarketData?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMarketDataModal,
   onOpenTableModal,
   monthlyPoints,
+  onSyncMarketData,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +80,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const isSynced =
+    marketData &&
+    config.equity_engine.current_share_price_usd === marketData.stockPriceUsd &&
+    config.macro.eur_usd_spot === marketData.eurUsdRate;
 
   const statusColor =
     marketData?.status === 'live'
@@ -124,20 +132,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             </select>
           </div>
 
-          {/* Market Data Badge */}
-          <button
-            onClick={onOpenMarketDataModal}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${statusColor}`}
-            title="Click to view market data feed details or refresh"
-          >
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-            <span>{marketData?.stockSymbol || 'GOOGL'}: ${marketData?.stockPriceUsd?.toFixed(1) || '185.0'}</span>
-            <span className="text-slate-400">•</span>
-            <span>€/$ {marketData?.eurUsdRate?.toFixed(3) || '0.915'}</span>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-1 py-0.2 rounded bg-slate-900/50">
-              {marketData?.status === 'live' ? 'Live' : marketData?.status === 'cached' ? 'Cached' : 'Offline Mode'}
-            </span>
-          </button>
+          {/* Market Data Badge & Sync */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onOpenMarketDataModal}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${statusColor}`}
+              title="Click to view market data feed details or configure rates"
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              <span>{marketData?.stockSymbol || 'GOOGL'}: ${marketData?.stockPriceUsd?.toFixed(1) || '185.0'}</span>
+              <span className="text-slate-400">•</span>
+              <span>€/$ {marketData?.eurUsdRate?.toFixed(3) || '0.915'}</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1 py-0.2 rounded bg-slate-900/50">
+                {marketData?.status === 'live' ? 'Live' : marketData?.status === 'cached' ? 'Cached' : 'Offline Mode'}
+              </span>
+            </button>
+
+            {onSyncMarketData && marketData && !isSynced && (
+              <button
+                onClick={onSyncMarketData}
+                className="px-2 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-colors flex items-center gap-1"
+                title="Sync latest live market price to current simulation model"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sync</span>
+              </button>
+            )}
+          </div>
 
           {/* Audit Log Table Button */}
           <button

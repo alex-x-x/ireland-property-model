@@ -92,7 +92,7 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
                   ? 'Live Public Feed Active'
                   : marketData?.status === 'cached'
                   ? 'Cached Feed Active'
-                  : 'Offline Benchmark / Demo Fallback Mode'}
+                  : 'Offline Benchmark / Fallback Mode'}
               </div>
               <p className="mt-0.5 opacity-90">{marketData?.source}</p>
               {marketData?.errorMessage && (
@@ -104,7 +104,14 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
           {/* Current Values Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-750">
-              <span className="text-xs text-slate-400 font-medium">Alphabet ({symbol}) Stock Price</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-medium">Alphabet ({symbol})</span>
+                {marketData?.isLiveStock ? (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">LIVE</span>
+                ) : (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-400 font-bold">BENCHMARK</span>
+                )}
+              </div>
               <div className="text-xl font-bold text-white mt-1">
                 ${marketData?.stockPriceUsd?.toFixed(2) || '185.00'} <span className="text-xs font-normal text-slate-400">USD</span>
               </div>
@@ -116,7 +123,14 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-750">
-              <span className="text-xs text-slate-400 font-medium">EUR/USD Exchange Rate</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-medium">EUR/USD FX Rate</span>
+                {marketData?.isLiveFx ? (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">LIVE</span>
+                ) : (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-400 font-bold">BENCHMARK</span>
+                )}
+              </div>
               <div className="text-xl font-bold text-white mt-1">
                 €{marketData?.eurUsdRate?.toFixed(4) || '0.9150'} <span className="text-xs font-normal text-slate-400">/ $1</span>
               </div>
@@ -187,7 +201,7 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
         <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-850 flex items-center justify-between">
           <button
             onClick={handleUseFetchedClick}
-            className="text-xs text-brand-400 hover:text-brand-300 font-medium underline flex items-center gap-1"
+            className="text-xs text-brand-400 hover:text-brand-300 font-semibold underline flex items-center gap-1"
           >
             <span>Sync Live Rates to Model</span>
             <ArrowRight className="w-3 h-3" />
