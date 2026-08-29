@@ -42,7 +42,6 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   const propMonthlyMult = Math.pow(1 + property.yearly_growth_rate, 1 / 12);
   const invMonthlyMult = Math.pow(1 + liquid_assets.investments_yearly_growth_rate, 1 / 12);
   const stockMonthlyMult = Math.pow(1 + equity_engine.stock_yearly_growth_rate, 1 / 12);
-  const fxMonthlyMult = Math.pow(1 + (macro.eur_usd_yearly_drift || 0), 1 / 12);
   const rentMonthlyMult = Math.pow(1 + (macro.rent_yearly_growth_rate || 0), 1 / 12);
 
   // Month 0 Initialization
