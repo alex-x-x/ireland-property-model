@@ -149,7 +149,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 <span className="text-slate-400 text-[11px] font-sans">Income: </span>
                 <span className="font-bold text-emerald-400">€{Math.round(totalSalary / 1000)}k</span>
                 <span className="text-[10px] text-slate-400 font-sans ml-1">
-                  (€{Math.round((config.mortgage.buyer_gross_annual_base_salary_eur ?? totalSalary) / 1000)}k + €{Math.round((config.mortgage.buyer_annual_bonus_eur ?? 0) / 1000)}k bonus)
+                  (€{Math.round((config.mortgage.buyer_gross_annual_base_salary_eur ?? totalSalary) / 1000)}k + {
+                    config.mortgage.buyer_annual_bonus_pct !== undefined
+                      ? `${(config.mortgage.buyer_annual_bonus_pct * 100).toFixed(1).replace(/\.0$/, '')}%`
+                      : `€${Math.round((config.mortgage.buyer_annual_bonus_eur || 0) / 1000)}k`
+                  } bonus)
                 </span>
               </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
@@ -283,47 +287,90 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 <h4 className="font-bold text-slate-200">Income & AIP Borrowing</h4>
               </div>
 
-              {/* Base Salary and Bonus */}
+              {/* Base Salary and Dual Bonus % / € */}
+              <div>
+                <label className="text-slate-400 block mb-1">Base Salary (€)</label>
+                <input
+                  type="number"
+                  step="5000"
+                  disabled={isProfileLocked}
+                  value={config.mortgage.buyer_gross_annual_base_salary_eur ?? 190000}
+                  onChange={(e) => {
+                    const base = parseFloat(e.target.value) || 0;
+                    const bonusPct = config.mortgage.buyer_annual_bonus_pct ?? 0.1842;
+                    const bonusEur = base * bonusPct;
+                    onChange({
+                      ...config,
+                      mortgage: {
+                        ...config.mortgage,
+                        buyer_gross_annual_base_salary_eur: base,
+                        buyer_annual_bonus_eur: bonusEur,
+                        buyer_gross_annual_salary_eur: base + bonusEur,
+                      },
+                    });
+                  }}
+                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-slate-400 block mb-1">Base Salary (€)</label>
-                  <input
-                    type="number"
-                    step="5000"
-                    disabled={isProfileLocked}
-                    value={config.mortgage.buyer_gross_annual_base_salary_eur ?? 190000}
-                    onChange={(e) => {
-                      const base = parseFloat(e.target.value) || 0;
-                      const bonus = config.mortgage.buyer_annual_bonus_eur || 0;
-                      onChange({
-                        ...config,
-                        mortgage: {
-                          ...config.mortgage,
-                          buyer_gross_annual_base_salary_eur: base,
-                          buyer_gross_annual_salary_eur: base + bonus,
-                        },
-                      });
-                    }}
-                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
-                  />
+                  <label className="text-slate-400 block mb-1">Bonus %</label>
+                  <div className="flex items-center bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700">
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      disabled={isProfileLocked}
+                      value={
+                        config.mortgage.buyer_annual_bonus_pct !== undefined
+                          ? Math.round(config.mortgage.buyer_annual_bonus_pct * 100)
+                          : config.mortgage.buyer_gross_annual_base_salary_eur
+                          ? Math.round(((config.mortgage.buyer_annual_bonus_eur || 0) / config.mortgage.buyer_gross_annual_base_salary_eur) * 100)
+                          : 0
+                      }
+                      onChange={(e) => {
+                        const pct = (parseFloat(e.target.value) || 0) / 100;
+                        const base = config.mortgage.buyer_gross_annual_base_salary_eur || 0;
+                        const bonusEur = base * pct;
+                        onChange({
+                          ...config,
+                          mortgage: {
+                            ...config.mortgage,
+                            buyer_annual_bonus_pct: pct,
+                            buyer_annual_bonus_eur: bonusEur,
+                            buyer_gross_annual_salary_eur: base + bonusEur,
+                          },
+                        });
+                      }}
+                      className="w-full bg-transparent text-white font-bold focus:outline-none"
+                    />
+                    <span className="text-slate-400 font-medium">%</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-slate-400 block mb-1">Bonus (€)</label>
                   <input
                     type="number"
-                    step="2500"
+                    step="1000"
                     disabled={isProfileLocked}
-                    value={config.mortgage.buyer_annual_bonus_eur ?? 35000}
+                    value={Math.round(
+                      config.mortgage.buyer_annual_bonus_eur ??
+                        (config.mortgage.buyer_gross_annual_base_salary_eur || 0) * (config.mortgage.buyer_annual_bonus_pct || 0)
+                    )}
                     onChange={(e) => {
-                      const bonus = parseFloat(e.target.value) || 0;
+                      const bonusEur = parseFloat(e.target.value) || 0;
                       const base = config.mortgage.buyer_gross_annual_base_salary_eur || 0;
+                      const pct = base > 0 ? bonusEur / base : 0;
                       onChange({
                         ...config,
                         mortgage: {
                           ...config.mortgage,
-                          buyer_annual_bonus_eur: bonus,
-                          buyer_gross_annual_salary_eur: base + bonus,
+                          buyer_annual_bonus_eur: bonusEur,
+                          buyer_annual_bonus_pct: pct,
+                          buyer_gross_annual_salary_eur: base + bonusEur,
                         },
                       });
                     }}

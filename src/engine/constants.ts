@@ -21,6 +21,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     mortgage_term_years: 25,
     yearly_maintenance_rate: 0.01,
     buyer_gross_annual_base_salary_eur: 190000,
+    buyer_annual_bonus_pct: 0.1842, // ~18.4% target bonus (€35k)
     buyer_annual_bonus_eur: 35000,
     buyer_gross_annual_salary_eur: 225000,
     cbi_max_lti_multiple: 4.0, // Central Bank of Ireland FTB LTI rule

@@ -16,7 +16,8 @@ export interface MortgageConfig {
   mortgage_term_years: number;
   yearly_maintenance_rate: number;
   buyer_gross_annual_base_salary_eur: number;
-  buyer_annual_bonus_eur: number;
+  buyer_annual_bonus_pct?: number; // Target bonus percentage (e.g. 0.20 for 20%)
+  buyer_annual_bonus_eur?: number; // Target bonus absolute value (e.g. €38,000)
   buyer_gross_annual_salary_eur?: number; // legacy fallback / total
   cbi_max_lti_multiple: number;
   approval_in_principle_amount_eur?: number | null; // explicit AIP loan limit
