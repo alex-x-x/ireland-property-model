@@ -7,9 +7,22 @@ export interface AmortizationResult {
   cumulativePrincipalPaid: number;
 }
 
+export function getBonusAmountEur(mortgage: MortgageConfig): number {
+  const base = mortgage.buyer_gross_annual_base_salary_eur || 0;
+  if (mortgage.buyer_annual_bonus_pct !== undefined && mortgage.buyer_annual_bonus_pct !== null) {
+    return base * mortgage.buyer_annual_bonus_pct;
+  }
+  if (mortgage.buyer_annual_bonus_eur !== undefined && mortgage.buyer_annual_bonus_eur !== null) {
+    return mortgage.buyer_annual_bonus_eur;
+  }
+  return 0;
+}
+
 export function getTotalGrossSalary(mortgage: MortgageConfig): number {
-  if (mortgage.buyer_gross_annual_base_salary_eur !== undefined) {
-    return (mortgage.buyer_gross_annual_base_salary_eur || 0) + (mortgage.buyer_annual_bonus_eur || 0);
+  if (mortgage.buyer_gross_annual_base_salary_eur !== undefined && mortgage.buyer_gross_annual_base_salary_eur !== null) {
+    const base = mortgage.buyer_gross_annual_base_salary_eur;
+    const bonus = getBonusAmountEur(mortgage);
+    return base + bonus;
   }
   return mortgage.buyer_gross_annual_salary_eur || 0;
 }

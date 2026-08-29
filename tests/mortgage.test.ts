@@ -59,5 +59,15 @@ describe('Mortgage Engine', () => {
       approval_in_principle_amount_eur: 850000,
     };
     expect(getEffectiveMaxMortgage(mortgageConfigWithAip)).toBe(850000);
+
+    // With bonus percentage (20% on €200k base = €40k bonus, €240k total)
+    const mortgageWithPctBonus = {
+      ...mortgageConfigWithoutAip,
+      buyer_gross_annual_base_salary_eur: 200000,
+      buyer_annual_bonus_pct: 0.20,
+      buyer_annual_bonus_eur: undefined,
+    };
+    expect(getTotalGrossSalary(mortgageWithPctBonus)).toBe(240000);
+    expect(getEffectiveMaxMortgage(mortgageWithPctBonus)).toBe(960000); // 4.0 * €240k
   });
 });
