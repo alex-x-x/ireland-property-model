@@ -20,6 +20,7 @@ import {
 import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
 import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
+import { calculateIrishTaxBreakdown } from '../engine/tax';
 
 interface PersonalProfileHeaderProps {
   config: SimulationConfig;
@@ -67,6 +68,24 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
   const updateMacro = (field: keyof SimulationConfig['macro'], value: any) => {
     onChange({ ...config, macro: { ...config.macro, [field]: value } });
   };
+
+  const updateTax = (field: keyof NonNullable<SimulationConfig['tax']>, value: any) => {
+    onChange({
+      ...config,
+      tax: {
+        ...(config.tax || {
+          standard_rate_cutoff_eur: 53000,
+          tax_credits_eur: 9000,
+          savings_calculation_mode: 'explicit',
+          monthly_living_expenses_eur: 2500,
+        }),
+        [field]: value,
+      },
+    });
+  };
+
+  const baseSalary = config.mortgage.buyer_gross_annual_base_salary_eur ?? 190000;
+  const taxBreakdown = calculateIrishTaxBreakdown(baseSalary, config.tax);
 
   const handleAddInitialGrant = () => {
     const newGrant: Grant = {
@@ -767,11 +786,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
               </div>
             </div>
 
-            {/* Column 4: Rent & Irish Tax */}
+            {/* Column 4: Irish Tax & Rent Baseline */}
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
               <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
                 <Building className="w-4 h-4 text-rose-400" />
-                <h4 className="font-bold text-slate-200">Rent & Tax Baseline</h4>
+                <h4 className="font-bold text-slate-200">Irish Tax & Rent Baseline</h4>
               </div>
 
               <div>
@@ -786,20 +805,67 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 />
               </div>
 
+              {/* Standard Rate Cut-Off Point (SRCOP) with Quick Presets */}
               <div>
-                <label className="text-slate-400 block mb-1">Irish GSU Marginal Tax Rate</label>
-                <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                  <input
-                    type="number"
-                    step="1"
-                    min="20"
-                    max="60"
-                    disabled={isProfileLocked}
-                    value={Math.round(config.equity_engine.marginal_tax_rate_ireland * 100)}
-                    onChange={(e) => updateEquityEngine('marginal_tax_rate_ireland', (parseFloat(e.target.value) || 52) / 100)}
-                    className="w-full bg-transparent text-white font-bold focus:outline-none"
-                  />
-                  <span className="text-slate-400 font-medium">%</span>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 block">Standard Rate Cut-Off (20% Band) (€)</label>
+                  {!isProfileLocked && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => updateTax('standard_rate_cutoff_eur', 44000)}
+                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        title="Single Person: €44,000"
+                      >
+                        Single €44k
+                      </button>
+                      <button
+                        onClick={() => updateTax('standard_rate_cutoff_eur', 53000)}
+                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        title="Married (1 Earner): €53,000"
+                      >
+                        Married €53k
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  step="1000"
+                  disabled={isProfileLocked}
+                  value={config.tax?.standard_rate_cutoff_eur ?? 53000}
+                  onChange={(e) => updateTax('standard_rate_cutoff_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Annual Tax Credits */}
+              <div>
+                <label className="text-slate-400 block mb-1">Annual Tax Credits (€)</label>
+                <input
+                  type="number"
+                  step="500"
+                  disabled={isProfileLocked}
+                  value={config.tax?.tax_credits_eur ?? 9000}
+                  onChange={(e) => updateTax('tax_credits_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Live Irish Tax & Net Take-Home Summary Card */}
+              <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 space-y-1 text-[11px] font-sans">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Net Monthly Base Pay:</span>
+                  <strong className="text-emerald-400 font-mono text-xs">
+                    €{Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}/mo
+                  </strong>
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/60">
+                  <span>Effective Base Tax:</span>
+                  <span className="text-slate-300 font-mono">{(taxBreakdown.effectiveTaxRate * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Marginal GSU/Bonus Tax:</span>
+                  <span className="text-purple-300 font-mono font-bold">52.0%</span>
                 </div>
               </div>
 
