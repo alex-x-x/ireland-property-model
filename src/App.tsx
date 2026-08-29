@@ -73,6 +73,12 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleQuickSync = () => {
+    if (marketData) {
+      handleApplyMarketData(marketData.stockPriceUsd, marketData.eurUsdRate, marketData.stockSymbol);
+    }
+  };
+
   const handleResetDefault = () => {
     if (window.confirm('Reset all parameters back to default Irish tech professional baseline?')) {
       setConfig(DEFAULT_CONFIG);
@@ -104,6 +110,7 @@ export const App: React.FC = () => {
         onOpenMarketDataModal={() => setIsMarketModalOpen(true)}
         onOpenTableModal={() => setIsTableModalOpen(true)}
         monthlyPoints={monthlyPoints}
+        onSyncMarketData={handleQuickSync}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
