@@ -95,4 +95,33 @@ describe('Decision Engine', () => {
 
     expect(decision.recommendedAction).toBe('buy_asap');
   });
+
+  it('correctly models multi-year holding horizon vs short-term closing date horizon', () => {
+    const config60 = {
+      ...DEFAULT_CONFIG,
+      meta: { ...DEFAULT_CONFIG.meta, forecast_months: 60 },
+      property: { ...DEFAULT_CONFIG.property, yearly_growth_rate: 0.05, target_price_eur: 750000 },
+      equity_engine: { ...DEFAULT_CONFIG.equity_engine, stock_yearly_growth_rate: 0.20 },
+    };
+    const monthly60 = runSimulation(config60);
+    const decision60 = runDecisionAnalysis(config60, monthly60);
+
+    const config12 = {
+      ...DEFAULT_CONFIG,
+      meta: { ...DEFAULT_CONFIG.meta, forecast_months: 12 },
+      property: { ...DEFAULT_CONFIG.property, yearly_growth_rate: 0.05, target_price_eur: 750000 },
+      equity_engine: { ...DEFAULT_CONFIG.equity_engine, stock_yearly_growth_rate: 0.20 },
+    };
+    const monthly12 = runSimulation(config12);
+    const decision12 = runDecisionAnalysis(config12, monthly12);
+
+    // At 60 months, all scenarios are evaluated after 5 full years
+    const wait12Scenario60m = decision60.scenarios.find((s) => s.id === 'wait_12m');
+    expect(wait12Scenario60m).toBeDefined();
+
+    // At 12 months, the evaluation ends at Month 12
+    const wait12Scenario12m = decision12.scenarios.find((s) => s.id === 'wait_12m');
+    expect(wait12Scenario12m).toBeDefined();
+    expect(wait12Scenario12m?.totalNetWealthAtM60).toBeLessThan(wait12Scenario60m?.totalNetWealthAtM60 ?? 0);
+  });
 });

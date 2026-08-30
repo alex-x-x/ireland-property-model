@@ -79,6 +79,11 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
             </h3>
             <p className="text-xs text-slate-400">
               Evaluates <strong className="text-brand-300">Month {horizonMonths} ({horizonYears} Yr{horizonYears === '1' ? '' : 's'})</strong> Net Wealth Advantage (Wait & Compound vs Buy ASAP)
+              {horizonMonths < 60 && (
+                <span className="block text-[11px] text-amber-300/90 mt-0.5">
+                  ⚠️ Note: M{horizonMonths} measures balance sheets on Month {horizonMonths}. Select <strong>5Y (M60)</strong> for the full 5-year post-purchase holding comparison.
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -167,6 +172,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
                 </td>
                 {row.cells.map((cell, cIdx) => {
                   const isWait = cell.winner === 'wait_and_compound';
+                  const displayDelta = isWait ? cell.delta : Math.abs(cell.delta);
 
                   return (
                     <td
@@ -176,16 +182,18 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
                           ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/20'
                           : 'bg-brand-950/40 text-brand-300 border border-brand-500/20'
                       }`}
-                      title={`Stock Growth: ${(cell.stockRate * 100).toFixed(0)}% p.a. | Property Growth: ${(cell.propRate * 100).toFixed(0)}% p.a.\nOptimal Action: ${
-                        isWait ? 'Wait & Compound Equity' : 'Buy ASAP'
-                      }\nYear ${horizonYears} (${horizonMonths} Mo) Net Wealth Advantage: ${cell.delta >= 0 ? '+' : ''}€${Math.round(cell.delta).toLocaleString()}`}
+                      title={`Stock Growth: ${(cell.stockRate * 100).toFixed(0)}% p.a. | Property Growth: ${(cell.propRate * 100).toFixed(0)}% p.a.\nOptimal Action at Month ${horizonMonths}: ${
+                        isWait ? 'Wait & Compound Equity' : 'Buy ASAP (Month 0)'
+                      }\nNet Wealth Advantage at Month ${horizonMonths}: +€${Math.round(displayDelta).toLocaleString()} for ${isWait ? 'Waiting' : 'Buying ASAP'}${
+                        horizonMonths < 60 ? `\n(Note: Set Horizon to 5Y / M60 to evaluate 5-year full post-purchase holding wealth)` : ''
+                      }`}
                     >
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-80">
                           {isWait ? 'WAIT' : 'BUY NOW'}
                         </span>
                         <span className="text-xs font-mono font-bold">
-                          {cell.delta >= 0 ? '+' : ''}€{Math.round(cell.delta / 1000)}k
+                          +€{Math.round(displayDelta / 1000)}k
                         </span>
                       </div>
                     </td>
