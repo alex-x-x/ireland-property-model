@@ -231,7 +231,19 @@ When purchasing a home at month $t$, the required deposit and closing costs are 
 </details>
 
 <details>
-<summary><strong>📐 7. Opportunity Cost & Delta Calculation (Click to expand)</strong></summary>
+<summary><strong>📐 7. Dynamic Net-Pay Derived Monthly Cash Savings (Click to expand)</strong></summary>
+
+Rather than forcing users to guess a static monthly savings number, the model dynamically computes net monthly savings from active base salary, tax bands, rent/mortgage, and monthly living expenses:
+* **Pre-Purchase (Renting):**
+  $$\text{Monthly Savings} = \text{Net Monthly Base Pay} - \text{Current Monthly Rent} - \text{Monthly Living Expenses}$$
+* **Post-Purchase (Homeowner):**
+  $$\text{Monthly Savings} = \text{Net Monthly Base Pay} - \text{Monthly Mortgage Payment} - \text{Maintenance} - \text{Monthly Living Expenses}$$
+
+When a planned **future salary step-up / promotion** occurs (e.g. +€30,000 gross base), your net monthly take-home increases by $+~€1,250/\text{mo}$, which **immediately and automatically flows into higher monthly cash accumulation**.
+</details>
+
+<details>
+<summary><strong>📐 8. Opportunity Cost & Delta Calculation (Click to expand)</strong></summary>
 
 At Year 5 ($t=60$), total net wealth for any scenario $S$ is evaluated as:
 $$\text{Net Wealth}_{60}(S) = \text{Remaining Liquid Wealth}_{60}(S) + \text{Home Equity}_{60}(S)$$

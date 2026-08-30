@@ -87,6 +87,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
   const baseSalary = config.mortgage.buyer_gross_annual_base_salary_eur ?? 190000;
   const taxBreakdown = calculateIrishTaxBreakdown(baseSalary, config.tax);
+  const livingExpenses = config.tax?.monthly_living_expenses_eur ?? 2500;
+  const currentRent = config.macro.current_monthly_rent_eur || 0;
+  const derivedMonthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - currentRent - livingExpenses);
+  const isNetPayDerived = config.tax?.savings_calculation_mode !== 'explicit';
+  const activeMonthlySavings = isNetPayDerived ? derivedMonthlySavings : config.liquid_assets.monthly_salary_savings_eur;
 
   const handleAddInitialGrant = () => {
     const newGrant: Grant = {
@@ -230,12 +235,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
               </div>
               <div
                 className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300"
-                title={`Total Grants: ${vestingSummary.totalGrantedShares.toLocaleString()} granted (${vestingSummary.unvestedGrossShares.toLocaleString()} unvested + ${vestingSummary.pastVestedGrossShares.toLocaleString()} past vested)`}
+                title={`Monthly Savings: €${Math.round(activeMonthlySavings).toLocaleString()}/mo (${isNetPayDerived ? 'Dynamic Net-Pay Derived: Net Pay €' + Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString() + ' - Rent €' + currentRent.toLocaleString() + ' - Living €' + livingExpenses.toLocaleString() : 'Fixed Explicit'})`}
               >
-                <span className="text-slate-400 text-[11px] font-sans">GSUs: </span>
-                <span className="font-bold text-purple-300">
-                  {config.equity_engine.initial_vested_shares_held ?? 0} held + {vestingSummary.unvestedGrossShares.toLocaleString()} unvested shs
-                </span>
+                <span className="text-slate-400 text-[11px] font-sans">Savings: </span>
+                <span className="font-bold text-sky-400">€{Math.round(activeMonthlySavings).toLocaleString()}/mo</span>
+                {isNetPayDerived && <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/20 text-sky-300 ml-1 font-sans">auto</span>}
               </div>
             </div>
           )}
@@ -795,16 +799,90 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 </span>
               </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">Monthly Salary Savings (€)</label>
-                <input
-                  type="number"
-                  step="250"
-                  disabled={isProfileLocked}
-                  value={config.liquid_assets.monthly_salary_savings_eur}
-                  onChange={(e) => updateLiquidAssets('monthly_salary_savings_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
-                />
+              {/* Monthly Living Expenses & Dynamic Savings */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    Monthly Living Expenses (€)
+                    <InfoTooltip
+                      title="Monthly Non-Housing Living Expenses"
+                      content="Groceries, dining, utilities, broadband, transport, insurance, gym, subscriptions, and discretionary leisure (excluding rent and mortgage). When in Dynamic Mode, your monthly cash savings automatically equals Net Take-Home minus Rent minus Living Expenses."
+                    />
+                  </label>
+                  {!isProfileLocked && (
+                    <button
+                      onClick={() =>
+                        updateTax(
+                          'savings_calculation_mode',
+                          isNetPayDerived ? 'explicit' : 'net_pay_derived'
+                        )
+                      }
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold border transition-colors ${
+                        isNetPayDerived
+                          ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                      }`}
+                      title={
+                        isNetPayDerived
+                          ? 'Click to switch to manual fixed savings input'
+                          : 'Click to switch to automatic net-pay derived savings'
+                      }
+                    >
+                      {isNetPayDerived ? '⚡ Auto-Derived' : 'Fixed Manual'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="100"
+                    min="0"
+                    disabled={isProfileLocked}
+                    value={config.tax?.monthly_living_expenses_eur ?? 2500}
+                    onChange={(e) =>
+                      updateTax('monthly_living_expenses_eur', parseFloat(e.target.value) || 0)
+                    }
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                    placeholder="e.g. 2500 (groceries, leisure, etc.)"
+                  />
+                </div>
+
+                {/* Dynamic Net Pay Breakdown or Fixed Manual Input */}
+                {isNetPayDerived ? (
+                  <div className="bg-slate-900/90 p-2 rounded-lg border border-sky-500/20 space-y-1 text-[11px] font-sans">
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Net Base Pay:</span>
+                      <span className="text-emerald-300 font-mono">€{Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Rent Paid:</span>
+                      <span className="text-rose-400 font-mono">-€{currentRent.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Living Expenses:</span>
+                      <span className="text-amber-300 font-mono">-€{livingExpenses.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-white font-bold">
+                      <span className="text-sky-300">⚡ Dynamic Monthly Savings:</span>
+                      <span className="text-sky-300 font-mono text-xs">€{Math.round(derivedMonthlySavings).toLocaleString()}/mo</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-slate-400 block mb-1">Fixed Manual Savings (€)</label>
+                    <input
+                      type="number"
+                      step="250"
+                      disabled={isProfileLocked}
+                      value={config.liquid_assets.monthly_salary_savings_eur}
+                      onChange={(e) =>
+                        updateLiquidAssets('monthly_salary_savings_eur', parseFloat(e.target.value) || 0)
+                      }
+                      className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-amber-500/30 text-amber-200 font-bold focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

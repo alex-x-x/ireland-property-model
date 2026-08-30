@@ -4,8 +4,9 @@ import {
   PurchaseScenario,
   SimulationConfig,
 } from './types';
-import { calculateMortgageAmortization } from './mortgage';
+import { calculateMortgageAmortization, getSalaryAtDate } from './mortgage';
 import { getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
+import { calculateIrishTaxBreakdown } from './tax';
 
 interface PostPurchaseSimulation {
   remainingLiquidWealthAtM60: number;
@@ -140,9 +141,22 @@ function simulateTrajectoryForPurchaseMonth(
     cumulativeMaintenancePaid += monthlyMaintenance;
 
     // Post-purchase cashflow adjustment:
-    // User stops paying rent, pays mortgage + maintenance
-    const savingsDelta = currentRent - (amort.monthlyPayment + monthlyMaintenance);
-    currentCash += liquid_assets.monthly_salary_savings_eur + savingsDelta;
+    const currentDate = addMonthsToDate(meta.start_date, m);
+    const dateStr = currentDate.toISOString().slice(0, 7);
+    const activeSalary = getSalaryAtDate(dateStr, mortgage);
+
+    let monthlySavings = liquid_assets.monthly_salary_savings_eur;
+    if (config.tax && config.tax.savings_calculation_mode === 'net_pay_derived') {
+      const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, config.tax);
+      const livingExpenses = config.tax.monthly_living_expenses_eur ?? 2500;
+      // Post-purchase savings: Net Take-Home - Mortgage - Maintenance - Living Expenses
+      monthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - (amort.monthlyPayment + monthlyMaintenance) - livingExpenses);
+    } else {
+      // User stops paying rent, pays mortgage + maintenance
+      const savingsDelta = currentRent - (amort.monthlyPayment + monthlyMaintenance);
+      monthlySavings = Math.max(0, liquid_assets.monthly_salary_savings_eur + savingsDelta);
+    }
+    currentCash += monthlySavings;
 
     currentRent *= rentMonthlyMult;
   }

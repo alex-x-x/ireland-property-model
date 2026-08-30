@@ -124,4 +124,25 @@ describe('Decision Engine', () => {
     expect(wait12Scenario12m).toBeDefined();
     expect(wait12Scenario12m?.totalNetWealthAtM60).toBeLessThan(wait12Scenario60m?.totalNetWealthAtM60 ?? 0);
   });
+
+  it('correctly models post-purchase cashflow under net_pay_derived mode with living expenses', () => {
+    const configDerived = {
+      ...DEFAULT_CONFIG,
+      tax: {
+        standard_rate_cutoff_eur: 53000,
+        tax_credits_eur: 9000,
+        savings_calculation_mode: 'net_pay_derived' as const,
+        monthly_living_expenses_eur: 2500,
+      },
+    };
+
+    const monthlyPoints = runSimulation(configDerived);
+    const decision = runDecisionAnalysis(configDerived, monthlyPoints);
+
+    expect(decision.scenarios.length).toBeGreaterThan(0);
+    for (const s of decision.scenarios) {
+      expect(Number.isFinite(s.totalNetWealthAtM60)).toBe(true);
+      expect(Number.isFinite(s.remainingLiquidWealthAtM60)).toBe(true);
+    }
+  });
 });

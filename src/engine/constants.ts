@@ -72,7 +72,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   tax: {
     standard_rate_cutoff_eur: 53000, // Irish Standard Rate Cut-Off (e.g. Married 1-Earner €53k, Single €44k)
     tax_credits_eur: 9000,           // Annual Tax Credits
-    savings_calculation_mode: 'explicit',
-    monthly_living_expenses_eur: 2500,
+    savings_calculation_mode: 'net_pay_derived', // Dynamic savings: Net Take-Home - Rent - Living Expenses
+    monthly_living_expenses_eur: 2500,           // Monthly non-rent / non-mortgage living spend
   },
 };

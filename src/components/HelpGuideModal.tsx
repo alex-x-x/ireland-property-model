@@ -442,6 +442,26 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                   </ol>
                 </div>
               </details>
+
+              {/* Math 6 */}
+              <details className="group p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2 cursor-pointer transition-colors open:bg-slate-800/80">
+                <summary className="font-bold text-white text-xs flex items-center justify-between">
+                  <span className="text-brand-300">📐 6. Dynamic Net-Pay Derived Monthly Cash Savings</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="pt-2 text-xs space-y-2 text-slate-300 border-t border-slate-750 mt-2 font-mono">
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    Automatically scales monthly cash savings when salary steps up or when transitioning from rent to mortgage:
+                  </p>
+                  <div className="p-2.5 rounded bg-slate-900 text-purple-300 space-y-1">
+                    <div>Pre-Purchase (Renting): Savings = Net Base Pay - Rent - Living Expenses</div>
+                    <div>Post-Purchase (Owner): Savings = Net Base Pay - Mortgage PMT - Maintenance - Living Expenses</div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    When a salary promotion occurs (e.g. +€30k gross), extra net take-home pay (+~€1,250/mo) immediately flows into higher monthly cash accumulation.
+                  </p>
+                </div>
+              </details>
             </div>
           )}
         </div>

@@ -173,6 +173,61 @@ describe('Simulation Engine', () => {
     expect(cashM1 - cashM0).toBeCloseTo(4524.76, 0);
   });
 
+  it('dynamically scales monthly cash savings when salary increases under net_pay_derived mode', () => {
+    // Start Date: 2026-08-01
+    // Initial Base: €140,000. Net Monthly Take-Home (SRCOP €53k, credits €9k) = €7,324.76/mo.
+    // Monthly Rent = €2,000/mo, Living Expenses = €2,500/mo.
+    // Derived Monthly Savings (M1-M11) = €7,324.76 - €2,000 - €2,500 = €2,824.76/mo.
+    // Step-up at Month 12 (2027-08-01): Base increases to €180,000 (+€40k/yr).
+    // Net Monthly Take-Home from €180k = €9,084.76/mo (Δ = +€1,760/mo).
+    // Derived Monthly Savings (M12+) = €9,084.76 - €2,000 - €2,500 = €4,584.76/mo.
+    const configSalaryStepSavings = {
+      ...DEFAULT_CONFIG,
+      meta: {
+        ...DEFAULT_CONFIG.meta,
+        start_date: '2026-08-01',
+      },
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        current_monthly_rent_eur: 2000,
+        rent_yearly_growth_rate: 0,
+      },
+      tax: {
+        standard_rate_cutoff_eur: 53000,
+        tax_credits_eur: 9000,
+        savings_calculation_mode: 'net_pay_derived' as const,
+        monthly_living_expenses_eur: 2500,
+      },
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        buyer_gross_annual_base_salary_eur: 140000,
+        buyer_annual_bonus_pct: 0,
+        buyer_annual_bonus_eur: 0,
+        salary_adjustments: [
+          {
+            id: 'promo_m12',
+            effective_date: '2027-08-01', // Month 12
+            base_salary_eur: 180000,
+            bonus_pct: 0,
+          },
+        ],
+      },
+    };
+
+    const sim = runSimulation(configSalaryStepSavings);
+
+    // M1 cash increment:
+    expect(sim[1].cash - sim[0].cash).toBeCloseTo(3024.76, 0);
+
+    // M11 cash increment (before step-up):
+    expect(sim[11].cash - sim[10].cash).toBeCloseTo(3024.76, 0);
+
+    // M12 cash increment (after step-up to €180k):
+    // Jump from €3,024.76 to €4,624.76 (+€1,600/mo after 52% marginal tax)!
+    expect(sim[12].cash - sim[11].cash).toBeCloseTo(4624.76, 0);
+    expect(sim[13].cash - sim[12].cash).toBeCloseTo(4624.76, 0);
+  });
+
   it('handles extreme downturn / bear market scenarios without negative balances or NaN errors', () => {
     const bearConfig = {
       ...DEFAULT_CONFIG,
