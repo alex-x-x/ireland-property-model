@@ -122,3 +122,70 @@ export function getVestingMilestonesForMonth(
 
   return events;
 }
+
+export interface GrantVestingSummary {
+  totalGrantedShares: number;
+  pastVestedGrossShares: number;
+  unvestedGrossShares: number;
+  unvestedWithinHorizonGrossShares: number;
+}
+
+export function calculateGrantVestingSummary(
+  grants: Grant[],
+  startDateStr: string,
+  horizonMonths: number = 60
+): GrantVestingSummary {
+  let totalGrantedShares = 0;
+  let pastVestedGrossShares = 0;
+  let unvestedGrossShares = 0;
+  let unvestedWithinHorizonGrossShares = 0;
+
+  for (const grant of grants) {
+    totalGrantedShares += grant.total_shares;
+    const milestones = getGrantMilestones(grant);
+    for (const milestone of milestones) {
+      const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
+      const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
+      const grossShares = grant.total_shares * milestone.percent;
+      if (offset <= 0) {
+        pastVestedGrossShares += grossShares;
+      } else {
+        unvestedGrossShares += grossShares;
+        if (offset <= horizonMonths) {
+          unvestedWithinHorizonGrossShares += grossShares;
+        }
+      }
+    }
+  }
+
+  return {
+    totalGrantedShares: Math.round(totalGrantedShares),
+    pastVestedGrossShares: Math.round(pastVestedGrossShares),
+    unvestedGrossShares: Math.round(unvestedGrossShares),
+    unvestedWithinHorizonGrossShares: Math.round(unvestedWithinHorizonGrossShares),
+  };
+}
+
+export function calculateSingleGrantVesting(
+  grant: Grant,
+  startDateStr: string
+): { pastGross: number; unvestedGross: number } {
+  const milestones = getGrantMilestones(grant);
+  let pastGross = 0;
+  let unvestedGross = 0;
+  for (const milestone of milestones) {
+    const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
+    const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
+    const grossShares = grant.total_shares * milestone.percent;
+    if (offset <= 0) {
+      pastGross += grossShares;
+    } else {
+      unvestedGross += grossShares;
+    }
+  }
+  return {
+    pastGross: Math.round(pastGross),
+    unvestedGross: Math.round(unvestedGross),
+  };
+}
+

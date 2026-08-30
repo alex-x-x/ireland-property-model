@@ -18,7 +18,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
-import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
+import { addMonthsToDate, getCalendarMonthOffset, calculateGrantVestingSummary, calculateSingleGrantVesting } from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
 import { calculateIrishTaxBreakdown } from '../engine/tax';
 import { InfoTooltip } from './InfoTooltip';
@@ -41,7 +41,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const grants = config.equity_engine.grants;
-  const totalGrantShares = grants.reduce((sum, g) => sum + g.total_shares, 0);
+  const vestingSummary = calculateGrantVestingSummary(grants, config.meta.start_date, config.meta.forecast_months);
   const totalSalary = getTotalGrossSalary(config.mortgage);
   const cbiCalculatedLoan = totalSalary * config.mortgage.cbi_max_lti_multiple;
   const effectiveMaxLoan = getEffectiveMaxMortgage(config.mortgage);
@@ -228,10 +228,13 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 <span className="text-slate-400 text-[11px] font-sans">Rent: </span>
                 <span className="font-bold text-rose-400">€{config.macro.current_monthly_rent_eur.toLocaleString()}/mo</span>
               </div>
-              <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
+              <div
+                className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300"
+                title={`Total Grants: ${vestingSummary.totalGrantedShares.toLocaleString()} granted (${vestingSummary.unvestedGrossShares.toLocaleString()} unvested + ${vestingSummary.pastVestedGrossShares.toLocaleString()} past vested)`}
+              >
                 <span className="text-slate-400 text-[11px] font-sans">GSUs: </span>
                 <span className="font-bold text-purple-300">
-                  {config.equity_engine.initial_vested_shares_held ?? 0} held + {totalGrantShares} unvested shs
+                  {config.equity_engine.initial_vested_shares_held ?? 0} held + {vestingSummary.unvestedGrossShares.toLocaleString()} unvested shs
                 </span>
               </div>
             </div>
@@ -911,7 +914,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     Google Stock Unit (GSU) Grants Baseline & Future Cliffs
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    Total: {totalGrantShares} gross shares across {grants.length} grants •
+                    <strong className="text-purple-300 font-semibold">{vestingSummary.unvestedGrossShares.toLocaleString()} unvested shares</strong> ({vestingSummary.totalGrantedShares.toLocaleString()} total granted across {grants.length} grants) •
                     {config.macro.use_manual_market_override ? (
                       <span className="text-rose-400 font-semibold ml-1 font-mono">
                         [OVERRIDE: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$]
@@ -977,61 +980,73 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
             {/* Grant Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {grants.map((grant) => (
-                <div
-                  key={grant.id}
-                  className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        disabled={isProfileLocked}
-                        value={grant.name || grant.id}
-                        onChange={(e) => handleUpdateGrant(grant.id, { name: e.target.value })}
-                        className="bg-transparent font-semibold text-xs text-white focus:outline-none focus:border-b border-purple-500 w-full"
-                        placeholder="Grant Name"
-                      />
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="capitalize px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[9px]">
-                          {grant.type}
-                        </span>
-                        <span>Grant Date:</span>
-                        <input
-                          type="date"
-                          disabled={isProfileLocked}
-                          value={grant.grant_date}
-                          onChange={(e) => handleUpdateGrant(grant.id, { grant_date: e.target.value })}
-                          className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 border border-slate-700 text-[10px] focus:outline-none"
-                        />
+              {grants.map((grant) => {
+                const grantVesting = calculateSingleGrantVesting(grant, config.meta.start_date);
+                return (
+                  <div
+                    key={grant.id}
+                    className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            disabled={isProfileLocked}
+                            value={grant.name || grant.id}
+                            onChange={(e) => handleUpdateGrant(grant.id, { name: e.target.value })}
+                            className="bg-transparent font-semibold text-xs text-white focus:outline-none focus:border-b border-purple-500 flex-1"
+                            placeholder="Grant Name"
+                          />
+                          <span className="text-[10px] text-purple-300 font-mono font-semibold">
+                            {grantVesting.unvestedGross.toLocaleString()} unvested
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span className="capitalize px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[9px]">
+                            {grant.type}
+                          </span>
+                          <span>Grant Date:</span>
+                          <input
+                            type="date"
+                            disabled={isProfileLocked}
+                            value={grant.grant_date}
+                            onChange={(e) => handleUpdateGrant(grant.id, { grant_date: e.target.value })}
+                            className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 border border-slate-700 text-[10px] focus:outline-none"
+                          />
+                        </div>
                       </div>
+
+                      {!isProfileLocked && (
+                        <button
+                          onClick={() => handleDeleteGrant(grant.id)}
+                          className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors"
+                          title="Remove grant"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
 
-                    {!isProfileLocked && (
-                      <button
-                        onClick={() => handleDeleteGrant(grant.id)}
-                        className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors"
-                        title="Remove grant"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
-                      <span className="text-[10px] text-slate-400 block font-medium">Total Shares</span>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <input
-                          type="number"
-                          disabled={isProfileLocked}
-                          value={grant.total_shares}
-                          onChange={(e) => handleUpdateGrant(grant.id, { total_shares: parseInt(e.target.value) || 0 })}
-                          className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none"
-                        />
-                        <span className="text-[10px] text-slate-400">shs</span>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
+                          <span>Total Granted</span>
+                          {grantVesting.pastGross > 0 && (
+                            <span className="text-slate-500">{grantVesting.pastGross} past</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <input
+                            type="number"
+                            disabled={isProfileLocked}
+                            value={grant.total_shares}
+                            onChange={(e) => handleUpdateGrant(grant.id, { total_shares: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none"
+                          />
+                          <span className="text-[10px] text-slate-400">shs</span>
+                        </div>
                       </div>
-                    </div>
 
                     <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
                       <span className="text-[10px] text-slate-400 block font-medium">Frequency</span>
@@ -1080,11 +1095,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 };

@@ -4,6 +4,8 @@ import {
   getVestingMilestonesForMonth,
   addMonthsToDate,
   getCalendarMonthOffset,
+  calculateGrantVestingSummary,
+  calculateSingleGrantVesting,
 } from '../src/engine/vesting';
 import { Grant } from '../src/engine/types';
 
@@ -114,5 +116,24 @@ describe('Vesting Engine', () => {
     expect(events.length).toBe(2);
     const totalGross = events.reduce((sum, e) => sum + e.grossShares, 0);
     expect(totalGross).toBeCloseTo(33 + 5, 1);
+  });
+
+  it('accurately calculates unvested vs past vested shares in calculateGrantVestingSummary', () => {
+    // Initial grant: 1000 shares total, granted 2024-08-01 (Y1=330, Y2=330, Y3=220, Y4=120)
+    // As of 2026-08-29 (24 months elapsed): Y1 (330) + Y2 (330) = 660 vested in past, 340 unvested.
+    // Refresher 2025: 200 shares total, granted 2025-08-01 (quarterly 4 x 50 shares over 12 months)
+    // As of 2026-08-29 (12 months elapsed): all 4 quarters (200 shares) vested in past, 0 unvested.
+    const summary = calculateGrantVestingSummary([initialGrant, refresherGrant], '2026-08-29', 60);
+
+    expect(summary.totalGrantedShares).toBe(1200);
+    expect(summary.pastVestedGrossShares).toBe(660 + 200); // 860 shares
+    expect(summary.unvestedGrossShares).toBe(340 + 0); // 340 shares
+    expect(summary.unvestedWithinHorizonGrossShares).toBe(340);
+  });
+
+  it('calculates single grant vesting breakdown properly', () => {
+    const single = calculateSingleGrantVesting(initialGrant, '2026-08-29');
+    expect(single.pastGross).toBe(660);
+    expect(single.unvestedGross).toBe(340);
   });
 });
