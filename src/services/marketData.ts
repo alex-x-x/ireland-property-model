@@ -123,39 +123,63 @@ export async function fetchMarketData(
     }
   }
 
-  // 3. Fetch Stock Price (Local Vite Proxy first, direct Yahoo, then CORS-friendly proxies)
-  const rawYahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
-  const stockEndpoints = [
-    `/api/yahoo/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
-    rawYahooUrl,
-    `https://corsproxy.io/?url=${encodeURIComponent(rawYahooUrl)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(rawYahooUrl)}`,
-  ];
-
-  for (const endpoint of stockEndpoints) {
-    try {
-      const stockResp = await fetch(endpoint, { signal: AbortSignal.timeout(4000) });
-      if (stockResp.ok) {
-        const stockData = await stockResp.json();
-        const meta = stockData?.chart?.result?.[0]?.meta;
-        const regularMarketPrice = meta?.regularMarketPrice;
-        if (regularMarketPrice) {
-          liveStockPrice = Number(regularMarketPrice);
-          sources.push(`Yahoo Finance (${symbol})`);
+  // 3. Fetch Stock Price
+  // 3a. Nasdaq public quote API — no key required, CORS-open, 15-min delayed or last close
+  try {
+    const nasdaqResp = await fetch(
+      `https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/info?assetclass=stocks`,
+      { signal: AbortSignal.timeout(4000) }
+    );
+    if (nasdaqResp.ok) {
+      const nasdaqData = await nasdaqResp.json();
+      const rawPrice = nasdaqData?.data?.primaryData?.lastSalePrice as string | undefined;
+      if (rawPrice) {
+        const parsed = parseFloat(rawPrice.replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) {
+          liveStockPrice = parsed;
+          sources.push(`Nasdaq (${symbol}, 15-min delayed)`);
         }
-
-        const quotes = stockData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-        if (Array.isArray(quotes) && quotes.length > 0) {
-          const validCloses = quotes.filter((q: number) => typeof q === 'number');
-          if (validCloses.length > 0) {
-            historicalStockPrice = validCloses[0];
-          }
-        }
-
-        if (liveStockPrice !== null) break;
       }
-    } catch {
-      // Try next
+    }
+  } catch {
+    // Fall through to Yahoo endpoints
+  }
+
+  // 3b. Yahoo Finance via Vite dev proxy, direct, then public CORS proxies (fallback chain)
+  if (liveStockPrice === null) {
+    const rawYahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
+    const stockEndpoints = [
+      `/api/yahoo/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
+      rawYahooUrl,
+      `https://corsproxy.io/?url=${encodeURIComponent(rawYahooUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(rawYahooUrl)}`,
+    ];
+
+    for (const endpoint of stockEndpoints) {
+      try {
+        const stockResp = await fetch(endpoint, { signal: AbortSignal.timeout(4000) });
+        if (stockResp.ok) {
+          const stockData = await stockResp.json();
+          const meta = stockData?.chart?.result?.[0]?.meta;
+          const regularMarketPrice = meta?.regularMarketPrice;
+          if (regularMarketPrice) {
+            liveStockPrice = Number(regularMarketPrice);
+            sources.push(`Yahoo Finance (${symbol})`);
+          }
+
+          const quotes = stockData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+          if (Array.isArray(quotes) && quotes.length > 0) {
+            const validCloses = quotes.filter((q: number) => typeof q === 'number');
+            if (validCloses.length > 0) {
+              historicalStockPrice = validCloses[0];
+            }
+          }
+
+          if (liveStockPrice !== null) break;
+        }
+      } catch {
+        // Try next
+      }
     }
   }
 

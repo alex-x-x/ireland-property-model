@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --base=/dublin-property-model/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
