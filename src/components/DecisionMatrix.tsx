@@ -142,25 +142,78 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
 
                   {/* Metric Rows */}
                   <div className="space-y-1.5 text-xs text-slate-300 pt-1 border-t border-slate-800/80">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Total Net Wealth (Y5):</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 inline-flex items-center gap-1">
+                        <span>Total Net Wealth (Y5):</span>
+                        <InfoTooltip
+                          title="Total Net Wealth at Year 5"
+                          content="Combined net worth at Month 60 = Home Equity (Y5) + Liquid Wealth (Cash + GSUs + Investments)."
+                        />
+                      </span>
                       <span className="font-bold text-white">€{Math.round(s.totalNetWealthAtM60).toLocaleString()}</span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Home Equity (Y5):</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 inline-flex items-center gap-1">
+                        <span>Home Equity (Y5):</span>
+                        <InfoTooltip
+                          title="Home Equity (Year 5 / Month 60)"
+                          content={
+                            s.homeEquityAtM60 > 0 ? (
+                              <div className="space-y-1.5 text-slate-300">
+                                <p>
+                                  Net unencumbered value of your home at Month 60 (Market Value minus Remaining Mortgage Debt).
+                                </p>
+                                <div className="pt-1 border-t border-slate-700/60 font-mono text-[11px] space-y-0.5">
+                                  <div className="flex justify-between">
+                                    <span>Y5 Market Value:</span>
+                                    <span className="text-white">€{Math.round(s.propertyValueAtM60).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-rose-300">
+                                    <span>Remaining Mortgage:</span>
+                                    <span>-€{Math.round(s.remainingMortgageBalanceAtM60).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-emerald-400 font-bold border-t border-slate-700 pt-0.5">
+                                    <span>Home Equity:</span>
+                                    <span>€{Math.round(s.homeEquityAtM60).toLocaleString()}</span>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-slate-400 pt-1">
+                                  Accumulated from: €{Math.round(s.depositPaid).toLocaleString()} deposit + €{Math.round(s.propertyValueAtM60 - s.propertyPurchasePrice).toLocaleString()} property appreciation + €{Math.round(s.cumulativeMortgagePrincipalPaid).toLocaleString()} principal paid down.
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-slate-300">
+                                <strong>€0 Home Equity:</strong> In this scenario you rent for the full 5 years. 100% of your wealth remains in liquid assets (Cash, GSUs, Investments) rather than real estate.
+                              </p>
+                            )
+                          }
+                        />
+                      </span>
                       <span className="font-semibold text-emerald-400">
                         {s.homeEquityAtM60 > 0 ? `€${Math.round(s.homeEquityAtM60).toLocaleString()}` : '€0 (Renting)'}
                       </span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Liquid Wealth (Y5):</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 inline-flex items-center gap-1">
+                        <span>Liquid Wealth (Y5):</span>
+                        <InfoTooltip
+                          title="Liquid Wealth at Year 5"
+                          content="Cash in bank + Unsold GSUs (projected value) + Trading Investments remaining at Month 60."
+                        />
+                      </span>
                       <span className="text-slate-200">€{Math.round(s.remainingLiquidWealthAtM60).toLocaleString()}</span>
                     </div>
 
-                    <div className="flex justify-between text-rose-400">
-                      <span className="text-slate-400">Sunk Rent Paid:</span>
+                    <div className="flex justify-between items-center text-rose-400">
+                      <span className="text-slate-400 inline-flex items-center gap-1">
+                        <span>Sunk Rent Paid:</span>
+                        <InfoTooltip
+                          title="Sunk Rent Paid"
+                          content="Non-recoverable rent paid to landlord prior to purchasing (or across all 5 years if renting)."
+                        />
+                      </span>
                       <span>-€{Math.round(s.cumulativeRentPaid).toLocaleString()}</span>
                     </div>
 
