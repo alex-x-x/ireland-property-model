@@ -164,13 +164,6 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
   );
   const shockPaymentDelta = shockedPayment - overpaymentResult.standardMonthlyPayment;
 
-  const handleCycleRateShock = () => {
-    setRateShockPct((prev) => {
-      const idx = RATE_SHOCK_OPTIONS.indexOf(prev);
-      const nextIdx = idx >= 0 && idx < RATE_SHOCK_OPTIONS.length - 1 ? idx + 1 : 0;
-      return RATE_SHOCK_OPTIONS[nextIdx];
-    });
-  };
 
   // Chart data: Sample down schedule for clear visualization (every 12 months)
   const chartData = useMemo(() => {
@@ -437,9 +430,9 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                 max="10"
                 value={interestRatePct}
                 onChange={(e) => setInterestRatePct(parseFloat(e.target.value) || 3.5)}
-                className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
+                className="min-w-0 w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
               />
-              <span className="text-slate-400 text-xs">%</span>
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs">%</span>
             </div>
           </div>
 
@@ -452,9 +445,9 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                 max="35"
                 value={termYears}
                 onChange={(e) => setTermYears(parseInt(e.target.value, 10) || 25)}
-                className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
+                className="min-w-0 w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
               />
-              <span className="text-slate-400 text-xs font-sans">yrs</span>
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs font-sans">yrs</span>
             </div>
           </div>
         </div>
@@ -466,28 +459,10 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
         <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-slate-400 text-xs block">Monthly Mortgage Payment</span>
-            <button
-              onClick={handleCycleRateShock}
-              className={`flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
-                rateShockPct === 0
-                  ? 'text-slate-300 bg-slate-800 hover:bg-slate-750 border-slate-700'
-                  : rateShockPct <= 1.0
-                  ? 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/30'
-                  : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'
-              }`}
-              title={
-                rateShockPct === 0
-                  ? `Simulated Flat Rate (0.0% hike): €${Math.round(shockedPayment).toLocaleString()}/mo. Click to cycle rate shock levels (0%, +0.5%, +1.0%, +1.5%, +2.0%, +3.0%).`
-                  : `Simulated +${rateShockPct}% rate increase at fixed renewal: €${Math.round(shockedPayment).toLocaleString()}/mo (+€${Math.round(shockPaymentDelta).toLocaleString()}/mo). Click to cycle rate shock levels.`
-              }
-            >
-              <ShieldAlert className="w-3 h-3" />
-              <span>
-                {rateShockPct === 0
-                  ? `0.0% (Flat): €${Math.round(shockedPayment).toLocaleString()}`
-                  : `+${rateShockPct}%: €${Math.round(shockedPayment).toLocaleString()}`}
-              </span>
-            </button>
+            <InfoTooltip
+              title="Variable Rate Shock"
+              content="Set a rate shock scenario in the Overpayment Simulator below to see stressed payment here."
+            />
           </div>
           <div className="text-xl font-bold font-mono text-indigo-300">
             €{Math.round(overpaymentResult.standardMonthlyPayment).toLocaleString()}<span className="text-xs font-sans text-slate-400">/mo</span>
@@ -495,6 +470,12 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
           <div className="text-[10px] text-slate-400 font-sans">
             Maint: +€{Math.round(monthlyMaintenance).toLocaleString()}/mo • Total: <strong className="text-slate-200">€{Math.round(monthlyHousingCost).toLocaleString()}</strong>
           </div>
+          {rateShockPct > 0 && (
+            <div className={`text-[10px] font-mono mt-0.5 ${rateShockPct <= 1.0 ? 'text-sky-300' : 'text-amber-400'}`}>
+              ⚡ +{rateShockPct}% shock: €{Math.round(shockedPayment).toLocaleString()}/mo
+              <span className="text-slate-400"> (+€{Math.round(shockPaymentDelta).toLocaleString()}/mo)</span>
+            </div>
+          )}
         </div>
 
         {/* Card 2: Free Cashflow Buffer */}
@@ -565,12 +546,11 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
         </div>
 
         {/* Overpayment Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-400 block text-[11px]">
-                Fixed Rate Period (Lockout)
-              </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-4 items-start">
+          {/* Col 1: Fixed Rate Lock */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between h-5">
+              <label className="text-slate-400 text-[11px]">Fixed Rate Period (Lockout)</label>
               <span className="text-[10px] text-sky-400 font-bold font-mono">
                 {fixedRateYears > 0 ? `${fixedRateYears}y Lock` : 'Variable'}
               </span>
@@ -582,31 +562,80 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                 max="10"
                 value={fixedRateYears}
                 onChange={(e) => setFixedRateYears(parseInt(e.target.value, 10) || 0)}
-                className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
+                className="min-w-0 w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
               />
-              <span className="text-slate-400 text-xs font-sans">years</span>
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs font-sans">years</span>
             </div>
-            <span className="text-[10px] text-slate-500 block mt-0.5">
+            <span className="text-[10px] text-slate-500">
               {fixedRateYears > 0 ? `Overpayments start Month ${fixedRateYears * 12 + 1}` : 'Variable rate (immediate overpayments)'}
             </span>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-400 block text-[11px]">
-                Monthly Overpayment (€/mo)
+          {/* Col 2: Variable Rate Shock */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between h-5">
+              <label className="text-slate-400 text-[11px] flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
+                Variable Rate Shock
               </label>
+              <span className={`text-[10px] font-bold font-mono ${rateShockPct === 0 ? 'text-slate-500' : rateShockPct <= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
+                {rateShockPct === 0 ? 'Flat' : `+${rateShockPct}%`}
+              </span>
+            </div>
+            <div className={`flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border ${rateShockPct === 0 ? 'border-slate-700' : rateShockPct <= 1.0 ? 'border-sky-500/40' : 'border-amber-500/40'}`}>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                max="5"
+                value={rateShockPct}
+                onChange={(e) => setRateShockPct(parseFloat(e.target.value) || 0)}
+                className={`min-w-0 w-full bg-transparent font-mono font-bold text-xs focus:outline-none ${rateShockPct === 0 ? 'text-slate-300' : rateShockPct <= 1.0 ? 'text-sky-300' : 'text-amber-300'}`}
+              />
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs">% hike</span>
+            </div>
+            {/* Quick-select pills */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {RATE_SHOCK_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setRateShockPct(opt)}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                    rateShockPct === opt
+                      ? opt === 0
+                        ? 'bg-slate-600 text-white border-slate-500'
+                        : opt <= 1.0
+                        ? 'bg-sky-600 text-white border-sky-400'
+                        : 'bg-amber-600 text-white border-amber-400'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-750'
+                  }`}
+                >
+                  {opt === 0 ? '0%' : `+${opt}%`}
+                </button>
+              ))}
+            </div>
+            {rateShockPct > 0 ? (
+              <span className={`text-[10px] font-mono ${rateShockPct <= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
+                Stressed: €{Math.round(shockedPayment).toLocaleString()}/mo (+€{Math.round(shockPaymentDelta).toLocaleString()})
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-500">ECB/stress test scenarios</span>
+            )}
+          </div>
+
+          {/* Col 3: Monthly Overpayment */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between h-5">
+              <label className="text-slate-400 text-[11px]">Monthly Overpayment</label>
               {freeCashflowBuffer > 0 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setMonthlyOverpayment(maxSafeOverpayment)}
-                    className="px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-colors flex items-center gap-1"
-                    title={`Fill 50% of free monthly cashflow buffer (safe discretionary margin: €${maxSafeOverpayment}/mo)`}
-                  >
-                    <Zap className="w-2.5 h-2.5" />
-                    <span>Safe 50% (+€{maxSafeOverpayment})</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setMonthlyOverpayment(maxSafeOverpayment)}
+                  className="px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-colors flex items-center gap-1"
+                  title={`Fill 50% of free monthly cashflow buffer (safe discretionary margin: €${maxSafeOverpayment}/mo)`}
+                >
+                  <Zap className="w-2.5 h-2.5" />
+                  <span>50% (+€{maxSafeOverpayment})</span>
+                </button>
               )}
             </div>
             <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-emerald-500/30">
@@ -616,21 +645,20 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                 min="0"
                 value={monthlyOverpayment}
                 onChange={(e) => setMonthlyOverpayment(parseFloat(e.target.value) || 0)}
-                className="w-full bg-transparent text-emerald-300 font-mono font-bold text-xs focus:outline-none"
+                className="min-w-0 w-full bg-transparent text-emerald-300 font-mono font-bold text-xs focus:outline-none"
                 placeholder="e.g. 400"
               />
-              <span className="text-slate-400 text-xs">€/mo</span>
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs">€/mo</span>
             </div>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
+            <span className="text-[10px] text-slate-400">
               Remaining free cash: <strong className="text-emerald-400">€{Math.max(0, Math.round(freeCashflowBuffer - monthlyOverpayment)).toLocaleString()}/mo</strong>
             </span>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-400 block text-[11px]">
-                Annual Bonus Lump Sum (€/yr)
-              </label>
+          {/* Col 4: Annual Bonus Lump Sum */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between h-5">
+              <label className="text-slate-400 text-[11px]">Annual Bonus Lump Sum</label>
               {grossBonusEur > 0 && (
                 <div className="flex items-center gap-1">
                   <button
@@ -645,7 +673,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                     className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors"
                     title={`Fill 50% Net Bonus (net €${halfNetBonusEur.toLocaleString()})`}
                   >
-                    50% Net (€{Math.round(halfNetBonusEur / 1000)}k)
+                    50% (€{Math.round(halfNetBonusEur / 1000)}k)
                   </button>
                 </div>
               )}
@@ -657,12 +685,12 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                 min="0"
                 value={annualLumpSum}
                 onChange={(e) => setAnnualLumpSum(parseFloat(e.target.value) || 0)}
-                className="w-full bg-transparent text-purple-300 font-mono font-bold text-xs focus:outline-none"
-                placeholder="e.g. 10000 (from March bonus)"
+                className="min-w-0 w-full bg-transparent text-purple-300 font-mono font-bold text-xs focus:outline-none"
+                placeholder="e.g. 10000"
               />
-              <span className="text-slate-400 text-xs">€/yr</span>
+              <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs">€/yr</span>
             </div>
-            <span className="text-[10px] text-slate-500 block mt-0.5">
+            <span className="text-[10px] text-slate-500">
               Applied every March. {grossBonusEur > 0 ? `Bonus on file: €${Math.round(grossBonusEur).toLocaleString()} gross (net €${netBonusEur.toLocaleString()} at 52% tax)` : 'Paid after fixed period'}
             </span>
           </div>
