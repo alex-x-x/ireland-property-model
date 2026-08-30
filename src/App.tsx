@@ -48,17 +48,21 @@ export const App: React.FC = () => {
       if (isMounted) {
         setMarketData(res);
         if (!config.macro.use_manual_market_override) {
-          setConfig((prev) => ({
-            ...prev,
-            equity_engine: {
-              ...prev.equity_engine,
-              current_share_price_usd: res.stockPriceUsd,
-            },
-            macro: {
-              ...prev.macro,
-              eur_usd_spot: res.eurUsdRate,
-            },
-          }));
+          setConfig((prev) => {
+            const nextEquity = { ...prev.equity_engine };
+            const nextMacro = { ...prev.macro };
+            if (res.isLiveStock || res.stockStatus === 'cached') {
+              nextEquity.current_share_price_usd = res.stockPriceUsd;
+            }
+            if (res.isLiveFx || res.fxStatus === 'cached') {
+              nextMacro.eur_usd_spot = res.eurUsdRate;
+            }
+            return {
+              ...prev,
+              equity_engine: nextEquity,
+              macro: nextMacro,
+            };
+          });
         }
       }
     });
@@ -71,21 +75,25 @@ export const App: React.FC = () => {
     const res = await fetchMarketData(symbol, config.meta.start_date);
     setMarketData(res);
     if (!config.macro.use_manual_market_override) {
-      setConfig((prev) => ({
-        ...prev,
-        meta: {
-          ...prev.meta,
-          stock_symbol: symbol,
-        },
-        equity_engine: {
-          ...prev.equity_engine,
-          current_share_price_usd: res.stockPriceUsd,
-        },
-        macro: {
-          ...prev.macro,
-          eur_usd_spot: res.eurUsdRate,
-        },
-      }));
+      setConfig((prev) => {
+        const nextEquity = { ...prev.equity_engine };
+        const nextMacro = { ...prev.macro };
+        if (res.isLiveStock || res.stockStatus === 'cached') {
+          nextEquity.current_share_price_usd = res.stockPriceUsd;
+        }
+        if (res.isLiveFx || res.fxStatus === 'cached') {
+          nextMacro.eur_usd_spot = res.eurUsdRate;
+        }
+        return {
+          ...prev,
+          meta: {
+            ...prev.meta,
+            stock_symbol: symbol,
+          },
+          equity_engine: nextEquity,
+          macro: nextMacro,
+        };
+      });
     }
   };
 

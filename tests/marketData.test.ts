@@ -7,15 +7,18 @@ describe('Market Data Service', () => {
   it('provides reliable fallback market data with accurate indicators', () => {
     const fallback = getFallbackMarketData('GOOGL', '2026-08-29');
     expect(fallback.status).toBe('fallback');
-    expect(fallback.stockPriceUsd).toBeGreaterThan(100);
-    expect(fallback.eurUsdRate).toBeGreaterThan(0.8);
-    expect(fallback.eurUsdRate).toBeLessThan(1.2);
+    expect(fallback.stockStatus).toBe('benchmark');
+    expect(fallback.fxStatus).toBe('benchmark');
+    expect(fallback.stockPriceUsd).toBe(346.50);
+    expect(fallback.eurUsdRate).toBe(0.860);
     expect(fallback.source).toContain('Fallback');
   });
 
-  it('handles fetchMarketData without throwing unhandled exceptions', async () => {
+  it('handles fetchMarketData without throwing unhandled exceptions and includes distinct statuses', async () => {
     const result = await fetchMarketData('GOOGL', '2026-08-29');
     expect(['live', 'cached', 'fallback']).toContain(result.status);
+    expect(['live', 'cached', 'benchmark']).toContain(result.stockStatus);
+    expect(['live', 'cached', 'benchmark']).toContain(result.fxStatus);
     expect(result.stockPriceUsd).toBeGreaterThan(0);
     expect(result.eurUsdRate).toBeGreaterThan(0);
   });

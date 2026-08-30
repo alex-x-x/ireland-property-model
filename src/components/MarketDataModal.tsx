@@ -116,14 +116,20 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-750">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400 font-medium">Alphabet ({symbol})</span>
-                {marketData?.isLiveStock ? (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">LIVE</span>
-                ) : (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-400 font-bold">BENCHMARK</span>
-                )}
+                <span
+                  className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-bold border ${
+                    marketData?.stockStatus === 'live'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : marketData?.stockStatus === 'cached'
+                      ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-slate-700 text-slate-400 border-slate-600'
+                  }`}
+                >
+                  {marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}
+                </span>
               </div>
               <div className="text-xl font-bold text-white mt-1">
-                ${marketData?.stockPriceUsd?.toFixed(2) || '185.00'} <span className="text-xs font-normal text-slate-400">USD</span>
+                ${marketData?.stockPriceUsd?.toFixed(2) || '346.50'} <span className="text-xs font-normal text-slate-400">USD</span>
               </div>
               {marketData?.historicalStockPriceUsd && (
                 <div className="text-[11px] text-slate-400 mt-1">
@@ -134,21 +140,25 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
 
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-750">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">EUR/USD FX Rate</span>
-                {marketData?.isLiveFx ? (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">LIVE</span>
-                ) : (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-400 font-bold">BENCHMARK</span>
-                )}
+                <span className="text-xs text-slate-400 font-medium">USD / EUR FX Rate</span>
+                <span
+                  className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-bold border ${
+                    marketData?.fxStatus === 'live'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : marketData?.fxStatus === 'cached'
+                      ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-slate-700 text-slate-400 border-slate-600'
+                  }`}
+                >
+                  {marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'}
+                </span>
               </div>
               <div className="text-xl font-bold text-white mt-1">
-                €{marketData?.eurUsdRate?.toFixed(4) || '0.9150'} <span className="text-xs font-normal text-slate-400">/ $1</span>
+                €{marketData?.eurUsdRate?.toFixed(4) || '0.8600'} <span className="text-xs font-normal text-slate-400">/ $1 USD</span>
               </div>
-              {marketData?.historicalEurUsdRate && (
-                <div className="text-[11px] text-slate-400 mt-1">
-                  Start Date FX: €{marketData.historicalEurUsdRate.toFixed(4)}
-                </div>
-              )}
+              <div className="text-[11px] text-slate-400 mt-1">
+                Inversion: 1 EUR = ${(1 / (marketData?.eurUsdRate || 0.86)).toFixed(4)} USD
+              </div>
             </div>
           </div>
 
