@@ -9,6 +9,7 @@ import {
   Radio,
   FileSpreadsheet,
   Check,
+  BookOpen,
 } from 'lucide-react';
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import { PRESET_SCENARIOS } from '../engine/presets';
@@ -22,6 +23,7 @@ interface NavbarProps {
   marketData: MarketDataResult | null;
   onOpenMarketDataModal: () => void;
   onOpenTableModal: () => void;
+  onOpenHelpModal?: () => void;
   monthlyPoints: MonthlyDataPoint[];
   onSyncMarketData?: () => void;
 }
@@ -33,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   marketData,
   onOpenMarketDataModal,
   onOpenTableModal,
+  onOpenHelpModal,
   monthlyPoints,
   onSyncMarketData,
 }) => {
@@ -221,6 +224,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Table className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline">60-Mo Table</span>
           </button>
+
+          {/* Methodology & Help Guide Button */}
+          {onOpenHelpModal && (
+            <button
+              onClick={onOpenHelpModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-colors shadow-sm"
+              title="Open Comprehensive Documentation & Methodology Guide"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">Guide & Math</span>
+            </button>
+          )}
 
           {/* Export / Import */}
           <div className="flex items-center gap-1">
