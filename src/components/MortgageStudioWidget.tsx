@@ -7,6 +7,7 @@ import {
   Calendar,
   Layers,
   ShieldAlert,
+  ListOrdered,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -16,15 +17,18 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import {
   calculateMortgageWithOverpayments,
   calculateMonthlyMortgagePayment,
   getSalaryAtDate,
+  AmortizationSchedulePoint,
 } from '../engine/mortgage';
 import { calculateIrishTaxBreakdown } from '../engine/tax';
 import { InfoTooltip } from './InfoTooltip';
+import { AmortizationScheduleModal } from './AmortizationScheduleModal';
 
 interface MortgageStudioWidgetProps {
   config: SimulationConfig;
@@ -42,6 +46,8 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
   }, [monthlyPoints]);
 
   const [selectedMonth, setSelectedMonth] = useState<number>(initialAffordableMonth);
+  const [isLedgerModalOpen, setIsLedgerModalOpen] = useState<boolean>(false);
+  const [chartViewMode, setChartViewMode] = useState<'all' | 'balance' | 'principal_interest'>('all');
 
   // Active timeline point at selected purchase month
   const activePoint = monthlyPoints[selectedMonth] || monthlyPoints[0];
@@ -154,40 +160,64 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
 
   // Chart data: Sample down schedule for clear visualization (every 12 months)
   const chartData = useMemo(() => {
-    const data: { year: number; standardBalance: number; overpaymentBalance: number }[] = [];
+    const data: {
+      year: number;
+      standardBalance: number;
+      overpaymentBalance: number;
+      cumulativePrincipal: number;
+      cumulativeInterest: number;
+      standardPrincipal: number;
+      standardInterest: number;
+    }[] = [];
     const standardTotalMonths = termYears * 12;
     const monthlyRate = (interestRatePct / 100) / 12;
     const standardPayment = overpaymentResult.standardMonthlyPayment;
 
     let stdBal = activeLoanAmount;
+    let stdCumInterest = 0;
+    let stdCumPrincipal = 0;
 
-    // Build standard balance map
-    const stdBalanceMap = new Map<number, number>();
-    stdBalanceMap.set(0, activeLoanAmount);
+    // Build standard balance and interest map
+    const stdMap = new Map<number, { balance: number; cumPrincipal: number; cumInterest: number }>();
+    stdMap.set(0, { balance: activeLoanAmount, cumPrincipal: 0, cumInterest: 0 });
     for (let m = 1; m <= standardTotalMonths; m++) {
       const interest = stdBal * monthlyRate;
       const principalPaid = Math.min(stdBal, standardPayment - interest);
       stdBal -= principalPaid;
+      stdCumInterest += interest;
+      stdCumPrincipal += principalPaid;
       if (stdBal <= 0.001) stdBal = 0;
-      stdBalanceMap.set(m, stdBal);
+      stdMap.set(m, { balance: stdBal, cumPrincipal: stdCumPrincipal, cumInterest: stdCumInterest });
     }
 
     // Map overpayment schedule
-    const overpaymentMap = new Map<number, number>();
-    overpaymentMap.set(0, activeLoanAmount);
+    const overpaymentMap = new Map<number, AmortizationSchedulePoint>();
     for (const pt of overpaymentResult.schedule) {
-      overpaymentMap.set(pt.month, pt.balance);
+      overpaymentMap.set(pt.month, pt);
     }
 
     const maxMonths = Math.max(standardTotalMonths, overpaymentResult.actualPayoffMonths);
     for (let m = 0; m <= maxMonths; m += 12) {
       const yr = m / 12;
-      const sBal = stdBalanceMap.get(m) ?? 0;
-      const oBal = m > overpaymentResult.actualPayoffMonths ? 0 : (overpaymentMap.get(m) ?? 0);
+      const stdEntry = stdMap.get(m);
+      const sBal = stdEntry?.balance ?? 0;
+      const stdPrin = stdEntry?.cumPrincipal ?? activeLoanAmount;
+      const stdInt = stdEntry?.cumInterest ?? overpaymentResult.totalInterestStandard;
+
+      const pt = overpaymentMap.get(m);
+      const isPastPayoff = m > overpaymentResult.actualPayoffMonths;
+      const oBal = m === 0 ? activeLoanAmount : isPastPayoff ? 0 : (pt?.balance ?? 0);
+      const cumPrin = m === 0 ? 0 : isPastPayoff ? activeLoanAmount : (pt?.cumulativePrincipalPaid ?? activeLoanAmount);
+      const cumInt = m === 0 ? 0 : isPastPayoff ? overpaymentResult.totalInterestWithOverpayment : (pt?.cumulativeInterestPaid ?? overpaymentResult.totalInterestWithOverpayment);
+
       data.push({
         year: yr,
         standardBalance: Math.round(sBal),
         overpaymentBalance: Math.round(oBal),
+        cumulativePrincipal: Math.round(cumPrin),
+        cumulativeInterest: Math.round(cumInt),
+        standardPrincipal: Math.round(stdPrin),
+        standardInterest: Math.round(stdInt),
       });
     }
 
@@ -562,7 +592,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
 
           <div>
             <label className="text-slate-400 block text-[11px] mb-1">
-              Annual Lump Sum Overpayment (€/yr)
+              Annual Bonus Lump Sum (€/yr)
             </label>
             <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
               <input
@@ -577,7 +607,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
               <span className="text-slate-400 text-xs">€/yr</span>
             </div>
             <span className="text-[10px] text-slate-500 block mt-0.5">
-              Applied each December after fixed period
+              Applied every March (Annual Bonus Month) after fixed period
             </span>
           </div>
         </div>
@@ -628,28 +658,56 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
         )}
       </div>
 
-      {/* 5. 5-Year & Full-Term Debt Amortization Chart */}
+      {/* 5. Multi-Curve Debt Paydown, Principal & Interest Chart */}
       <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-sky-400" />
-            <h4 className="font-bold text-slate-200 text-xs">Remaining Mortgage Debt Paydown Trajectory</h4>
+            <h4 className="font-bold text-slate-200 text-xs">Amortization Paydown: Debt Balance, Principal & Interest</h4>
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
-            <span className="flex items-center gap-1.5 text-slate-400 font-sans">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block" />
-              Standard Amortization
-            </span>
-            {(monthlyOverpayment > 0 || annualLumpSum > 0) && (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-sans font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
-                With Overpayments
-              </span>
-            )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-[11px]">
+              <button
+                onClick={() => setChartViewMode('all')}
+                className={`px-2 py-0.5 rounded font-semibold transition-colors ${
+                  chartViewMode === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📊 All Curves
+              </button>
+              <button
+                onClick={() => setChartViewMode('balance')}
+                className={`px-2 py-0.5 rounded font-semibold transition-colors ${
+                  chartViewMode === 'balance' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📉 Debt Balance
+              </button>
+              <button
+                onClick={() => setChartViewMode('principal_interest')}
+                className={`px-2 py-0.5 rounded font-semibold transition-colors ${
+                  chartViewMode === 'principal_interest' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📈 Principal vs Interest
+              </button>
+            </div>
+
+            {/* Open Full Ledger Modal Button */}
+            <button
+              onClick={() => setIsLedgerModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/40 text-indigo-300 text-xs font-bold border border-indigo-500/40 transition-colors"
+              title="Open full month-by-month table of all payments"
+            >
+              <ListOrdered className="w-3.5 h-3.5" />
+              <span>📋 View Full Amortization Ledger ({overpaymentResult.actualPayoffMonths}m)</span>
+            </button>
           </div>
         </div>
 
-        <div className="h-56 w-full">
+        <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
@@ -667,36 +725,98 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.5rem', fontSize: '11px' }}
-                formatter={(value: any, name: string) => [
-                  `€${Number(value).toLocaleString()}`,
-                  name === 'standardBalance' ? 'Standard Balance' : 'Overpayment Balance',
-                ]}
+                formatter={(value: any, name: string) => {
+                  const valNum = Number(value);
+                  const labelMap: Record<string, string> = {
+                    overpaymentBalance: 'Remaining Loan Balance',
+                    standardBalance: 'Standard Remaining Balance',
+                    cumulativePrincipal: 'Loan Body (Principal) Paid',
+                    cumulativeInterest: 'Cumulative Interest Paid to Bank',
+                    standardPrincipal: 'Standard Principal Paid',
+                    standardInterest: 'Standard Interest Paid',
+                  };
+                  return [`€${valNum.toLocaleString()}`, labelMap[name] || name];
+                }}
                 labelFormatter={(label) => `Year ${label}`}
               />
-              <Area
-                type="monotone"
-                dataKey="standardBalance"
-                name="standardBalance"
-                fill="#64748b"
-                fillOpacity={0.15}
-                stroke="#64748b"
-                strokeWidth={2}
+              <Legend
+                wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
+                formatter={(value: string) => {
+                  const legendLabels: Record<string, string> = {
+                    overpaymentBalance: 'Remaining Debt Balance',
+                    standardBalance: 'Standard Balance (No Overpayment)',
+                    cumulativePrincipal: 'Loan Body (Principal) Paid',
+                    cumulativeInterest: 'Cumulative Interest Paid',
+                  };
+                  return legendLabels[value] || value;
+                }}
               />
-              {(monthlyOverpayment > 0 || annualLumpSum > 0) && (
-                <Area
-                  type="monotone"
-                  dataKey="overpaymentBalance"
-                  name="overpaymentBalance"
-                  fill="#10b981"
-                  fillOpacity={0.25}
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                />
+
+              {/* Debt Balance Curves */}
+              {(chartViewMode === 'all' || chartViewMode === 'balance') && (
+                <>
+                  <Area
+                    type="monotone"
+                    dataKey="standardBalance"
+                    name="standardBalance"
+                    fill="#64748b"
+                    fillOpacity={0.10}
+                    stroke="#64748b"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="overpaymentBalance"
+                    name="overpaymentBalance"
+                    fill="#3b82f6"
+                    fillOpacity={0.20}
+                    stroke="#3b82f6"
+                    strokeWidth={2.5}
+                  />
+                </>
+              )}
+
+              {/* Principal & Interest Curves */}
+              {(chartViewMode === 'all' || chartViewMode === 'principal_interest') && (
+                <>
+                  <Area
+                    type="monotone"
+                    dataKey="cumulativePrincipal"
+                    name="cumulativePrincipal"
+                    fill="#10b981"
+                    fillOpacity={0.20}
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cumulativeInterest"
+                    name="cumulativeInterest"
+                    fill="#f43f5e"
+                    fillOpacity={0.15}
+                    stroke="#f43f5e"
+                    strokeWidth={2}
+                  />
+                </>
               )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Amortization Ledger Modal */}
+      <AmortizationScheduleModal
+        isOpen={isLedgerModalOpen}
+        onClose={() => setIsLedgerModalOpen(false)}
+        result={overpaymentResult}
+        principal={activeLoanAmount}
+        annualRatePct={interestRatePct}
+        termYears={termYears}
+        fixedRateYears={fixedRateYears}
+        monthlyOverpayment={monthlyOverpayment}
+        annualLumpSum={annualLumpSum}
+      />
     </div>
   );
 };

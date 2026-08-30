@@ -164,6 +164,7 @@ export interface MortgageOverpaymentOptions {
   fixedRateYears?: number; // Initial fixed lock period where overpayments are 0 (e.g. 2 years)
   monthlyOverpayment?: number; // Regular monthly overpayment amount after fixed period
   annualLumpSumOverpayment?: number; // Optional annual lump sum after fixed period
+  lumpSumMonth?: number; // Calendar month (1-12) when annual bonus lump sum is paid (default: 3 for March)
 }
 
 export interface AmortizationSchedulePoint {
@@ -174,7 +175,10 @@ export interface AmortizationSchedulePoint {
   principalPaid: number;
   overpaymentPaid: number;
   totalPayment: number;
+  cumulativeInterestPaid: number;
+  cumulativePrincipalPaid: number;
   isFixedPeriod: boolean;
+  isLumpSumApplied?: boolean;
 }
 
 export interface MortgageOverpaymentResult {
@@ -203,6 +207,7 @@ export function calculateMortgageWithOverpayments(
     fixedRateYears = 2,
     monthlyOverpayment = 0,
     annualLumpSumOverpayment = 0,
+    lumpSumMonth = 3, // Default March for Google/Dublin tech annual bonuses
   } = options;
 
   if (principal <= 0 || termYears <= 0) {
@@ -240,9 +245,14 @@ export function calculateMortgageWithOverpayments(
   const [startYear, startMonth] = startDateStr.split('-').map((v) => parseInt(v, 10));
 
   for (let m = 1; m <= totalStandardMonths; m++) {
+    // Date computation
+    const curYear = startYear + Math.floor((startMonth - 1 + m) / 12);
+    const curMonthNum = ((startMonth - 1 + m) % 12) + 1;
+    const dateStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
+
     const isFixedPeriod = m <= fixedMonths;
     const regularOverpayment = isFixedPeriod ? 0 : Math.max(0, monthlyOverpayment);
-    const isLumpSumMonth = !isFixedPeriod && m % 12 === 0;
+    const isLumpSumMonth = !isFixedPeriod && curMonthNum === lumpSumMonth;
     const lumpSumOverpayment = isLumpSumMonth ? Math.max(0, annualLumpSumOverpayment) : 0;
     const targetOverpayment = regularOverpayment + lumpSumOverpayment;
 
@@ -256,11 +266,6 @@ export function calculateMortgageWithOverpayments(
     cumulativePrincipal += principalPaidThisMonth;
     cumulativeOverpayments += extraPrincipal;
 
-    // Date computation
-    const curYear = startYear + Math.floor((startMonth - 1 + m) / 12);
-    const curMonthNum = ((startMonth - 1 + m) % 12) + 1;
-    const dateStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
-
     schedule.push({
       month: m,
       dateStr,
@@ -269,7 +274,10 @@ export function calculateMortgageWithOverpayments(
       principalPaid: scheduledPrincipal,
       overpaymentPaid: extraPrincipal,
       totalPayment: interest + principalPaidThisMonth,
+      cumulativeInterestPaid: cumulativeInterestWithOverpayment,
+      cumulativePrincipalPaid: cumulativePrincipal,
       isFixedPeriod,
+      isLumpSumApplied: isLumpSumMonth && extraPrincipal > regularOverpayment,
     });
 
     if (balance <= 0.001) {

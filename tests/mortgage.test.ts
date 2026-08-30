@@ -318,23 +318,37 @@ describe('Mortgage Engine', () => {
       expect(result.totalInterestWithOverpayment + result.totalInterestSaved).toBeCloseTo(result.totalInterestStandard, 1);
     });
 
-    it('handles annual lump sum overpayments correctly', () => {
-      const result = calculateMortgageWithOverpayments({
-        principal: 500000,
-        annualRate: 0.035,
-        termYears: 25,
-        fixedRateYears: 2,
-        monthlyOverpayment: 0,
-        annualLumpSumOverpayment: 10000, // €10k annual bonus payment after fixed period
-      });
+    it('handles annual lump sum overpayments aligned with March bonus month', () => {
+      const result = calculateMortgageWithOverpayments(
+        {
+          principal: 500000,
+          annualRate: 0.035,
+          termYears: 25,
+          fixedRateYears: 2, // 24 months fixed lock (ends 2028-08)
+          monthlyOverpayment: 0,
+          annualLumpSumOverpayment: 10000, // €10k annual bonus payment
+          lumpSumMonth: 3, // March
+        },
+        '2026-08-01'
+      );
 
-      // Months 12, 24: fixed period, lump sum is 0
-      expect(result.schedule[11].overpaymentPaid).toBe(0);
-      expect(result.schedule[23].overpaymentPaid).toBe(0);
+      // Month 7 (2027-03): Fixed period active -> lump sum is 0
+      expect(result.schedule[6].dateStr).toBe('2027-03');
+      expect(result.schedule[6].overpaymentPaid).toBe(0);
 
-      // Month 36 (3rd year end): lump sum kicks in
-      expect(result.schedule[35].overpaymentPaid).toBe(10000);
-      expect(result.yearsSaved).toBeGreaterThan(5);
+      // Month 19 (2028-03): Fixed period active -> lump sum is 0
+      expect(result.schedule[18].dateStr).toBe('2028-03');
+      expect(result.schedule[18].overpaymentPaid).toBe(0);
+
+      // Month 31 (2029-03): First March off fixed rate -> lump sum €10k kicks in!
+      expect(result.schedule[30].dateStr).toBe('2029-03');
+      expect(result.schedule[30].overpaymentPaid).toBe(10000);
+      expect(result.schedule[30].isLumpSumApplied).toBe(true);
+      expect(result.yearsSaved).toBeGreaterThan(4);
+
+      // Cumulative tracking assertions
+      expect(result.schedule[30].cumulativePrincipalPaid).toBeGreaterThan(40000);
+      expect(result.schedule[30].cumulativeInterestPaid).toBeGreaterThan(30000);
     });
 
     it('safely handles zero and negative mortgage parameters in overpayment simulation', () => {
