@@ -150,13 +150,27 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
   );
   const maxSafeOverpayment = Math.max(0, Math.floor((freeCashflowBuffer * 0.5) / 50) * 50);
 
-  // Interest rate shock analysis
+  // Bonus on file (gross vs net after 52% Irish marginal tax)
+  const grossBonusEur = activeSalary.bonusEur;
+  const netBonusEur = Math.round(grossBonusEur * 0.48); // 52% marginal rate: 40% IT + 8% USC + 4% PRSI
+  const halfNetBonusEur = Math.round(netBonusEur * 0.5);
+
+  // Interest rate shock options (Irish/ECB benchmarks: 0% Flat, +0.5% Variable Bump, +1.0% Hike, +1.5%/+2.0% Central Bank Stress, +3.0% Severe)
+  const RATE_SHOCK_OPTIONS = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0];
   const shockedPayment = calculateMonthlyMortgagePayment(
     activeLoanAmount,
     (interestRatePct + rateShockPct) / 100,
     termYears
   );
   const shockPaymentDelta = shockedPayment - overpaymentResult.standardMonthlyPayment;
+
+  const handleCycleRateShock = () => {
+    setRateShockPct((prev) => {
+      const idx = RATE_SHOCK_OPTIONS.indexOf(prev);
+      const nextIdx = idx >= 0 && idx < RATE_SHOCK_OPTIONS.length - 1 ? idx + 1 : 0;
+      return RATE_SHOCK_OPTIONS[nextIdx];
+    });
+  };
 
   // Chart data: Sample down schedule for clear visualization (every 12 months)
   const chartData = useMemo(() => {
@@ -453,12 +467,26 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-slate-400 text-xs block">Monthly Mortgage Payment</span>
             <button
-              onClick={() => setRateShockPct((prev) => (prev === 1.0 ? 1.5 : prev === 1.5 ? 2.0 : prev === 2.0 ? 3.0 : 1.0))}
-              className="flex items-center gap-1 text-[10px] text-amber-400 font-mono bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 transition-colors cursor-pointer"
-              title={`Simulated +${rateShockPct}% rate increase at fixed renewal: €${Math.round(shockedPayment).toLocaleString()}/mo (+€${Math.round(shockPaymentDelta).toLocaleString()}). Click to cycle shock level (+1.0%, +1.5%, +2.0%, +3.0%).`}
+              onClick={handleCycleRateShock}
+              className={`flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                rateShockPct === 0
+                  ? 'text-slate-300 bg-slate-800 hover:bg-slate-750 border-slate-700'
+                  : rateShockPct <= 1.0
+                  ? 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/30'
+                  : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'
+              }`}
+              title={
+                rateShockPct === 0
+                  ? `Simulated Flat Rate (0.0% hike): €${Math.round(shockedPayment).toLocaleString()}/mo. Click to cycle rate shock levels (0%, +0.5%, +1.0%, +1.5%, +2.0%, +3.0%).`
+                  : `Simulated +${rateShockPct}% rate increase at fixed renewal: €${Math.round(shockedPayment).toLocaleString()}/mo (+€${Math.round(shockPaymentDelta).toLocaleString()}/mo). Click to cycle rate shock levels.`
+              }
             >
               <ShieldAlert className="w-3 h-3" />
-              <span>+{rateShockPct}%: €{Math.round(shockedPayment).toLocaleString()}</span>
+              <span>
+                {rateShockPct === 0
+                  ? `0.0% (Flat): €${Math.round(shockedPayment).toLocaleString()}`
+                  : `+${rateShockPct}%: €${Math.round(shockedPayment).toLocaleString()}`}
+              </span>
             </button>
           </div>
           <div className="text-xl font-bold font-mono text-indigo-300">
@@ -591,9 +619,29 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
           </div>
 
           <div>
-            <label className="text-slate-400 block text-[11px] mb-1">
-              Annual Bonus Lump Sum (€/yr)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-400 block text-[11px]">
+                Annual Bonus Lump Sum (€/yr)
+              </label>
+              {grossBonusEur > 0 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setAnnualLumpSum(netBonusEur)}
+                    className="px-1.5 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[10px] font-bold border border-purple-500/30 transition-colors"
+                    title={`Fill 100% Net Bonus (gross €${grossBonusEur.toLocaleString()} minus 52% Irish tax = net €${netBonusEur.toLocaleString()})`}
+                  >
+                    100% Net (€{Math.round(netBonusEur / 1000)}k)
+                  </button>
+                  <button
+                    onClick={() => setAnnualLumpSum(halfNetBonusEur)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors"
+                    title={`Fill 50% Net Bonus (net €${halfNetBonusEur.toLocaleString()})`}
+                  >
+                    50% Net (€{Math.round(halfNetBonusEur / 1000)}k)
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
               <input
                 type="number"
@@ -607,7 +655,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
               <span className="text-slate-400 text-xs">€/yr</span>
             </div>
             <span className="text-[10px] text-slate-500 block mt-0.5">
-              Applied every March (Annual Bonus Month) after fixed period
+              Applied every March. {grossBonusEur > 0 ? `Bonus on file: €${Math.round(grossBonusEur).toLocaleString()} gross (net €${netBonusEur.toLocaleString()} at 52% tax)` : 'Paid after fixed period'}
             </span>
           </div>
         </div>
