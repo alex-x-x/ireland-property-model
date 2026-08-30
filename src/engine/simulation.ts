@@ -146,7 +146,12 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
     const borrowingShortfall = Math.max(0, requiredLoan - maxMortgageAtMonth);
     const targetCapital = baseRequiredDeposit + stampDuty + property.legal_and_closing_fees_eur + borrowingShortfall;
 
-    const surplus = totalLiquidWealth - targetCapital;
+    const totalSafetyBufferEur =
+      (liquid_assets.cash_safety_buffer_eur || 0) +
+      (liquid_assets.cash_safety_buffer_usd || 0) * currentFx;
+    const usableLiquidWealth = Math.max(0, totalLiquidWealth - totalSafetyBufferEur);
+
+    const surplus = totalLiquidWealth - (targetCapital + totalSafetyBufferEur);
     const isAffordable = surplus >= 0;
 
     points.push({
@@ -162,6 +167,8 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       stockPriceUsd: currentStockPrice,
       fxRate: currentFx,
       totalLiquidWealth,
+      safetyBufferEur: totalSafetyBufferEur,
+      usableLiquidWealth,
       surplus,
       isAffordable,
       vestEvents,

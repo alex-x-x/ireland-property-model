@@ -799,6 +799,76 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 </span>
               </div>
 
+              {/* Cash Safety Pot (Untouchable Emergency Reserve) */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span className="text-sky-300">🛡️ Cash Safety Pot</span>
+                    <InfoTooltip
+                      title="Cash Safety Pot (Emergency Buffer)"
+                      content="Reserved liquid cash in EUR and USD that will NEVER be spent on property deposits, stamp duty, or legal fees. The model guarantees this cash buffer remains untouched in your bank account post-purchase."
+                    />
+                  </label>
+                  {!isProfileLocked && (
+                    <button
+                      onClick={() => {
+                        const sixMonthsExpenses = Math.round((config.tax?.monthly_living_expenses_eur ?? 2500) * 6);
+                        onChange({
+                          ...config,
+                          liquid_assets: {
+                            ...config.liquid_assets,
+                            cash_safety_buffer_eur: sixMonthsExpenses,
+                          },
+                        });
+                      }}
+                      className="text-[9.5px] px-2 py-0.5 rounded font-bold border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 transition-colors flex items-center gap-1"
+                      title="Set emergency fund to 6 months of living expenses"
+                    >
+                      ⚡ Set 6M Expenses (€{Math.round((config.tax?.monthly_living_expenses_eur ?? 2500) * 6).toLocaleString()})
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Safety Pot EUR (€)</label>
+                    <input
+                      type="number"
+                      step="2500"
+                      min="0"
+                      disabled={isProfileLocked}
+                      placeholder="e.g. 15000"
+                      value={config.liquid_assets.cash_safety_buffer_eur ?? 0}
+                      onChange={(e) => updateLiquidAssets('cash_safety_buffer_eur', parseFloat(e.target.value) || 0)}
+                      className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-sky-500/30 text-sky-200 font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1">Safety Pot USD ($)</label>
+                    <input
+                      type="number"
+                      step="2500"
+                      min="0"
+                      disabled={isProfileLocked}
+                      placeholder="e.g. 0"
+                      value={config.liquid_assets.cash_safety_buffer_usd ?? 0}
+                      onChange={(e) => updateLiquidAssets('cash_safety_buffer_usd', parseFloat(e.target.value) || 0)}
+                      className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-sky-500/30 text-sky-200 font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {((config.liquid_assets.cash_safety_buffer_eur || 0) > 0 || (config.liquid_assets.cash_safety_buffer_usd || 0) > 0) && (
+                  <div className="flex justify-between items-center text-[10.5px] bg-sky-950/40 px-2 py-1 rounded border border-sky-800/40 text-sky-300">
+                    <span>Total Protected Buffer:</span>
+                    <span className="font-mono font-bold">
+                      €{Math.round((config.liquid_assets.cash_safety_buffer_eur || 0) + (config.liquid_assets.cash_safety_buffer_usd || 0) * config.macro.eur_usd_spot).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Monthly Living Expenses & Dynamic Savings */}
               <div className="pt-2 border-t border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">

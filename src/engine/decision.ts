@@ -77,14 +77,19 @@ function simulateTrajectoryForPurchaseMonth(
   const totalUpfrontPaid = depositPaid + stampDutyPaid + closingFeesPaid;
   const initialMortgagePrincipal = propertyPurchasePrice - depositPaid;
 
-  // Capital withdrawal waterfall at buyMonth: Cash -> Base Inv -> GSU Pool
+  const totalSafetyBufferEur =
+    (liquid_assets.cash_safety_buffer_eur || 0) +
+    (liquid_assets.cash_safety_buffer_usd || 0) * (buyPoint.fxRate || macro.eur_usd_spot);
+
+  // Capital withdrawal waterfall at buyMonth: Usable Cash -> Base Inv -> GSU Pool -> (Safety Buffer protected)
   let cashAfterBuy = buyPoint.cash;
   let invAfterBuy = buyPoint.investments;
   let gsuAfterBuy = buyPoint.gsuPool;
   let remainingNeeded = totalUpfrontPaid;
 
-  // 1. Withdraw from Cash
-  const cashUsed = Math.min(cashAfterBuy, remainingNeeded);
+  // 1. Withdraw from Cash (protecting emergency safety pot)
+  const usableCash = Math.max(0, cashAfterBuy - totalSafetyBufferEur);
+  const cashUsed = Math.min(usableCash, remainingNeeded);
   cashAfterBuy -= cashUsed;
   remainingNeeded -= cashUsed;
 
@@ -100,6 +105,13 @@ function simulateTrajectoryForPurchaseMonth(
     const gsuUsed = Math.min(gsuAfterBuy, remainingNeeded);
     gsuAfterBuy -= gsuUsed;
     remainingNeeded -= gsuUsed;
+  }
+
+  // 4. Emergency fallback (only if total liquid < upfront needed)
+  if (remainingNeeded > 0) {
+    const emergencyCashUsed = Math.min(cashAfterBuy, remainingNeeded);
+    cashAfterBuy -= emergencyCashUsed;
+    remainingNeeded -= emergencyCashUsed;
   }
 
   const monthsUnderMortgage = forecastMonths - buyMonth;
