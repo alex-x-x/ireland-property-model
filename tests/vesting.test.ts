@@ -569,10 +569,10 @@ describe('Vesting Engine', () => {
       expect(summary.unvestedGrossEur).toBe(54000);
       expect(summary.unvestedNetEur).toBe(25920);
 
-      // Past: 1000 shs * $150 = $150,000 * 0.90 = €135,000 gross; net €64,800
-      expect(summary.pastVestedGrossUsd).toBe(150000);
-      expect(summary.pastVestedGrossEur).toBe(135000);
-      expect(summary.pastVestedNetEur).toBe(64800);
+      // Past: 1000 shs granted in 2024-08 auto-resolves historical July 2024 benchmark ($183.00 @ 0.921 = €168,543 gross)
+      expect(summary.pastVestedGrossUsd).toBe(183000);
+      expect(summary.pastVestedGrossEur).toBe(168543);
+      expect(summary.pastVestedNetEur).toBeCloseTo(168543 * 0.48, 0);
     });
   });
 });
