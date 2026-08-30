@@ -9,8 +9,8 @@ interface SensitivityMatrixProps {
 }
 
 export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) => {
-  const [horizonYears, setHorizonYears] = useState<number>(5);
-  const horizonMonths = horizonYears * 12;
+  const [horizonMonths, setHorizonMonths] = useState<number>(60);
+  const horizonYears = (horizonMonths / 12).toFixed(1).replace(/\.0$/, '');
 
   // Stock Growth Rates in 5% brackets from -20% to +30%
   const stockRates = [-0.20, -0.15, -0.10, -0.05, 0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
@@ -73,43 +73,48 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
               <span>Sensitivity Heatmap: Stock Growth vs Dublin Property Growth</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Evaluates <strong className="text-brand-300">Year {horizonYears} ({horizonMonths} Mo)</strong> Net Wealth Advantage (Wait & Compound vs Buy ASAP)
+              Evaluates <strong className="text-brand-300">Month {horizonMonths} ({horizonYears} Yr{horizonYears === '1' ? '' : 's'})</strong> Net Wealth Advantage (Wait & Compound vs Buy ASAP)
             </p>
           </div>
         </div>
 
-        {/* Horizon Slider & Quick Buttons */}
+        {/* Horizon Month Slider & Quick Buttons */}
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-slate-850 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
             <span className="text-slate-400 font-medium whitespace-nowrap">Horizon:</span>
             <input
               type="range"
               min="1"
-              max="5"
+              max="60"
               step="1"
-              value={horizonYears}
-              onChange={(e) => setHorizonYears(parseInt(e.target.value, 10) || 5)}
-              className="w-20 sm:w-28 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              value={horizonMonths}
+              onChange={(e) => setHorizonMonths(parseInt(e.target.value, 10) || 60)}
+              className="w-24 sm:w-32 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              title={`Drag to select comparison horizon (1 to 60 months)`}
             />
-            <span className="font-mono font-bold text-brand-400 min-w-[3.5rem] text-right">
-              Yr {horizonYears} ({horizonMonths}m)
+            <span className="font-mono font-bold text-brand-400 min-w-[4.2rem] text-right">
+              M{horizonMonths} <span className="text-[11px] font-normal text-slate-400">({horizonYears}y)</span>
             </span>
           </div>
 
           <div className="flex gap-1 bg-slate-850 p-1 rounded-xl border border-slate-800">
-            {[1, 2, 3, 4, 5].map((yr) => (
-              <button
-                key={yr}
-                onClick={() => setHorizonYears(yr)}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
-                  horizonYears === yr
-                    ? 'bg-brand-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                {yr}Y
-              </button>
-            ))}
+            {[1, 2, 3, 4, 5].map((yr) => {
+              const targetMo = yr * 12;
+              return (
+                <button
+                  key={yr}
+                  onClick={() => setHorizonMonths(targetMo)}
+                  className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                    horizonMonths === targetMo
+                      ? 'bg-brand-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                  title={`Jump to ${yr} Year (${targetMo} Months)`}
+                >
+                  {yr}Y
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
