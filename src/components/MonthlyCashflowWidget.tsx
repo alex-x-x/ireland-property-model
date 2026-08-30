@@ -230,11 +230,11 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
           </div>
 
           {/* Ledger Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-800 max-h-[500px] overflow-y-auto">
-            <table className="w-full text-left text-xs border-collapse font-mono">
+          <div className="overflow-x-auto rounded-xl border border-slate-800 max-h-[520px] overflow-y-auto">
+            <table className="w-full text-left text-xs border-collapse font-mono min-w-[1150px]">
               <thead className="sticky top-0 bg-slate-850 z-10 border-b border-slate-750 text-slate-300 font-sans text-[11px]">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold">
+                  <th className="py-2.5 px-3 font-semibold min-w-[180px]">
                     <span className="inline-flex items-center gap-1">
                       <span>Month / Date</span>
                       <InfoTooltip
@@ -243,7 +243,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right">
+                  <th className="py-2.5 px-3 font-semibold text-right min-w-[130px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Cash Balance (Δ)</span>
                       <InfoTooltip
@@ -252,7 +252,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right">
+                  <th className="py-2.5 px-3 font-semibold text-right min-w-[110px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Rent Drag</span>
                       <InfoTooltip
@@ -261,7 +261,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right text-purple-300">
+                  <th className="py-2.5 px-3 font-semibold text-right text-purple-300 min-w-[220px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>GSU Pool & Stocks Vested (Δ)</span>
                       <InfoTooltip
@@ -270,7 +270,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right">
+                  <th className="py-2.5 px-3 font-semibold text-right min-w-[110px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Investments (Δ)</span>
                       <InfoTooltip
@@ -279,7 +279,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right text-emerald-400">
+                  <th className="py-2.5 px-3 font-semibold text-right text-emerald-400 min-w-[130px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Total Liquid (Δ)</span>
                       <InfoTooltip
@@ -288,7 +288,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right">
+                  <th className="py-2.5 px-3 font-semibold text-right min-w-[120px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Target Capital</span>
                       <InfoTooltip
@@ -297,7 +297,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-right">
+                  <th className="py-2.5 px-3 font-semibold text-right min-w-[120px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Surplus / Deficit</span>
                       <InfoTooltip
@@ -306,7 +306,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold text-center">Status</th>
+                  <th className="py-2.5 px-3 font-semibold text-center min-w-[90px]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -337,13 +337,13 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                     >
                       {/* Month & Date with Badges */}
                       <td className="py-2.5 px-3">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex flex-col gap-1 items-start">
+                          <div className="flex items-center gap-1.5 flex-wrap whitespace-nowrap">
                             <span className="font-bold text-white">M{p.month}</span>
                             <span className="text-slate-400 font-sans text-[11px]">{p.date}</span>
                             {hasMarchBonus && (
                               <span
-                                className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-sans font-bold border border-emerald-500/30"
+                                className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9.5px] font-sans font-bold border border-emerald-500/30 whitespace-nowrap"
                                 title={`Annual bonus payout (+€${Math.round(p.netBonusReceivedEur!).toLocaleString()} net after 52% tax)`}
                               >
                                 🎁 Bonus
@@ -351,7 +351,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                             )}
                             {hasVesting && (
                               <span
-                                className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-sans font-bold border border-purple-500/30"
+                                className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9.5px] font-sans font-bold border border-purple-500/30 whitespace-nowrap"
                                 title={`Monthly stock vesting (+${netSharesVested.toFixed(1)} net shs / ${grossSharesVested.toFixed(0)} gross)`}
                               >
                                 💎 Vest
@@ -365,11 +365,11 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                               {newGrantEvents.map((ev) => (
                                 <span
                                   key={ev.grantId}
-                                  className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-sans font-bold border border-indigo-500/40 flex items-center gap-1"
+                                  className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9.5px] font-sans font-semibold border border-indigo-500/40 inline-flex items-center gap-1.5 whitespace-nowrap shadow-sm"
                                   title={`Grant Awarded: ${ev.grantName} (${ev.totalShares} total shares)`}
                                 >
                                   <span>✨ New Grant: {ev.grantName}</span>
-                                  <span className="text-indigo-200 font-mono">+{ev.totalShares} shs</span>
+                                  <span className="text-indigo-200 font-mono font-bold">+{ev.totalShares} shs</span>
                                 </span>
                               ))}
                             </div>
@@ -380,7 +380,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                               {completedGrantEvents.map((ev) => (
                                 <span
                                   key={ev.grantId}
-                                  className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-sans font-bold border border-amber-500/40 flex items-center gap-1"
+                                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9.5px] font-sans font-semibold border border-amber-500/40 inline-flex items-center gap-1.5 whitespace-nowrap shadow-sm"
                                   title={`Grant Finished (Cliff): ${ev.grantName} has reached its final vest milestone.`}
                                 >
                                   <span>🏁 Grant Complete: {ev.grantName}</span>
@@ -393,9 +393,9 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
 
                       {/* Cash & Cash Inflow Diff */}
                       <td className="py-2.5 px-3 text-right">
-                        <div className="font-semibold text-slate-200">€{Math.round(p.cash).toLocaleString()}</div>
+                        <div className="font-semibold text-slate-200 whitespace-nowrap">€{Math.round(p.cash).toLocaleString()}</div>
                         {prevPoint && (
-                          <div className="text-[10px] text-emerald-400">
+                          <div className="text-[10px] text-emerald-400 whitespace-nowrap">
                             +{Math.round(cashDiff).toLocaleString()}
                             {hasMarchBonus && (
                               <span className="text-slate-500 ml-1">
@@ -408,17 +408,17 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
 
                       {/* Rent Drag */}
                       <td className="py-2.5 px-3 text-right">
-                        <div className="text-rose-400">-€{Math.round(p.monthlyRent).toLocaleString()}/mo</div>
-                        <div className="text-[10px] text-slate-500 font-sans">
+                        <div className="text-rose-400 whitespace-nowrap font-semibold">-€{Math.round(p.monthlyRent).toLocaleString()}/mo</div>
+                        <div className="text-[10px] text-slate-500 font-sans whitespace-nowrap">
                           Cum: -€{Math.round(p.cumulativeRent).toLocaleString()}
                         </div>
                       </td>
 
                       {/* GSU Pool & Retained Shares & Stocks Vested Delta */}
                       <td className="py-2.5 px-3 text-right text-purple-300">
-                        <div className="font-semibold text-purple-200">€{Math.round(p.gsuPool).toLocaleString()}</div>
+                        <div className="font-semibold text-purple-200 whitespace-nowrap">€{Math.round(p.gsuPool).toLocaleString()}</div>
                         <div className="text-[10px] text-slate-300 font-sans flex flex-col items-end gap-0.5">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                             <span>{Math.round(p.retainedShares).toLocaleString()} shs held</span>
                             {prevPoint && (
                               <span className="text-purple-400 font-mono">
@@ -427,7 +427,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                             )}
                           </div>
                           {netSharesVested > 0 && (
-                            <div className="text-[9.5px] text-purple-300 bg-purple-950/70 px-1.5 py-0.5 rounded border border-purple-800/50 flex items-center gap-1 font-sans">
+                            <div className="text-[9.5px] text-purple-200 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800/60 inline-flex items-center justify-end gap-1.5 whitespace-nowrap font-sans shadow-sm mt-0.5">
                               <span className="font-semibold text-emerald-300 font-mono">+{netSharesVested.toFixed(1)} net shs</span>
                               <span className="text-slate-400 font-mono">({grossSharesVested.toFixed(0)} gross)</span>
                               <span className="text-purple-300 font-semibold font-mono">• +€{Math.round(netVestEur).toLocaleString()}</span>
@@ -437,48 +437,48 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       </td>
 
                       {/* Investments */}
-                      <td className="py-2 px-3 text-right">
-                        <div className="text-slate-300">€{Math.round(p.investments).toLocaleString()}</div>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="text-slate-300 whitespace-nowrap">€{Math.round(p.investments).toLocaleString()}</div>
                         {prevPoint && (
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-slate-400 whitespace-nowrap">
                             +{Math.round(invDiff).toLocaleString()}
                           </div>
                         )}
                       </td>
 
                       {/* Total Liquid Wealth */}
-                      <td className="py-2 px-3 text-right text-emerald-400">
-                        <div className="font-bold text-sm">€{Math.round(p.totalLiquidWealth).toLocaleString()}</div>
+                      <td className="py-2.5 px-3 text-right text-emerald-400">
+                        <div className="font-bold text-sm whitespace-nowrap">€{Math.round(p.totalLiquidWealth).toLocaleString()}</div>
                         {prevPoint && (
-                          <div className="text-[10px] text-emerald-300">
+                          <div className="text-[10px] text-emerald-300 whitespace-nowrap">
                             +{Math.round(totalDiff).toLocaleString()}/mo
                           </div>
                         )}
                       </td>
 
                       {/* Target Capital Required */}
-                      <td className="py-2 px-3 text-right text-amber-300">
-                        <div className="font-semibold">€{Math.round(p.targetCapital).toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-500 font-sans">
+                      <td className="py-2.5 px-3 text-right text-amber-300">
+                        <div className="font-semibold whitespace-nowrap">€{Math.round(p.targetCapital).toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-500 font-sans whitespace-nowrap">
                           Cap: €{Math.round(p.propertyPrice).toLocaleString()}
                         </div>
                       </td>
 
                       {/* Surplus / Deficit */}
-                      <td className="py-2 px-3 text-right">
-                        <span className={`font-bold ${p.surplus >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <td className="py-2.5 px-3 text-right">
+                        <span className={`font-bold whitespace-nowrap ${p.surplus >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {p.surplus >= 0 ? '+' : ''}€{Math.round(p.surplus).toLocaleString()}
                         </span>
                       </td>
 
                       {/* Status */}
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-2.5 px-3 text-center">
                         {p.isAffordable ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
                             ✓ Ready
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 whitespace-nowrap">
                             Shortfall
                           </span>
                         )}
