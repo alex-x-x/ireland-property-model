@@ -10,7 +10,7 @@ import {
   Sparkles,
   Search,
 } from 'lucide-react';
-import { MonthlyDataPoint, SimulationConfig } from '../engine/types';
+import { MonthlyDataPoint, SimulationConfig, SalaryAdjustment } from '../engine/types';
 import { exportMonthlyPointsToCsv, downloadCsvFile } from '../engine/export';
 import { getGrantLifecycleEvents, GrantLifecycleEvent } from '../engine/vesting';
 import { InfoTooltip } from './InfoTooltip';
@@ -33,6 +33,28 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
       config.meta.forecast_months ?? 60
     );
   }, [config]);
+
+  // Build a map from simulation month → salary adjustment that first becomes active that month
+  const salaryEventsByMonth = useMemo<Map<number, SalaryAdjustment>>(() => {
+    const map = new Map<number, SalaryAdjustment>();
+    const adjustments = config?.mortgage?.salary_adjustments;
+    if (!adjustments || adjustments.length === 0) return map;
+
+    const sorted = [...adjustments].sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+    for (const adj of sorted) {
+      const adjYYYYMM = adj.effective_date.slice(0, 7);
+      // Find the first simulation point whose YYYY-MM >= effective_date
+      for (const p of data) {
+        if (p.date >= adjYYYYMM) {
+          if (!map.has(p.month)) {
+            map.set(p.month, adj);
+          }
+          break;
+        }
+      }
+    }
+    return map;
+  }, [config, data]);
 
   const eventsByMonth = useMemo(() => {
     const map = new Map<number, GrantLifecycleEvent[]>();
@@ -67,6 +89,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
       if (selectedFilter === 'y5') return p.month >= 49 && p.month <= 60;
       if (selectedFilter === 'milestones') {
         const hasLifecycleEvent = eventsByMonth.has(p.month);
+        const hasSalaryEvent = salaryEventsByMonth.has(p.month);
         return (
           p.month === 0 ||
           p.isAffordable ||
@@ -76,6 +99,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
           p.month === 48 ||
           p.month === 60 ||
           hasLifecycleEvent ||
+          hasSalaryEvent ||
           Boolean(p.netBonusReceivedEur && p.netBonusReceivedEur > 0)
         );
       }
@@ -324,9 +348,11 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                   const newGrantEvents = monthLifecycleEvents.filter((e) => e.type === 'grant_awarded');
                   const completedGrantEvents = monthLifecycleEvents.filter((e) => e.type === 'grant_completed');
 
-                  const netSharesVested = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.netShares, 0) : 0;
+                   const netSharesVested = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.netShares, 0) : 0;
                   const grossSharesVested = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.grossShares, 0) : 0;
                   const netVestEur = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.netAmountEur, 0) : 0;
+
+                  const salaryEvent = salaryEventsByMonth.get(p.month);
 
                   return (
                     <tr
@@ -385,6 +411,27 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                                   <span>🏁 Cliff</span>
                                 </span>
                               ))}
+                            </div>
+                          )}
+
+                          {/* Salary Increase Badge */}
+                          {salaryEvent && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              <span
+                                className="px-1.5 py-0.2 rounded bg-yellow-500/20 text-yellow-300 text-[9px] font-sans font-bold border border-yellow-500/40 inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
+                                title={[
+                                  `Salary increase effective ${salaryEvent.effective_date}`,
+                                  `New base: €${Math.round(salaryEvent.base_salary_eur).toLocaleString()}/yr`,
+                                  salaryEvent.bonus_pct !== undefined && salaryEvent.bonus_pct !== null
+                                    ? `Bonus: ${(salaryEvent.bonus_pct * 100).toFixed(0)}% (€${Math.round(salaryEvent.base_salary_eur * salaryEvent.bonus_pct).toLocaleString()} gross)`
+                                    : salaryEvent.bonus_eur !== undefined && salaryEvent.bonus_eur !== null
+                                    ? `Bonus: €${Math.round(salaryEvent.bonus_eur).toLocaleString()} gross`
+                                    : null,
+                                  salaryEvent.note ? `Note: ${salaryEvent.note}` : null,
+                                ].filter(Boolean).join(' · ')}
+                              >
+                                <span>💼 Raise</span>
+                              </span>
                             </div>
                           )}
                         </div>
