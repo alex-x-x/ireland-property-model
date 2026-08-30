@@ -22,14 +22,10 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const [coords, setCoords] = useState<{ top: number; left: number; placement: 'top' | 'bottom' }>({
-    top: 0,
-    left: 0,
-    placement: 'top',
-  });
+  const [coords, setCoords] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
 
   const updatePosition = () => {
-    if (!triggerRef.current) return;
+    if (!triggerRef.current) return null;
     const rect = triggerRef.current.getBoundingClientRect();
     const tooltipWidth = 320;
     const tooltipEstimatedHeight = 120;
@@ -38,7 +34,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     // Determine if placing above or below
     const spaceAbove = rect.top;
     const spaceBelow = window.innerHeight - rect.bottom;
-    const placement = spaceAbove < tooltipEstimatedHeight && spaceBelow > spaceAbove ? 'bottom' : 'top';
+    const placement: 'top' | 'bottom' = spaceAbove < tooltipEstimatedHeight && spaceBelow > spaceAbove ? 'bottom' : 'top';
 
     const top = placement === 'top' ? rect.top - 8 : rect.bottom + 8;
     // Center horizontally on trigger
@@ -47,12 +43,22 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     // Clamp left within window boundaries
     left = Math.max(padding, Math.min(window.innerWidth - tooltipWidth - padding, left));
 
-    setCoords({ top, left, placement });
+    const newCoords = { top, left, placement };
+    setCoords(newCoords);
+    return newCoords;
+  };
+
+  const handleOpen = () => {
+    updatePosition();
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
   };
 
   useEffect(() => {
     if (isOpen) {
-      updatePosition();
       const handleScrollOrResize = () => updatePosition();
       window.addEventListener('scroll', handleScrollOrResize, true);
       window.addEventListener('resize', handleScrollOrResize);
@@ -89,11 +95,15 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     <div
       ref={triggerRef}
       className={`inline-flex items-center align-middle ${className}`}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      onMouseEnter={handleOpen}
+      onMouseLeave={handleClose}
       onClick={(e) => {
         e.stopPropagation();
-        setIsOpen((prev) => !prev);
+        if (isOpen) {
+          handleClose();
+        } else {
+          handleOpen();
+        }
       }}
     >
       <button
@@ -108,11 +118,11 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         )}
       </button>
 
-      {isOpen &&
+      {isOpen && coords &&
         createPortal(
           <div
             ref={tooltipRef}
-            className={`fixed z-[99999] w-72 sm:w-80 p-3 rounded-xl bg-slate-900/98 backdrop-blur-md border border-slate-700 shadow-2xl text-slate-200 text-xs font-normal leading-relaxed pointer-events-none animate-in fade-in zoom-in-95 duration-100 ${
+            className={`fixed z-[99999] w-72 sm:w-80 p-3 rounded-xl bg-slate-900/98 backdrop-blur-md border border-slate-700 shadow-2xl text-slate-200 text-xs font-normal leading-relaxed pointer-events-none ${
               coords.placement === 'top' ? '-translate-y-full' : ''
             }`}
             style={{
