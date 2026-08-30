@@ -562,25 +562,19 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
               In Ireland, early overpayments during the initial fixed-rate period (default 2 years) are restricted. Overpayments kick in automatically once off-fixed.
             </p>
           </div>
-
-          {freeCashflowBuffer > 0 && (
-            <button
-              onClick={() => setMonthlyOverpayment(maxSafeOverpayment)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 text-xs font-bold border border-emerald-500/40 transition-colors flex items-center gap-1 self-start sm:self-auto"
-              title="Set overpayment to 50% of free monthly cashflow buffer"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>⚡ Safe Overpayment (+€{maxSafeOverpayment}/mo)</span>
-            </button>
-          )}
         </div>
 
         {/* Overpayment Controls */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="text-slate-400 block text-[11px] mb-1">
-              Fixed Rate Period (Lockout)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-400 block text-[11px]">
+                Fixed Rate Period (Lockout)
+              </label>
+              <span className="text-[10px] text-sky-400 font-bold font-mono">
+                {fixedRateYears > 0 ? `${fixedRateYears}y Lock` : 'Variable'}
+              </span>
+            </div>
             <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
               <input
                 type="number"
@@ -598,9 +592,23 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
           </div>
 
           <div>
-            <label className="text-slate-400 block text-[11px] mb-1">
-              Monthly Overpayment (€/mo)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-400 block text-[11px]">
+                Monthly Overpayment (€/mo)
+              </label>
+              {freeCashflowBuffer > 0 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setMonthlyOverpayment(maxSafeOverpayment)}
+                    className="px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-colors flex items-center gap-1"
+                    title={`Fill 50% of free monthly cashflow buffer (safe discretionary margin: €${maxSafeOverpayment}/mo)`}
+                  >
+                    <Zap className="w-2.5 h-2.5" />
+                    <span>Safe 50% (+€{maxSafeOverpayment})</span>
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-emerald-500/30">
               <input
                 type="number"
