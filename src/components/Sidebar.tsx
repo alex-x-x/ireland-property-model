@@ -11,7 +11,7 @@ interface SidebarProps {
 interface SliderControlProps {
   label: string;
   tooltipTitle: string;
-  tooltipContent: string;
+  tooltipContent: React.ReactNode;
   value: number;
   min: number;
   max: number;
@@ -363,8 +363,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 6. EUR/USD Drift */}
           <SliderControl
             label="EUR/USD Spot Drift (p.a.)"
-            tooltipTitle="FX Rate Drift"
-            tooltipContent="Annual change in the EUR/USD exchange rate. A weakening dollar reduces the EUR value of USD-denominated stock."
+            tooltipTitle="EUR/USD Currency Drift"
+            tooltipContent={
+              <div className="space-y-1.5">
+                <p>
+                  Annual percentage shift in the USD/EUR exchange rate applied to USD-denominated assets (Google stock & USD cash).
+                </p>
+                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
+                  <div className="text-rose-300 font-semibold">
+                    ⬅ Move Left (&lt; 0%): USD Weakens / EUR Rises
+                  </div>
+                  <div className="text-slate-400 pl-2">
+                    USD-denominated stock converts into <strong>fewer Euros</strong>, reducing your Dublin purchasing power.
+                  </div>
+                  <div className="text-emerald-300 font-semibold pt-0.5">
+                    ➡ Move Right (&gt; 0%): USD Strengthens / EUR Drops
+                  </div>
+                  <div className="text-slate-400 pl-2">
+                    USD stock converts into <strong>more Euros</strong>, boosting your deposit.
+                  </div>
+                </div>
+                <p className="text-[10px] text-brand-300/90 pt-0.5">
+                  📌 <strong>Past Year Reference:</strong> EUR/USD traded between ~1.04 and ~1.12 (~±3% to ±5% annual swing) based on ECB vs US Fed interest rate differentials.
+                </p>
+              </div>
+            }
             value={driftRate}
             min={-0.05}
             max={0.05}
@@ -372,7 +395,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
             inputStep={0.1}
             precision={1}
             colorTheme="slate"
-            ticks={['-5%', '0%', '+5%']}
+            ticks={['-5% (USD Weaker)', '0%', '+5% (USD Stronger)']}
             onChange={handleDriftChange}
           />
         </div>
