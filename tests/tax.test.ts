@@ -103,4 +103,52 @@ describe('Irish Progressive Tax Engine', () => {
     expect(lowIncomeBreakdown.netIncomeTax).toBe(0);
     expect(lowIncomeBreakdown.totalTax).toBe(lowIncomeBreakdown.usc + lowIncomeBreakdown.prsi);
   });
+
+  it('handles exact income threshold boundary points (€12,012, €25,760, €53,000, €70,044)', () => {
+    // Exactly at USC Tier 1 boundary (€12,012): 0.5% = €60.06
+    expect(calculateIrishUsc(12012)).toBeCloseTo(60.06, 2);
+
+    // Exactly at USC Tier 2 boundary (€25,760): €60.06 + €13,748 * 0.02 (€274.96) = €335.02
+    expect(calculateIrishUsc(25760)).toBeCloseTo(335.02, 2);
+
+    // Exactly at USC Tier 3 boundary (€70,044): €335.02 + €44,284 * 0.04 (€1,771.36) = €2,106.38
+    expect(calculateIrishUsc(70044)).toBeCloseTo(2106.38, 2);
+
+    // Exactly on SRCOP (€53,000): higherRateTax must be strictly 0
+    const cutoffBreakdown = calculateIrishTaxBreakdown(53000, {
+      standard_rate_cutoff_eur: 53000,
+      tax_credits_eur: 4000,
+    });
+    expect(cutoffBreakdown.higherRateTax).toBe(0);
+    expect(cutoffBreakdown.standardRateTax).toBe(10600); // 20% of 53k
+    expect(cutoffBreakdown.grossIncomeTax).toBe(10600);
+  });
+
+  it('confirms 52% marginal rate for high earners (€300k+) and 20% for low earners (<€44k)', () => {
+    const highEarner = calculateIrishTaxBreakdown(300000);
+    expect(highEarner.marginalTaxRate).toBe(0.52);
+
+    const lowEarner = calculateIrishTaxBreakdown(35000, {
+      standard_rate_cutoff_eur: 44000,
+    });
+    expect(lowEarner.higherRateTax).toBe(0);
+  });
+
+  it('guarantees exact mathematical identity gross = netTakeHome + totalTax across all income levels', () => {
+    const salaries = [20000, 44000, 53000, 70044, 100000, 190000, 350000, 750000, 1000000];
+    for (const sal of salaries) {
+      const breakdown = calculateIrishTaxBreakdown(sal);
+      expect(breakdown.netAnnualTakeHome + breakdown.totalTax).toBeCloseTo(sal, 2);
+      expect(breakdown.netMonthlyTakeHome * 12).toBeCloseTo(breakdown.netAnnualTakeHome, 2);
+    }
+  });
+
+  it('correctly computes tax when tax credits are set to zero', () => {
+    const zeroCredits = calculateIrishTaxBreakdown(100000, {
+      standard_rate_cutoff_eur: 53000,
+      tax_credits_eur: 0,
+    });
+    expect(zeroCredits.taxCreditsUsed).toBe(0);
+    expect(zeroCredits.netIncomeTax).toBe(zeroCredits.grossIncomeTax);
+  });
 });

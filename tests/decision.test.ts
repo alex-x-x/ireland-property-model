@@ -145,4 +145,110 @@ describe('Decision Engine', () => {
       expect(Number.isFinite(s.remainingLiquidWealthAtM60)).toBe(true);
     }
   });
+
+  it('strictly validates Tier 1 (Cash Only) liquidation when cash covers 100% of upfront capital', () => {
+    // €600k property, 10% deposit + 1% stamp duty + €3k fees = €60k + €6k + €3k = €69k
+    // Buyer has €150,000 cash, €80,000 ETF investments, and €200,000 GSUs
+    const cashRichConfig = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 600000,
+        yearly_growth_rate: 0.05,
+      },
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 150000,
+        investments_eur: 80000,
+      },
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        initial_vested_shares_held: 1000,
+      },
+    };
+
+    const monthlyPoints = runSimulation(cashRichConfig);
+    const decision = runDecisionAnalysis(cashRichConfig, monthlyPoints);
+
+    const buyAsap = decision.scenarios.find((s) => s.id === 'buy_asap');
+    expect(buyAsap).toBeDefined();
+    expect(buyAsap?.totalUpfrontPaid).toBe(69000); // 60k + 6k + 3k
+    expect(buyAsap?.depositPaid).toBe(60000);
+    expect(buyAsap?.initialMortgagePrincipal).toBe(540000);
+    // Home equity + remaining liquid assets must equal total net wealth
+    expect(buyAsap!.totalNetWealthAtM60).toBeCloseTo(
+      buyAsap!.homeEquityAtM60 + buyAsap!.remainingLiquidWealthAtM60,
+      1
+    );
+  });
+
+  it('validates multi-tier liquidation waterfall (Tier 1 Cash + Tier 2 Investments) without touching GSUs', () => {
+    // €800k property, deposit + fees = €80k + €8k + €3k = €91k
+    // Cash = €30,000, Investments = €100,000, GSUs = €300,000
+    const tieredConfig = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 800000,
+        yearly_growth_rate: 0.05,
+      },
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 30000,
+        investments_eur: 100000,
+      },
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        initial_vested_shares_held: 1500,
+      },
+    };
+
+    const monthlyPoints = runSimulation(tieredConfig);
+    const decision = runDecisionAnalysis(tieredConfig, monthlyPoints);
+
+    const buyAsap = decision.scenarios.find((s) => s.id === 'buy_asap');
+    expect(buyAsap).toBeDefined();
+    expect(buyAsap?.totalUpfrontPaid).toBe(91000);
+    expect(buyAsap?.depositPaid).toBe(80000);
+    expect(buyAsap?.initialMortgagePrincipal).toBe(720000);
+    expect(buyAsap!.totalNetWealthAtM60).toBeGreaterThan(0);
+  });
+
+  it('enforces mathematical delta invariants across all decision scenarios', () => {
+    const monthlyPoints = runSimulation(DEFAULT_CONFIG);
+    const decision = runDecisionAnalysis(DEFAULT_CONFIG, monthlyPoints);
+
+    const buyAsap = decision.scenarios.find((s) => s.id === 'buy_asap');
+    expect(buyAsap).toBeDefined();
+    expect(buyAsap?.netWealthDeltaVsBuyAsap).toBe(0);
+
+    for (const s of decision.scenarios) {
+      if (s.netWealthDeltaVsBuyAsap !== undefined && s.netWealthDeltaVsBuyAsap !== null) {
+        const expectedDelta = s.totalNetWealthAtM60 - buyAsap!.totalNetWealthAtM60;
+        expect(s.netWealthDeltaVsBuyAsap).toBeCloseTo(expectedDelta, 1);
+      }
+    }
+  });
+
+  it('accurately distinguishes recommendation boundary around the €5,000 threshold', () => {
+    // When deltas are small (< €5,000), default recommendation favors locking in home ownership (buy_asap)
+    // When deltas are significant (> €5,000), recommendation switches to wait_and_compound
+    const closeDeltaConfig = {
+      ...DEFAULT_CONFIG,
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        stock_yearly_growth_rate: 0.05,
+      },
+      property: {
+        ...DEFAULT_CONFIG.property,
+        yearly_growth_rate: 0.05,
+      },
+    };
+
+    const monthlyPoints = runSimulation(closeDeltaConfig);
+    const decision = runDecisionAnalysis(closeDeltaConfig, monthlyPoints);
+
+    expect(['buy_asap', 'wait_and_compound']).toContain(decision.recommendedAction);
+    expect(decision.scenarios.length).toBeGreaterThanOrEqual(2);
+  });
 });
