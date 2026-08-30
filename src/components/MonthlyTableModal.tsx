@@ -80,9 +80,17 @@ export const MonthlyTableModal: React.FC<MonthlyTableModalProps> = ({
                   <td className="py-2 px-3 text-right text-slate-200">€{Math.round(p.propertyPrice).toLocaleString()}</td>
                   <td className="py-2 px-3 text-right text-amber-300 font-semibold">€{Math.round(p.targetCapital).toLocaleString()}</td>
                   <td className="py-2 px-3 text-right text-slate-300">€{Math.round(p.cash).toLocaleString()}</td>
-                  <td className="py-2 px-3 text-right text-slate-300">€{Math.round(p.investments).toLocaleString()}</td>
-                  <td className="py-2 px-3 text-right text-purple-300">€{Math.round(p.gsuPool).toLocaleString()}</td>
-                  <td className="py-2 px-3 text-right text-emerald-400 font-bold">€{Math.round(p.totalLiquidWealth).toLocaleString()}</td>
+                  <td className="py-2 px-3 text-right text-purple-300">
+                    <div>€{Math.round(p.gsuPool).toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-400 font-sans">
+                      {Math.round(p.retainedShares)} shs
+                      {p.vestEvents && p.vestEvents.length > 0 && (
+                        <span className="text-emerald-400 ml-1 font-mono font-semibold">
+                          (+{p.vestEvents.reduce((sum, e) => sum + e.netShares, 0).toFixed(1)} net)
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-2 px-3 text-right">
                     <span className={p.surplus >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400'}>
                       {p.surplus >= 0 ? '+' : ''}€{Math.round(p.surplus).toLocaleString()}

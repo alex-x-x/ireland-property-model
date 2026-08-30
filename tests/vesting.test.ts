@@ -6,6 +6,7 @@ import {
   getCalendarMonthOffset,
   calculateGrantVestingSummary,
   calculateSingleGrantVesting,
+  getGrantLifecycleEvents,
 } from '../src/engine/vesting';
 import { Grant } from '../src/engine/types';
 
@@ -327,5 +328,54 @@ describe('Vesting Engine', () => {
     expect(events[0].grossShares).toBe(1);
     expect(events[0].netShares).toBe(0.48);
     expect(events[0].netAmountEur).toBeCloseTo(0.48 * 200 * 0.86, 4);
+  });
+
+  it('accurately identifies grant award dates and grant completion (cliff) milestones via getGrantLifecycleEvents', () => {
+    const grants: Grant[] = [
+      {
+        id: 'initial_4y',
+        name: 'Hire Grant (4Y)',
+        type: 'initial',
+        grant_date: '2024-08-01', // 24 months before 2026-08-01
+        total_shares: 1000,
+        schedule_percents: [0.33, 0.33, 0.22, 0.12],
+        vest_frequency_months: 1, // Monthly over 48 months -> ends at 2028-08-01 (Month 24)
+      },
+      {
+        id: 'refresher_2027',
+        name: 'Annual Refresher 2027',
+        type: 'refresher',
+        grant_date: '2027-04-01', // Month 8 from 2026-08-01
+        total_shares: 400,
+        schedule_percents: [0.25, 0.25, 0.25, 0.25],
+        vest_frequency_months: 3, // 4 quarterly vests -> ends at 2028-04-01 (Month 20)
+      },
+    ];
+
+    const startDate = '2026-08-01';
+    const lifecycle = getGrantLifecycleEvents(grants, startDate, 60);
+
+    // Initial grant:
+    // - Award was in the past (2024-08-01), so no award event in simulation window.
+    // - Final vest: 2028-08-01 (Month 24) -> 'grant_completed'
+    const initialCompletion = lifecycle.find((e) => e.grantId === 'initial_4y' && e.type === 'grant_completed');
+    expect(initialCompletion).toBeDefined();
+    expect(initialCompletion?.month).toBe(24);
+    expect(initialCompletion?.date).toBe('2028-08');
+    expect(initialCompletion?.description).toContain('Hire Grant (4Y)');
+
+    // Refresher grant:
+    // - Award: 2027-04-01 (Month 8) -> 'grant_awarded'
+    const refAward = lifecycle.find((e) => e.grantId === 'refresher_2027' && e.type === 'grant_awarded');
+    expect(refAward).toBeDefined();
+    expect(refAward?.month).toBe(8);
+    expect(refAward?.date).toBe('2027-04');
+    expect(refAward?.totalShares).toBe(400);
+
+    // - Final vest: 2028-04-01 (Month 20) -> 'grant_completed'
+    const refCompletion = lifecycle.find((e) => e.grantId === 'refresher_2027' && e.type === 'grant_completed');
+    expect(refCompletion).toBeDefined();
+    expect(refCompletion?.month).toBe(20);
+    expect(refCompletion?.date).toBe('2028-04');
   });
 });

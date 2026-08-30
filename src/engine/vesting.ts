@@ -189,3 +189,67 @@ export function calculateSingleGrantVesting(
   };
 }
 
+export interface GrantLifecycleEvent {
+  month: number;
+  date: string;
+  type: 'grant_awarded' | 'grant_completed';
+  grantId: string;
+  grantName: string;
+  grantType: 'initial' | 'refresher' | 'custom';
+  totalShares: number;
+  description: string;
+}
+
+export function getGrantLifecycleEvents(
+  grants: Grant[],
+  startDateStr: string,
+  forecastMonths: number = 60
+): GrantLifecycleEvent[] {
+  const events: GrantLifecycleEvent[] = [];
+
+  for (const grant of grants) {
+    const grantName = grant.name || (grant.type === 'initial' ? 'Initial Hire Grant' : 'Refresher Grant');
+    
+    // 1. Grant Award Event (if within simulation horizon, m >= 0 and m <= forecastMonths)
+    const grantAwardDateStr = grant.grant_date.slice(0, 7);
+    const awardOffset = getCalendarMonthOffset(startDateStr, addMonthsToDate(grant.grant_date, 0));
+    if (awardOffset >= 0 && awardOffset <= forecastMonths) {
+      events.push({
+        month: awardOffset,
+        date: grantAwardDateStr,
+        type: 'grant_awarded',
+        grantId: grant.id,
+        grantName,
+        grantType: grant.type,
+        totalShares: grant.total_shares,
+        description: `New Grant Awarded: ${grantName} (${grant.total_shares} shs)`,
+      });
+    }
+
+    // 2. Grant Completion / Final Vest Event
+    const milestones = getGrantMilestones(grant);
+    if (milestones.length > 0) {
+      const lastMilestone = milestones[milestones.length - 1];
+      const finalDate = addMonthsToDate(grant.grant_date, lastMilestone.milestoneMonthOffset);
+      const completionOffset = getCalendarMonthOffset(startDateStr, finalDate);
+      const completionDateStr = finalDate.toISOString().slice(0, 7);
+
+      if (completionOffset >= 0 && completionOffset <= forecastMonths) {
+        events.push({
+          month: completionOffset,
+          date: completionDateStr,
+          type: 'grant_completed',
+          grantId: grant.id,
+          grantName,
+          grantType: grant.type,
+          totalShares: grant.total_shares,
+          description: `Grant Completed (Final Vest): ${grantName} (${grant.total_shares} total shs)`,
+        });
+      }
+    }
+  }
+
+  // Sort chronologically
+  return events.sort((a, b) => a.month - b.month);
+}
+
