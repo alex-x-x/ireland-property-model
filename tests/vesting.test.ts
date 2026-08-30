@@ -141,7 +141,7 @@ describe('Vesting Engine', () => {
   });
 
   it('accurately reconciles multi-grant portfolio summing to 3,242 granted shares', () => {
-    // Realistic multi-grant Dublin Google portfolio:
+    // Realistic multi-grant Irish Google portfolio:
     // 1. Initial Grant: 2,000 shares, granted 2023-08-01 (33/33/22/12 monthly)
     // 2. Refresher 2024: 500 shares, granted 2024-08-01 (25/25/25/25 monthly)
     // 3. Refresher 2025: 742 shares, granted 2025-08-01 (25/25/25/25 monthly)

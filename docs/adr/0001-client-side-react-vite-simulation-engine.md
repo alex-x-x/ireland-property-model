@@ -6,7 +6,7 @@
 
 ## Context
 
-Tech professionals in Dublin face a multi-variable financial decision: whether to liquidate Google Stock Units (GSUs) and investments to buy property immediately upon meeting the 10% First-Time Buyer deposit threshold, or to continue renting while unvested equity compounds. Static spreadsheets fail to capture dynamic cliff schedules (33/33/22/12, 25/25/25/25), Irish marginal tax (52%), currency fluctuations (EUR/USD), property inflation, and mortgage amortization.
+Tech professionals in Ireland face a multi-variable financial decision: whether to liquidate Google Stock Units (GSUs) and investments to buy property immediately upon meeting the 10% First-Time Buyer deposit threshold, or to continue renting while unvested equity compounds. Static spreadsheets fail to capture dynamic cliff schedules (33/33/22/12, 25/25/25/25), Irish marginal tax (52%), currency fluctuations (EUR/USD), property inflation, and mortgage amortization.
 
 We need an interactive, fast, privacy-preserving, zero-backend modeling tool that can simulate financial trajectories over 60 consecutive months in real-time.
 

@@ -1,6 +1,6 @@
-# Implementation Plan: Dublin Property Acquisition & Equity Decision Engine
+# Implementation Plan: Ireland Property Acquisition & Equity Decision Engine
 
-Build a standalone, client-side web application that simulates a Dublin tech professional's 60-month financial trajectory to answer: *"Should I buy as soon as I hit the minimum deposit threshold, or should I keep renting to let unvested stock and investments compound?"*
+Build a standalone, client-side web application that simulates an Irish tech professional's 60-month financial trajectory to answer: *"Should I buy as soon as I hit the minimum deposit threshold, or should I keep renting to let unvested stock and investments compound?"*
 
 ## User Review Required
 

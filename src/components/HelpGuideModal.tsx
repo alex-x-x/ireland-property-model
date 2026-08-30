@@ -132,10 +132,10 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-950/40 via-slate-850 to-purple-950/30 border border-brand-500/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-brand-400" />
-                  <h3 className="text-sm sm:text-base font-bold text-white">The Core Dublin Tech Dilemma</h3>
+                  <h3 className="text-sm sm:text-base font-bold text-white">The Core Ireland Tech Dilemma</h3>
                 </div>
                 <p className="text-slate-300 leading-normal">
-                  For tech professionals working in Dublin (Alphabet, Meta, Microsoft, AWS, Stripe, etc.), deciding whether to buy property immediately or continue renting is one of the most consequential financial choices of their lives.
+                  For tech professionals working in Ireland (Alphabet, Meta, Microsoft, AWS, Stripe, etc.), deciding whether to buy property immediately or continue renting is one of the most consequential financial choices of their lives.
                 </p>
                 <p className="text-slate-300 leading-normal">
                   The decision is a <strong>three-way financial tug-of-war</strong>:
@@ -148,7 +148,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       <span>1. Property Inflation</span>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Dublin house prices appreciate ~5%/yr. An €800k home rises ~€40k/yr, increasing your required deposit and stamp duty every month you delay.
+                      Irish house prices appreciate ~5%/yr. An €800k home rises ~€40k/yr, increasing your required deposit and stamp duty every month you delay.
                     </p>
                   </div>
 
@@ -158,7 +158,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       <span>2. Rental Drag</span>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Dublin rent (€2,500–€3,500/mo) is a 100% sunk cost. Over 2 years, you burn €60,000+ that could have paid down a mortgage.
+                      Irish rent (€2,500–€3,500/mo) is a 100% sunk cost. Over 2 years, you burn €60,000+ that could have paid down a mortgage.
                     </p>
                   </div>
 
@@ -283,7 +283,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               {/* 3 Real-World Case Studies */}
               <div className="space-y-3">
                 <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
-                  🎯 Real-World Dublin Decision Case Studies
+                  🎯 Real-World Ireland Decision Case Studies
                 </h4>
 
                 <div className="space-y-3">
@@ -299,7 +299,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       </span>
                     </div>
                     <p className="text-xs text-slate-300">
-                      <strong>Profile & Assumptions:</strong> Senior engineer with 1,200 unvested GSUs, €190k base, €2,500/mo rent. Alphabet stock expected to compound at <strong>18%/yr</strong> vs Dublin property at <strong>5%/yr</strong>.
+                      <strong>Profile & Assumptions:</strong> Senior engineer with 1,200 unvested GSUs, €190k base, €2,500/mo rent. Alphabet stock expected to compound at <strong>18%/yr</strong> vs Irish property at <strong>5%/yr</strong>.
                     </p>
                     <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-750 text-xs text-purple-300 font-mono space-y-0.5">
                       <div>• 5-Year Delta (Wait 24M): <strong className="text-emerald-400">+€58,400</strong> higher net wealth vs Buy ASAP</div>
@@ -322,7 +322,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       </span>
                     </div>
                     <p className="text-xs text-slate-300">
-                      <strong>Profile & Assumptions:</strong> Tech couple renting in Grand Canal Dock at <strong>€3,500/mo</strong> (€42k/yr in 100% sunk cost). Conservative stock outlook (<strong>6%/yr</strong>) with Dublin house inflation at <strong>6%/yr</strong>.
+                      <strong>Profile & Assumptions:</strong> Tech couple renting in Grand Canal Dock at <strong>€3,500/mo</strong> (€42k/yr in 100% sunk cost). Conservative stock outlook (<strong>6%/yr</strong>) with Irish house inflation at <strong>6%/yr</strong>.
                     </p>
                     <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-750 text-xs text-emerald-300 font-mono space-y-0.5">
                       <div>• 5-Year Delta (Wait 24M): <strong className="text-rose-400">-€49,200</strong> loss vs Buy ASAP</div>
@@ -412,7 +412,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                   <span className="text-[10px] uppercase font-bold text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">Interactive</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  <strong>What it is:</strong> Instantaneous controls to stress-test your future across 6 macroeconomic engines: Google stock growth, Dublin house price inflation, ETF returns, mortgage interest rates, rent inflation (RPZ), and USD/EUR currency drift.
+                  <strong>What it is:</strong> Instantaneous controls to stress-test your future across 6 macroeconomic engines: Google stock growth, Irish house price inflation, ETF returns, mortgage interest rates, rent inflation (RPZ), and USD/EUR currency drift.
                 </p>
                 <p className="text-xs text-slate-400">
                   <strong>Key Insight:</strong> Sliders update with <strong>zero lag</strong>. Dragging them allows you to see how small changes (e.g. stock growing at 15% vs 20%) immediately flip the optimal decision.
@@ -484,7 +484,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                     <strong className="text-purple-300 block">📊 What VARIES on the Grid (The 2 Axes):</strong>
                     <ul className="list-disc pl-4 space-y-0.5 text-slate-400">
                       <li><strong>Y-Axis (Rows):</strong> Alphabet stock growth (-20% to +30% p.a.).</li>
-                      <li><strong>X-Axis (Columns):</strong> Dublin property inflation (-3% to +8% p.a.).</li>
+                      <li><strong>X-Axis (Columns):</strong> Ireland property inflation (-3% to +8% p.a.).</li>
                     </ul>
                   </div>
                   <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-750 space-y-1">
@@ -592,7 +592,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       When "Buy ASAP" Typically Wins:
                     </span>
                     <ul className="list-disc pl-4 space-y-1 text-xs text-slate-300">
-                      <li>Dublin property prices rise at ≥ 5% per year.</li>
+                      <li>Irish property prices rise at ≥ 5% per year.</li>
                       <li>Current rent is high (≥ €2,500/mo), draining cash reserves.</li>
                       <li>Mortgage interest rate is competitive (≤ 3.5%), so your payments build equity rather than pure interest.</li>
                       <li>Expected future stock growth is moderate (≤ 10%–12%).</li>
@@ -607,7 +607,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       <li>Alphabet / tech equity grows aggressively (≥ 15%–20%/yr).</li>
                       <li>You have major unvested GSU grants vesting in the next 12–24 months.</li>
                       <li>Current rent is low or rent pressure zone (RPZ) restricted.</li>
-                      <li>Dublin property growth stagnates (≤ 2%–3%).</li>
+                      <li>Irish property growth stagnates (≤ 2%–3%).</li>
                     </ul>
                   </div>
                 </div>

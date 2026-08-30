@@ -46,7 +46,7 @@ export interface HistoricalRateBenchmark {
   label: string;
 }
 
-// Dublin Tech / Google GSU compensation standard:
+// Irish Tech / Google GSU compensation standard:
 // Grants issued in month M use the average closing price & ECB FX rate of preceding month (M - 1).
 const PRECEDING_MONTH_BENCHMARKS: Record<string, { priceUsd: number; fxRate: number; precedingMonthName: string }> = {
   // 2023 Grants (Preceding month: Dec 2022 - Nov 2023)

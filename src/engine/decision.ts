@@ -308,7 +308,7 @@ export function runDecisionAnalysis(
   let recommendationReason = '';
   if (recommendedAction === 'wait_and_compound') {
     const bestScenario = scenarios.find((s) => s.netWealthDeltaVsBuyAsap === maxWaitDelta);
-    recommendationReason = `Waiting and compounding equity delivers a net wealth advantage of +€${Math.round(maxWaitDelta).toLocaleString()} by Year 5 (${bestScenario?.timingLabel}). Tech stock and investment returns outpace Dublin property inflation and rental drag.`;
+    recommendationReason = `Waiting and compounding equity delivers a net wealth advantage of +€${Math.round(maxWaitDelta).toLocaleString()} by Year 5 (${bestScenario?.timingLabel}). Tech stock and investment returns outpace Ireland property inflation and rental drag.`;
   } else {
     recommendationReason = `Purchasing at Month ${earliestBuyMonth} maximizes Year 5 wealth. Locking in property valuation and eliminating monthly rent friction saves more than potential equity appreciation.`;
   }

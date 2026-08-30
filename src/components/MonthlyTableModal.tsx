@@ -18,7 +18,7 @@ export const MonthlyTableModal: React.FC<MonthlyTableModalProps> = ({
 
   const handleDownloadCsv = () => {
     const csvContent = exportMonthlyPointsToCsv(monthlyPoints);
-    downloadCsvFile(`dublin-property-audit-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+    downloadCsvFile(`ireland-property-audit-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   };
 
   return (

@@ -207,7 +207,7 @@ export function calculateMortgageWithOverpayments(
     fixedRateYears = 2,
     monthlyOverpayment = 0,
     annualLumpSumOverpayment = 0,
-    lumpSumMonth = 3, // Default March for Google/Dublin tech annual bonuses
+    lumpSumMonth = 3, // Default March for Google/Irish tech annual bonuses
   } = options;
 
   if (principal <= 0 || termYears <= 0) {

@@ -1,11 +1,11 @@
 {
-  "name": "dublin-property-buying-model",
+  "name": "ireland-property-model",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build --base=/dublin-property-model/",
+    "build": "tsc -b && vite build --base=/ireland-property-model/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

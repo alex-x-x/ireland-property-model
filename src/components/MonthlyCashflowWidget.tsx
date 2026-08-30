@@ -68,7 +68,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
 
   const handleDownloadCsv = () => {
     const csvContent = exportMonthlyPointsToCsv(data);
-    downloadCsvFile(`dublin-property-cashflow-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+    downloadCsvFile(`ireland-property-cashflow-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   };
 
   const filteredData = useMemo(() => {

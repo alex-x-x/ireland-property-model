@@ -1,23 +1,26 @@
-# Dublin Property Acquisition & Equity Decision Engine
+# Ireland Property Acquisition & Equity Decision Engine
 
-[![Tests](https://img.shields.io/badge/tests-47%20passed-success)](https://github.com/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-alex--x--x.github.io%2Fireland--property--model-emerald?style=for-the-badge&logo=githubpages&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
+[![Tests](https://img.shields.io/badge/tests-95%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
 [![React](https://img.shields.io/badge/React-18.3-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-3.2-yellow)](https://vitest.dev/)
 
+> 🌐 **Live Web Application:** [https://alex-x-x.github.io/ireland-property-model/](https://alex-x-x.github.io/ireland-property-model/)
+
 > **An interactive, real-time financial simulation engine to answer the core tech compensation dilemma:**  
-> *"Should I buy Dublin real estate as soon as I hit the minimum deposit threshold, or keep renting to let unvested Google Stock Units (GSUs) and equity investments compound?"*
+> *"Should I buy Irish real estate as soon as I hit the minimum deposit threshold, or keep renting to let unvested Google Stock Units (GSUs) and equity investments compound?"*
 
 ---
 
-## 📌 Executive Summary: The Dublin Dilemma (Plain-English)
+## 📌 Executive Summary: The Ireland Dilemma (Plain-English)
 
-For tech professionals in Dublin (at Alphabet, Meta, Microsoft, AWS, Stripe, and peer multinationals), purchasing a home is rarely a simple "save cash and buy" decision. Instead, it is a **dynamic three-way financial tug-of-war**:
+For tech professionals in Ireland (at Alphabet, Meta, Microsoft, AWS, Stripe, and peer multinationals), purchasing a home is rarely a simple "save cash and buy" decision. Instead, it is a **dynamic three-way financial tug-of-war**:
 
 ```
       ┌────────────────────────────────────────────────────────┐
-      │               THE DUBLIN FINANCIAL TUG-OF-WAR          │
+      │               THE IRISH FINANCIAL TUG-OF-WAR           │
       └────────────────────────────────────────────────────────┘
                                  ▲
                                  │
@@ -25,7 +28,7 @@ For tech professionals in Dublin (at Alphabet, Meta, Microsoft, AWS, Stripe, and
      │                           │                           │
 ┌────┴─────────────────┐ ┌───────┴───────────────┐ ┌─────────┴────────────────┐
 │  1. Property Market  │ │    2. Rental Drag     │ │     3. Stock Equity      │
-│  Dublin real estate  │ │ Dublin rent (€2.5k–   │ │ US Tech stock (GSUs)     │
+│  Irish real estate   │ │ Irish rent (€2.5k–    │ │ US Tech stock (GSUs)     │
 │  appreciates ~5%/yr; │ │ €3.5k/mo) is a 100%   │ │ compounds aggressively   │
 │  delaying purchase   │ │ sunk cost that burns  │ │ (10%–20%/yr), but vests  │
 │  increases deposit   │ │ monthly savings and   │ │ trigger a 52% Irish      │
@@ -34,7 +37,7 @@ For tech professionals in Dublin (at Alphabet, Meta, Microsoft, AWS, Stripe, and
 ```
 
 1. **The Cost of Waiting (Property Inflation & Rent Sunk Cost):**
-   * If Dublin housing appreciates at **5% per annum**, an €800,000 home increases in price by **~€40,000 each year**. Delaying purchase by 2 years means needing an extra €8,000+ in cash deposit and €800+ in tiered Irish Stamp Duty.
+   * If Irish housing appreciates at **5% per annum**, an €800,000 home increases in price by **~€40,000 each year**. Delaying purchase by 2 years means needing an extra €8,000+ in cash deposit and €800+ in tiered Irish Stamp Duty.
    * In addition, renting for those 2 years at €2,500/month burns **€60,000 in sunk, non-recoverable rent**.
 2. **The Opportunity Cost of Buying Early (GSU Liquidation):**
    * Buying immediately stops the rent bleed and locks in property price appreciation.
@@ -49,6 +52,9 @@ This application builds a month-by-month mathematical simulation across **60 con
 
 ## 🚀 Quick Start
 
+### Live App
+Access the deployed application directly at **[https://alex-x-x.github.io/ireland-property-model/](https://alex-x-x.github.io/ireland-property-model/)**.
+
 ### Prerequisites
 * **Node.js**: v18.0.0 or higher (v20+ recommended)
 * **npm**: v9.0.0 or higher
@@ -56,8 +62,8 @@ This application builds a month-by-month mathematical simulation across **60 con
 ### Installation & Local Run
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/dublin-property-buying-model.git
-cd dublin-property-buying-model
+git clone https://github.com/alex-x-x/ireland-property-model.git
+cd ireland-property-model
 
 # 2. Install dependencies
 npm install
@@ -116,17 +122,17 @@ Follow this **4-step decision-making playbook** to transform complex financial t
 
 ---
 
-### 🎯 Real-World Dublin Decision Case Studies
+### 🎯 Real-World Ireland Decision Case Studies
 
 #### Case A: "The GSU Bull" (High Stock Compounding)
 * **Profile:** Senior Google engineer with 1,200 unvested GSUs, €190k base salary, renting at €2,500/mo.
-* **Macro Assumptions:** Alphabet stock compounding at **18%/yr** vs Dublin property inflation at **5%/yr**.
+* **Macro Assumptions:** Alphabet stock compounding at **18%/yr** vs Irish property inflation at **5%/yr**.
 * **Engine Verdict:** **WAIT 24M–36M (+€58,400 higher 5-Year Net Wealth)**.
 * **Why:** Even after the 52% Irish marginal tax at vest, 18% equity appreciation massively outperforms property inflation. Delaying purchase allows building a 30%+ deposit, taking a smaller mortgage, and maintaining large liquid reserves.
 
 #### Case B: "The High-Rent Sunk Cost Trap"
 * **Profile:** Tech couple renting a 2-bed in Grand Canal Dock for **€3,500/mo** (€42,000/yr in 100% sunk cost), with modest stock expectations (**6%/yr**).
-* **Macro Assumptions:** Dublin property inflating at **6%/yr**.
+* **Macro Assumptions:** Irish property inflating at **6%/yr**.
 * **Engine Verdict:** **BUY ASAP (+€49,200 gain vs waiting 24 months)**.
 * **Why:** Paying €3,500/mo in sunk rent acts as an intense negative drag on wealth accumulation. Buying immediately stops the rent bleed and redirects cash into mortgage principal amortization and home equity appreciation.
 
@@ -160,12 +166,12 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
 ### 2. Financial Modeling Sliders (Sidebar)
 * **Purpose:** Allows instant, 0ms-latency stress testing of the 6 core economic growth engines:
   1. **Google Stock Growth (p.a.):** -10% to +30% (how fast Alphabet equity compounds).
-  2. **Property Inflation (p.a.):** 0% to +15% (Dublin house price inflation).
+  2. **Property Inflation (p.a.):** 0% to +15% (Irish house price inflation).
   3. **Base Investment Yield (p.a.):** 0% to +20% (index funds / global ETFs).
   4. **Mortgage Interest Rate:** 2.0% to 7.0% (AIB Green Benchmark ~3.50%).
   5. **Rent Inflation (RPZ):** 0% to 8% (statutory 2% RPZ rent cap vs open market).
   6. **EUR/USD Spot Drift (p.a.):** -5% to +5% (currency exchange rate drift on USD-denominated stock & cash):
-     * *Move Left (< 0%):* Expect USD to weaken vs EUR $\implies$ stock converts into fewer Euros (reduces Dublin buying power).
+     * *Move Left (< 0%):* Expect USD to weaken vs EUR $\implies$ stock converts into fewer Euros (reduces Irish buying power).
      * *Move Right (> 0%):* Expect USD to strengthen vs EUR $\implies$ stock converts into more Euros (boosts deposit).
      * *Past Year Reference:* EUR/USD traded between ~1.04 and ~1.12 (~±3% to ±5% annual swing) based on ECB vs Fed rate differentials.
 * **Key Insight:** Moving sliders immediately updates the 60-month trajectory and decision cards without lagging the UI.
@@ -200,7 +206,7 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
 * **Purpose:** Evaluates **55 macroeconomic permutations** ($11 \text{ stock rates} \times 5 \text{ property rates}$) simultaneously to show the exact boundary where buying immediately beats waiting.
 * **What VARIES on the Grid (The 2 Axes):**
   * **Y-Axis (Rows):** Alphabet / Tech stock annual growth rate ($-20\%$ to $+30\%$).
-  * **X-Axis (Columns):** Dublin property price inflation ($-3\%$ to $+8\%$).
+  * **X-Axis (Columns):** Ireland property price inflation ($-3\%$ to $+8\%$).
 * **What is FIXED Behind the Grid:**
   * Your personal financial profile (Base Salary, Living Expenses, Cash, Held GSUs, Unvested Grants).
   * Fixed macro parameters (Mortgage Interest Rate ~3.50%, RPZ Rent Cap ~2.0%, FX Drift 0%).
@@ -239,11 +245,11 @@ The decision to wait is never open-ended — it is always evaluated over a **spe
 
 ### 3. The Golden Rules of the Model
 * **When "Buy ASAP" Typically Wins:**
-  * Dublin property inflation ($\ge 5\%$) outpaces net GSU growth.
+  * Irish property inflation ($\ge 5\%$) outpaces net GSU growth.
   * High monthly rent ($\ge €2,500/\text{mo}$) inflicts heavy cumulative cash bleed.
   * Mortgage interest rate is low ($\le 3.5\%$), so monthly payments aggressively amortize principal.
 * **When "Wait & Compound" Typically Wins:**
-  * Stock equity grows rapidly ($\ge 15\%-20\%/\text{yr}$), exceeding Dublin property appreciation.
+  * Stock equity grows rapidly ($\ge 15\%-20\%/\text{yr}$), exceeding Irish property appreciation.
   * You have major unvested GSU cliffs arriving in the next 12–24 months that are better left compounding in USD equity.
   * Rent is relatively low or controlled by RPZ regulations.
 

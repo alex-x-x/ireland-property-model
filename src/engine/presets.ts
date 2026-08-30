@@ -3,9 +3,9 @@ import { PresetScenario } from './types';
 export const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: 'baseline',
-    name: 'Standard Dublin Baseline',
+    name: 'Standard Ireland Baseline',
     tagline: '5% Property Growth, 10% GSU Return, 3.5% AIB Rate',
-    description: 'Realistic baseline reflecting historical Dublin residential inflation and Alphabet equity trajectory with AIB green mortgage benchmark.',
+    description: 'Realistic baseline reflecting historical Irish residential inflation and Alphabet equity trajectory with AIB green mortgage benchmark.',
     config: {
       property: {
         yearly_growth_rate: 0.05,
@@ -51,9 +51,9 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
   },
   {
     id: 'dublin_property_surge',
-    name: 'Dublin Property Squeeze',
+    name: 'Ireland Property Squeeze',
     tagline: '8.5% Property Appreciation & 4% Rent Growth',
-    description: 'Severe housing supply shortage causes Dublin home prices to surge 8.5% annually alongside higher rent inflation, strongly incentivizing buying early.',
+    description: 'Severe housing supply shortage causes Irish home prices to surge 8.5% annually alongside higher rent inflation, strongly incentivizing buying early.',
     config: {
       property: {
         yearly_growth_rate: 0.085,

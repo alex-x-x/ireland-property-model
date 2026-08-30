@@ -73,12 +73,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleExportJson = () => {
     const jsonStr = exportConfigToJson(config);
-    downloadJsonFile(`dublin-property-model-${new Date().toISOString().slice(0, 10)}.json`, jsonStr);
+    downloadJsonFile(`ireland-property-model-${new Date().toISOString().slice(0, 10)}.json`, jsonStr);
   };
 
   const handleExportCsv = () => {
     const csvContent = exportMonthlyPointsToCsv(monthlyPoints);
-    downloadCsvFile(`dublin-property-model-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+    downloadCsvFile(`ireland-property-model-60m-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   };
 
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,13 +119,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-lg text-white tracking-tight">Dublin Property & GSU Decision Engine</h1>
+              <h1 className="font-bold text-lg text-white tracking-tight">Ireland Property & GSU Decision Engine</h1>
               <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
                 5-Yr Model
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Interactive financial simulation for Dublin tech professionals (GSUs, 52% tax, mortgage & rent drag)
+              Interactive financial simulation for Ireland tech professionals (GSUs, 52% tax, mortgage & rent drag)
             </p>
           </div>
         </div>
