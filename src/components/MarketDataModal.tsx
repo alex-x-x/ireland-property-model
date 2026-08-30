@@ -9,7 +9,8 @@ interface MarketDataModalProps {
   marketData: MarketDataResult | null;
   config: SimulationConfig;
   onRefresh: (symbol: string) => Promise<void>;
-  onApplyManualData: (stockPrice: number, fxRate: number, symbol: string) => void;
+  onApplyManualData: (stockPrice: number, fxRate: number, symbol: string, isManualOverride?: boolean) => void;
+  onToggleManualOverride?: (enabled: boolean) => void;
 }
 
 export const MarketDataModal: React.FC<MarketDataModalProps> = ({
@@ -19,12 +20,14 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
   config,
   onRefresh,
   onApplyManualData,
+  onToggleManualOverride,
 }) => {
   if (!isOpen) return null;
 
   const [symbol, setSymbol] = useState(config.meta.stock_symbol || 'GOOGL');
   const [manualStockPrice, setManualStockPrice] = useState(config.equity_engine.current_share_price_usd);
   const [manualFxRate, setManualFxRate] = useState(config.macro.eur_usd_spot);
+  const [isManualOverride, setIsManualOverride] = useState(!!config.macro.use_manual_market_override);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshClick = async () => {
@@ -34,13 +37,20 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
   };
 
   const handleApplyClick = () => {
-    onApplyManualData(manualStockPrice, manualFxRate, symbol);
+    onApplyManualData(manualStockPrice, manualFxRate, symbol, isManualOverride);
+    if (onToggleManualOverride) {
+      onToggleManualOverride(isManualOverride);
+    }
     onClose();
   };
 
   const handleUseFetchedClick = () => {
     if (marketData) {
-      onApplyManualData(marketData.stockPriceUsd, marketData.eurUsdRate, marketData.stockSymbol);
+      setIsManualOverride(false);
+      onApplyManualData(marketData.stockPriceUsd, marketData.eurUsdRate, marketData.stockSymbol, false);
+      if (onToggleManualOverride) {
+        onToggleManualOverride(false);
+      }
       onClose();
     }
   };
@@ -168,18 +178,57 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
             </div>
           </div>
 
-          {/* Manual Parameter Override */}
-          <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Manual Rate Override</h4>
-            <div className="grid grid-cols-2 gap-3">
+          {/* Manual Parameter Override Section */}
+          <div className={`p-4 rounded-xl border transition-colors space-y-3 ${
+            isManualOverride ? 'bg-rose-950/20 border-rose-500/40' : 'bg-slate-850 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isManualOverride ? 'bg-rose-500 animate-ping' : 'bg-slate-500'}`} />
+                <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                  Manual Rate Override
+                </h4>
+              </div>
+
+              {/* Toggle Switch */}
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isManualOverride}
+                  onChange={(e) => setIsManualOverride(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+                <span className="ml-2 text-xs font-medium text-slate-300">
+                  {isManualOverride ? (
+                    <span className="text-rose-400 font-bold">Enabled</span>
+                  ) : (
+                    <span className="text-slate-400">Disabled (Default)</span>
+                  )}
+                </span>
+              </label>
+            </div>
+
+            {isManualOverride ? (
+              <p className="text-[11px] text-rose-300/90 font-medium">
+                ⚠️ Manual Override Active: Custom rates below take precedence over live and cached feeds.
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400">
+                Overrides disabled. The simulation automatically tracks market data feeds. Toggle above to lock custom prices.
+              </p>
+            )}
+
+            <div className={`grid grid-cols-2 gap-3 transition-opacity ${!isManualOverride ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Stock Price ($ USD)</label>
                 <input
                   type="number"
                   step="0.5"
+                  disabled={!isManualOverride}
                   value={manualStockPrice}
                   onChange={(e) => setManualStockPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono font-bold"
                 />
               </div>
 
@@ -188,9 +237,10 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
                 <input
                   type="number"
                   step="0.005"
+                  disabled={!isManualOverride}
                   value={manualFxRate}
                   onChange={(e) => setManualFxRate(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono font-bold"
                 />
               </div>
             </div>

@@ -67,6 +67,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     eur_usd_yearly_drift: 0.0,
     current_monthly_rent_eur: 2500,
     rent_yearly_growth_rate: 0.02, // Dublin RPZ statutory cap baseline
+    use_manual_market_override: false, // Overrides disabled by default
   },
   tax: {
     standard_rate_cutoff_eur: 53000, // Irish Standard Rate Cut-Off (e.g. Married 1-Earner €53k, Single €44k)

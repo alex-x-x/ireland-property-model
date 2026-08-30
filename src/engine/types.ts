@@ -67,6 +67,7 @@ export interface MacroConfig {
   eur_usd_yearly_drift: number;
   current_monthly_rent_eur: number;
   rent_yearly_growth_rate: number;
+  use_manual_market_override?: boolean; // When true, manual price/FX overrides are used instead of market feed
 }
 
 export interface MetaConfig {
