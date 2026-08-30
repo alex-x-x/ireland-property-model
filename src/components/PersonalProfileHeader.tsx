@@ -18,7 +18,15 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
-import { addMonthsToDate, getCalendarMonthOffset, calculateGrantVestingSummary, calculateSingleGrantVesting } from '../engine/vesting';
+import {
+  addMonthsToDate,
+  getCalendarMonthOffset,
+  calculateGrantVestingSummary,
+  calculateSingleGrantVesting,
+  resolveEffectiveGrantShares,
+  getProjectedMarketRatesAtDate,
+  MarketRateContext,
+} from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
 import { calculateIrishTaxBreakdown } from '../engine/tax';
 import { InfoTooltip } from './InfoTooltip';
@@ -40,8 +48,20 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const marketContext: MarketRateContext = {
+    currentSharePriceUsd: config.equity_engine.current_share_price_usd,
+    stockYearlyGrowthRate: config.equity_engine.stock_yearly_growth_rate,
+    eurUsdSpot: config.macro.eur_usd_spot,
+    eurUsdYearlyDrift: config.macro.eur_usd_yearly_drift,
+  };
+
   const grants = config.equity_engine.grants;
-  const vestingSummary = calculateGrantVestingSummary(grants, config.meta.start_date, config.meta.forecast_months);
+  const vestingSummary = calculateGrantVestingSummary(
+    grants,
+    config.meta.start_date,
+    config.meta.forecast_months,
+    marketContext
+  );
   const totalSalary = getTotalGrossSalary(config.mortgage);
   const cbiCalculatedLoan = totalSalary * config.mortgage.cbi_max_lti_multiple;
   const effectiveMaxLoan = getEffectiveMaxMortgage(config.mortgage);
@@ -96,12 +116,13 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
   const handleAddInitialGrant = () => {
     const newGrant: Grant = {
       id: `grant_${Date.now()}`,
-      name: `Initial Grant ${new Date().getFullYear()}`,
+      name: `Initial Hire Grant ${new Date().getFullYear()}`,
       type: 'initial',
       grant_date: config.meta.start_date,
+      nomination_mode: 'shares',
       total_shares: 800,
       schedule_percents: [0.33, 0.33, 0.22, 0.12],
-      vest_frequency_months: 1, // Monthly vesting
+      vest_frequency_months: 1, // Monthly vesting (Google standard)
     };
     onUpdateGrants([...grants, newGrant]);
   };
@@ -109,12 +130,14 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
   const handleAddRefresherGrant = () => {
     const newGrant: Grant = {
       id: `refresher_${Date.now()}`,
-      name: `Refresher ${new Date().getFullYear()}`,
+      name: `Annual Refresher ${new Date().getFullYear()}`,
       type: 'refresher',
       grant_date: config.meta.start_date,
-      total_shares: 200,
+      nomination_mode: 'eur',
+      target_value_eur: 80000,
+      total_shares: 0,
       schedule_percents: [0.25, 0.25, 0.25, 0.25],
-      vest_frequency_months: 1, // Monthly vesting
+      vest_frequency_months: 3, // Quarterly vesting
     };
     onUpdateGrants([...grants, newGrant]);
   };
@@ -125,7 +148,15 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
   const handleUpdateGrant = (id: string, updates: Partial<Grant>) => {
     onUpdateGrants(
-      grants.map((g) => (g.id === id ? { ...g, ...updates } : g))
+      grants.map((g) => {
+        if (g.id !== id) return g;
+        const updated = { ...g, ...updates };
+        const effectiveShares = resolveEffectiveGrantShares(updated, config.meta.start_date, marketContext);
+        return {
+          ...updated,
+          total_shares: updated.nomination_mode === 'shares' ? (updated.total_shares || 0) : effectiveShares,
+        };
+      })
     );
   };
 
@@ -1149,7 +1180,28 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
             {/* Grant Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {grants.map((grant) => {
-                const grantVesting = calculateSingleGrantVesting(grant, config.meta.start_date);
+                const mode = grant.nomination_mode || 'shares';
+                const effectiveShares = resolveEffectiveGrantShares(grant, config.meta.start_date, marketContext);
+                const grantVesting = calculateSingleGrantVesting(grant, config.meta.start_date, marketContext);
+                const projectedRates = getProjectedMarketRatesAtDate(
+                  grant.grant_date,
+                  config.meta.start_date,
+                  config.equity_engine.current_share_price_usd,
+                  config.equity_engine.stock_yearly_growth_rate,
+                  config.macro.eur_usd_spot,
+                  config.macro.eur_usd_yearly_drift
+                );
+
+                const activeGrantPrice = grant.grant_price_usd && grant.grant_price_usd > 0
+                  ? grant.grant_price_usd
+                  : projectedRates.projectedStockPriceUsd;
+
+                const activeFxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
+                  ? grant.grant_fx_rate
+                  : projectedRates.projectedFxRate;
+
+                const netShares = Math.round(effectiveShares * (1 - config.equity_engine.marginal_tax_rate_ireland));
+
                 return (
                   <div
                     key={grant.id}
@@ -1170,7 +1222,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                             {grantVesting.unvestedGross.toLocaleString()} unvested
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 flex-wrap">
                           <span className="capitalize px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[9px]">
                             {grant.type}
                           </span>
@@ -1196,76 +1248,207 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
-                          <span>Total Granted</span>
-                          {grantVesting.pastGross > 0 && (
-                            <span className="text-slate-500">{grantVesting.pastGross} past</span>
-                          )}
+                    {/* Nomination Mode Selector */}
+                    <div className="bg-slate-850 p-1 rounded-lg border border-slate-750 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400 font-semibold px-1">Nomination:</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={isProfileLocked}
+                          onClick={() => handleUpdateGrant(grant.id, {
+                            nomination_mode: 'eur',
+                            target_value_eur: grant.target_value_eur || 80000,
+                          })}
+                          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                            mode === 'eur'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          EUR (€)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isProfileLocked}
+                          onClick={() => handleUpdateGrant(grant.id, {
+                            nomination_mode: 'usd',
+                            target_value_usd: grant.target_value_usd || 100000,
+                          })}
+                          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                            mode === 'usd'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          USD ($)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isProfileLocked}
+                          onClick={() => handleUpdateGrant(grant.id, {
+                            nomination_mode: 'shares',
+                            total_shares: effectiveShares || 200,
+                          })}
+                          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                            mode === 'shares'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Shares (#)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Monetary Inputs */}
+                    {mode === 'eur' && (
+                      <div className="bg-slate-850 p-2 rounded-lg border border-slate-750 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-medium">Target EUR (€)</span>
+                          <div className="flex gap-1">
+                            {[40, 60, 80, 100].map((k) => (
+                              <button
+                                key={k}
+                                type="button"
+                                disabled={isProfileLocked}
+                                onClick={() => handleUpdateGrant(grant.id, { target_value_eur: k * 1000 })}
+                                className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:border-purple-500"
+                              >
+                                €{k}k
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 mt-0.5">
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="number"
+                            step="5000"
+                            min="0"
                             disabled={isProfileLocked}
-                            value={grant.total_shares}
-                            onChange={(e) => handleUpdateGrant(grant.id, { total_shares: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none"
+                            value={grant.target_value_eur || 0}
+                            onChange={(e) => handleUpdateGrant(grant.id, { target_value_eur: parseFloat(e.target.value) || 0 })}
+                            className="w-full bg-slate-800 px-2 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none text-xs"
                           />
-                          <span className="text-[10px] text-slate-400">shs</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                          <span>Ref: ${activeGrantPrice.toFixed(1)} @ {activeFxRate.toFixed(2)}</span>
+                          <span>Gross: <strong className="text-purple-300">{effectiveShares} shs</strong> (Net: {netShares})</span>
                         </div>
                       </div>
+                    )}
 
-                    <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
-                      <span className="text-[10px] text-slate-400 block font-medium">Frequency</span>
-                      <select
-                        disabled={isProfileLocked}
-                        value={grant.vest_frequency_months}
-                        onChange={(e) => handleUpdateGrant(grant.id, { vest_frequency_months: parseInt(e.target.value) || 12 })}
-                        className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-semibold text-slate-200 border border-slate-700 focus:outline-none mt-0.5 text-xs"
-                      >
-                        <option value={12}>Annual (12m)</option>
-                        <option value={6}>Semi-Annual (6m)</option>
-                        <option value={3}>Quarterly (3m)</option>
-                        <option value={1}>Monthly (1m)</option>
-                      </select>
+                    {mode === 'usd' && (
+                      <div className="bg-slate-850 p-2 rounded-lg border border-slate-750 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-medium">Target USD ($)</span>
+                          <div className="flex gap-1">
+                            {[50, 75, 100, 125].map((k) => (
+                              <button
+                                key={k}
+                                type="button"
+                                disabled={isProfileLocked}
+                                onClick={() => handleUpdateGrant(grant.id, { target_value_usd: k * 1000 })}
+                                className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:border-purple-500"
+                              >
+                                ${k}k
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            step="5000"
+                            min="0"
+                            disabled={isProfileLocked}
+                            value={grant.target_value_usd || 0}
+                            onChange={(e) => handleUpdateGrant(grant.id, { target_value_usd: parseFloat(e.target.value) || 0 })}
+                            className="w-full bg-slate-800 px-2 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none text-xs"
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                          <span>Ref: ${activeGrantPrice.toFixed(1)}</span>
+                          <span>Gross: <strong className="text-purple-300">{effectiveShares} shs</strong> (Net: {netShares})</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {mode === 'shares' && (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
+                            <span>Total Granted</span>
+                            {grantVesting.pastGross > 0 && (
+                              <span className="text-slate-500">{grantVesting.pastGross} past</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <input
+                              type="number"
+                              disabled={isProfileLocked}
+                              value={grant.total_shares}
+                              onChange={(e) => handleUpdateGrant(grant.id, { total_shares: parseInt(e.target.value) || 0 })}
+                              className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-bold text-white border border-slate-700 focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400">shs</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
+                          <span className="text-[10px] text-slate-400 block font-medium">Frequency</span>
+                          <select
+                            disabled={isProfileLocked}
+                            value={grant.vest_frequency_months}
+                            onChange={(e) => handleUpdateGrant(grant.id, { vest_frequency_months: parseInt(e.target.value) || 12 })}
+                            className="w-full bg-slate-800 px-1.5 py-0.5 rounded font-semibold text-slate-200 border border-slate-700 focus:outline-none mt-0.5 text-xs"
+                          >
+                            <option value={12}>Annual (12m)</option>
+                            <option value={6}>Semi-Annual (6m)</option>
+                            <option value={3}>Quarterly (3m)</option>
+                            <option value={1}>Monthly (1m)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Visual Timeline */}
+                    <div className="flex items-center gap-1 flex-wrap pt-1">
+                      {grant.schedule_percents.map((pct, idx) => {
+                        const milestoneMonths = (idx + 1) * grant.vest_frequency_months;
+                        const milestoneDate = addMonthsToDate(grant.grant_date, milestoneMonths);
+                        const offset = getCalendarMonthOffset(config.meta.start_date, milestoneDate);
+                        const isPast = offset <= 0;
+                        const grossShares = effectiveShares * pct;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] border font-medium ${
+                              isPast
+                                ? 'bg-slate-800/80 border-slate-700 text-slate-400'
+                                : 'bg-purple-950/40 border-purple-500/40 text-purple-200'
+                            }`}
+                            title={
+                              isPast
+                                ? `Vested in past on ${milestoneDate.toISOString().slice(0, 10)} (${Math.round(grossShares)} shs)`
+                                : `Vests at Month ${offset} (${milestoneDate.toISOString().slice(0, 10)}) - ${Math.round(grossShares)} shs`
+                            }
+                          >
+                            {isPast ? <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" /> : <Clock className="w-2.5 h-2.5 text-purple-400" />}
+                            <span>
+                              {grant.vest_frequency_months === 1
+                                ? `Yr ${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`
+                                : `Q${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`}
+                            </span>
+                            <span className={isPast ? 'text-slate-500' : 'text-purple-300 font-bold'}>{isPast ? 'PAST' : `M${offset}`}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-
-                  {/* Visual Timeline */}
-                  <div className="flex items-center gap-1 flex-wrap pt-1">
-                    {grant.schedule_percents.map((pct, idx) => {
-                      const milestoneMonths = (idx + 1) * grant.vest_frequency_months;
-                      const milestoneDate = addMonthsToDate(grant.grant_date, milestoneMonths);
-                      const offset = getCalendarMonthOffset(config.meta.start_date, milestoneDate);
-                      const isPast = offset <= 0;
-                      const grossShares = grant.total_shares * pct;
-
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] border font-medium ${
-                            isPast
-                              ? 'bg-slate-800/80 border-slate-700 text-slate-400'
-                              : 'bg-purple-950/40 border-purple-500/40 text-purple-200'
-                          }`}
-                          title={
-                            isPast
-                              ? `Vested in past on ${milestoneDate.toISOString().slice(0, 10)} (${grossShares} shs)`
-                              : `Vests at Month ${offset} (${milestoneDate.toISOString().slice(0, 10)}) - ${grossShares} shs`
-                          }
-                        >
-                          {isPast ? <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" /> : <Clock className="w-2.5 h-2.5 text-purple-400" />}
-                          <span>Y{idx + 1}: {Math.round(pct * 100)}% ({Math.round(grossShares)} shs)</span>
-                          <span className={isPast ? 'text-slate-500' : 'text-purple-300 font-bold'}>{isPast ? 'PAST' : `M${offset}`}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
         </div>
       </div>
     )}

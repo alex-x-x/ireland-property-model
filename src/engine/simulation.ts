@@ -44,11 +44,19 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   const invMonthlyMult = Math.pow(1 + liquid_assets.investments_yearly_growth_rate, 1 / 12);
   const rentMonthlyMult = Math.pow(1 + (macro.rent_yearly_growth_rate || 0), 1 / 12);
 
+  const marketContext = {
+    currentSharePriceUsd: equity_engine.current_share_price_usd,
+    stockYearlyGrowthRate: equity_engine.stock_yearly_growth_rate,
+    eurUsdSpot: macro.eur_usd_spot,
+    eurUsdYearlyDrift: macro.eur_usd_yearly_drift,
+  };
+
   // Month 0 Initialization
   const recon = reconcileHistoricalGrants(
     equity_engine.grants,
     meta.start_date,
-    equity_engine.marginal_tax_rate_ireland
+    equity_engine.marginal_tax_rate_ireland,
+    marketContext
   );
 
   let currentPropPrice = property.target_price_eur;
@@ -121,7 +129,8 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       equity_engine.grants,
       currentStockPrice,
       currentFx,
-      equity_engine.marginal_tax_rate_ireland
+      equity_engine.marginal_tax_rate_ireland,
+      marketContext
     );
 
     const newNetShares = vestEvents.reduce((sum, e) => sum + e.netShares, 0);
