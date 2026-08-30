@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { Sliders } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import { InfoTooltip } from './InfoTooltip';
@@ -9,24 +9,99 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
-  const updateProperty = (field: keyof SimulationConfig['property'], value: any) => {
-    onChange({ ...config, property: { ...config.property, [field]: value } });
+  const [, startTransition] = useTransition();
+
+  // Local state for immediate slider feedback
+  const [stockRate, setStockRate] = useState(config.equity_engine.stock_yearly_growth_rate);
+  const [propRate, setPropRate] = useState(config.property.yearly_growth_rate);
+  const [invRate, setInvRate] = useState(config.liquid_assets.investments_yearly_growth_rate);
+  const [mortgageRate, setMortgageRate] = useState(config.mortgage.mortgage_interest_rate);
+  const [rentRate, setRentRate] = useState(config.macro.rent_yearly_growth_rate || 0);
+  const [driftRate, setDriftRate] = useState(config.macro.eur_usd_yearly_drift || 0);
+
+  // Sync local state when external presets/config change
+  useEffect(() => {
+    setStockRate(config.equity_engine.stock_yearly_growth_rate);
+  }, [config.equity_engine.stock_yearly_growth_rate]);
+
+  useEffect(() => {
+    setPropRate(config.property.yearly_growth_rate);
+  }, [config.property.yearly_growth_rate]);
+
+  useEffect(() => {
+    setInvRate(config.liquid_assets.investments_yearly_growth_rate);
+  }, [config.liquid_assets.investments_yearly_growth_rate]);
+
+  useEffect(() => {
+    setMortgageRate(config.mortgage.mortgage_interest_rate);
+  }, [config.mortgage.mortgage_interest_rate]);
+
+  useEffect(() => {
+    setRentRate(config.macro.rent_yearly_growth_rate || 0);
+  }, [config.macro.rent_yearly_growth_rate]);
+
+  useEffect(() => {
+    setDriftRate(config.macro.eur_usd_yearly_drift || 0);
+  }, [config.macro.eur_usd_yearly_drift]);
+
+  const handleStockChange = (val: number) => {
+    setStockRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        equity_engine: { ...config.equity_engine, stock_yearly_growth_rate: val },
+      });
+    });
   };
 
-  const updateMortgage = (field: keyof SimulationConfig['mortgage'], value: any) => {
-    onChange({ ...config, mortgage: { ...config.mortgage, [field]: value } });
+  const handlePropChange = (val: number) => {
+    setPropRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        property: { ...config.property, yearly_growth_rate: val },
+      });
+    });
   };
 
-  const updateLiquidAssets = (field: keyof SimulationConfig['liquid_assets'], value: any) => {
-    onChange({ ...config, liquid_assets: { ...config.liquid_assets, [field]: value } });
+  const handleInvChange = (val: number) => {
+    setInvRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        liquid_assets: { ...config.liquid_assets, investments_yearly_growth_rate: val },
+      });
+    });
   };
 
-  const updateEquityEngine = (field: keyof SimulationConfig['equity_engine'], value: any) => {
-    onChange({ ...config, equity_engine: { ...config.equity_engine, [field]: value } });
+  const handleMortgageChange = (val: number) => {
+    setMortgageRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        mortgage: { ...config.mortgage, mortgage_interest_rate: val },
+      });
+    });
   };
 
-  const updateMacro = (field: keyof SimulationConfig['macro'], value: any) => {
-    onChange({ ...config, macro: { ...config.macro, [field]: value } });
+  const handleRentChange = (val: number) => {
+    setRentRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        macro: { ...config.macro, rent_yearly_growth_rate: val },
+      });
+    });
+  };
+
+  const handleDriftChange = (val: number) => {
+    setDriftRate(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        macro: { ...config.macro, eur_usd_yearly_drift: val },
+      });
+    });
   };
 
   return (
@@ -63,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-sm text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
-                {(config.equity_engine.stock_yearly_growth_rate * 100).toFixed(1)}%
+                {(stockRate * 100).toFixed(1)}%
               </span>
             </div>
             <input
@@ -71,8 +146,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="-0.10"
               max="0.30"
               step="0.005"
-              value={config.equity_engine.stock_yearly_growth_rate}
-              onChange={(e) => updateEquityEngine('stock_yearly_growth_rate', parseFloat(e.target.value))}
+              value={stockRate}
+              onChange={(e) => handleStockChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -93,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-sm text-brand-400 bg-brand-950/40 px-2 py-0.5 rounded border border-brand-500/30">
-                {(config.property.yearly_growth_rate * 100).toFixed(1)}%
+                {(propRate * 100).toFixed(1)}%
               </span>
             </div>
             <input
@@ -101,8 +176,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="0.0"
               max="0.15"
               step="0.005"
-              value={config.property.yearly_growth_rate}
-              onChange={(e) => updateProperty('yearly_growth_rate', parseFloat(e.target.value))}
+              value={propRate}
+              onChange={(e) => handlePropChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -123,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-sm text-sky-400 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-500/30">
-                {(config.liquid_assets.investments_yearly_growth_rate * 100).toFixed(1)}%
+                {(invRate * 100).toFixed(1)}%
               </span>
             </div>
             <input
@@ -131,8 +206,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="0.0"
               max="0.20"
               step="0.005"
-              value={config.liquid_assets.investments_yearly_growth_rate}
-              onChange={(e) => updateLiquidAssets('investments_yearly_growth_rate', parseFloat(e.target.value))}
+              value={invRate}
+              onChange={(e) => handleInvChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -153,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-sm text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
-                {(config.mortgage.mortgage_interest_rate * 100).toFixed(2)}%
+                {(mortgageRate * 100).toFixed(2)}%
               </span>
             </div>
             <input
@@ -161,8 +236,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="0.02"
               max="0.07"
               step="0.001"
-              value={config.mortgage.mortgage_interest_rate}
-              onChange={(e) => updateMortgage('mortgage_interest_rate', parseFloat(e.target.value))}
+              value={mortgageRate}
+              onChange={(e) => handleMortgageChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -183,7 +258,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-sm text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30">
-                {((config.macro.rent_yearly_growth_rate || 0) * 100).toFixed(1)}%
+                {(rentRate * 100).toFixed(1)}%
               </span>
             </div>
             <input
@@ -191,8 +266,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="0.0"
               max="0.08"
               step="0.005"
-              value={config.macro.rent_yearly_growth_rate || 0}
-              onChange={(e) => updateMacro('rent_yearly_growth_rate', parseFloat(e.target.value))}
+              value={rentRate}
+              onChange={(e) => handleRentChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -213,7 +288,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                 />
               </span>
               <span className="font-mono font-bold text-slate-200 bg-slate-800 px-2 py-0.5 rounded">
-                {((config.macro.eur_usd_yearly_drift || 0) * 100).toFixed(1)}%
+                {(driftRate * 100).toFixed(1)}%
               </span>
             </div>
             <input
@@ -221,8 +296,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
               min="-0.05"
               max="0.05"
               step="0.005"
-              value={config.macro.eur_usd_yearly_drift || 0}
-              onChange={(e) => updateMacro('eur_usd_yearly_drift', parseFloat(e.target.value))}
+              value={driftRate}
+              onChange={(e) => handleDriftChange(parseFloat(e.target.value))}
               className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-slate-400"
             />
           </div>

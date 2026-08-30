@@ -32,13 +32,16 @@ export const App: React.FC = () => {
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
 
-  // Save config changes to localStorage
+  // Debounce saving config changes to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem('dublin_property_model_config', JSON.stringify(config));
-    } catch {
-      // localStorage write error
-    }
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem('dublin_property_model_config', JSON.stringify(config));
+      } catch {
+        // localStorage write error
+      }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [config]);
 
   // Fetch initial market data and auto-sync if manual override is disabled
