@@ -214,10 +214,11 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
 * **Key Features:**
   * **Timeline Purchase Selector ($M0 \dots M60$):** Dynamically pulls the inflated house price, active salary (with planned step-ups/promotions), and usable liquid funds (Cash + Investments + GSUs minus Cash Safety Pot) at that chosen future date.
   * **Linked Loan vs. Deposit Split Slider:** Synchronizes Deposit (€/%) and Loan (€/LTV%) with 1-click strategy presets (`10% Min Deposit`, `80% Green Tier`, `70% Super-Green`, `Max Liquid Deposit`).
-  * **Irish Fixed-Rate Overpayment Simulator:** Models the standard Irish fixed-rate lockout (default **2 Years Fixed**) where extra repayments are restricted, with monthly or annual overpayments kicking in seamlessly once off-fixed.
+  * **Irish Fixed-Rate Overpayment Simulator:** Models the standard Irish fixed-rate lockout (default **2 Years Fixed**) where extra repayments are restricted, with monthly overpayments and **March Annual Tech Bonus Lump Sums** kicking in seamlessly once off-fixed.
   * **Free Monthly Cashflow Buffer:** Computes exact discretionary savings room ($\text{Net Salary} - \text{Mortgage} - \text{Maint} - \text{Living Spend}$) with a **"⚡ Safe Overpayment"** 1-click suggestion.
   * **Rate Shock Stress Tester:** 1-click test to simulate payment increases if mortgage rates jump $+1.0\%$ to $+3.0\%$ at fixed-rate renewal.
-  * **Debt Paydown Trajectory Chart:** Visual side-by-side comparison of debt reduction with vs without overpayments.
+  * **Multi-Curve Paydown Chart:** Renders **Remaining Debt Balance**, **Cumulative Principal (Loan Body) Paid**, and **Cumulative Interest Paid to Bank** with view toggles (`All Curves`, `Debt Balance`, `Principal vs Interest`).
+  * **Full Month-by-Month Amortization Ledger Modal:** Interactive ledger modal displaying every single monthly payment, principal/interest breakdown, phase badges (`🔒 Fixed Lock`, `⚡ Overpayment`, `🎁 March Bonus`, `🎉 Paid Off`), year filters, search, and CSV export.
 
 ---
 
