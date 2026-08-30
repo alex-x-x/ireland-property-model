@@ -1,7 +1,7 @@
 # Property Buying Model — Project Context
 
 ## Overview
-Interactive financial decision-modeling application simulating 60-month wealth trajectories for Dublin tech professionals balancing Google Stock Units (GSUs), Irish marginal tax (52%), property price inflation, and mortgage amortization.
+Interactive financial decision-modeling application simulating 60-month wealth trajectories for Ireland tech professionals balancing Google Stock Units (GSUs), Irish marginal tax (52%), property price inflation, and mortgage amortization.
 
 ## Project Structure
 - `src/engine/`: Pure functional mathematical simulation engine (no React/DOM dependencies).

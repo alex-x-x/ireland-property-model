@@ -1,15 +1,15 @@
-# SYSTEM SPECIFICATION: Dublin Property Acquisition & Equity Decision Engine
+# SYSTEM SPECIFICATION: Ireland Property Acquisition & Equity Decision Engine
 
 ---
 
 ## 1. Context & Motivation (The "Why")
 
-### The Dublin Real Estate & Tech Compensation Dilemma
+### The Ireland Real Estate & Tech Compensation Dilemma
 
-For tech professionals in Dublin (particularly at Google Ireland and peer multinationals), homeownership decisions exist at the intersection of three aggressive financial forces:
+For tech professionals in Ireland (particularly at Google Ireland and peer multinationals), homeownership decisions exist at the intersection of three aggressive financial forces:
 
-1. **Persistent Real Estate Appreciation:** Dublin residential property prices compound steadily (historically 4.5%–5.5% annually). Delaying a purchase means chasing a constantly moving target for the standard 10% First-Time Buyer (FTB) deposit and associated transaction taxes (Irish Stamp Duty: 1% up to €1,000,000, 2% above €1,000,000).
-2. **High Rental Friction:** Dublin rents represent a severe monthly cash drag (typically €2,000–€3,500/month in sunk costs) that erodes baseline monthly cash savings.
+1. **Persistent Real Estate Appreciation:** Irish residential property prices compound steadily (historically 4.5%–5.5% annually). Delaying a purchase means chasing a constantly moving target for the standard 10% First-Time Buyer (FTB) deposit and associated transaction taxes (Irish Stamp Duty: 1% up to €1,000,000, 2% above €1,000,000).
+2. **High Rental Friction:** Irish rents represent a severe monthly cash drag (typically €2,000–€3,500/month in sunk costs) that erodes baseline monthly cash savings.
 3. **High-Beta Equity Compensation (Google GSUs / RSUs):** Tech compensation packages are heavily weighted in US dollar-denominated company stock (Alphabet GOOG / GOOGL), structured around non-linear vesting cliffs (e.g. initial grants vesting 33/33/22/12 annually, layered with quarterly 25/25/25/25 refreshers). In Ireland, these vests trigger an immediate ~52% marginal tax event (Income Tax at 40%, USC up to 8%, PRSI at 4%) via sell-to-cover.
 
 ### The Strategic Question

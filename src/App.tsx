@@ -262,7 +262,7 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-6 px-4 text-center text-xs text-slate-500">
         <div className="max-w-[1720px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Dublin Property Acquisition & Equity Decision Engine • Pure Client-Side Simulation</span>
+          <span>Ireland Property Acquisition & Equity Decision Engine • Pure Client-Side Simulation</span>
           <span>AIB 2026 Mortgage Benchmark (~3.50% Fixed) • Irish Marginal Tax (52%) • CBI 4.0x LTI</span>
         </div>
       </footer>

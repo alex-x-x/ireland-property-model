@@ -67,7 +67,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
       type: 'refresher',
       grant_date: config.meta.start_date,
       nomination_mode: 'eur',
-      target_value_eur: 80000, // Standard €80k Dublin tech refresher
+      target_value_eur: 80000, // Standard €80k Irish tech refresher
       total_shares: 0,
       schedule_percents: [0.25, 0.25, 0.25, 0.25],
       vest_frequency_months: 3, // Quarterly vesting

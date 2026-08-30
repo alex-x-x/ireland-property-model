@@ -296,11 +296,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
             onChange={handleStockChange}
           />
 
-          {/* 2. Dublin Property Inflation */}
+          {/* 2. Ireland Property Inflation */}
           <SliderControl
             label="Property Inflation (p.a.)"
-            tooltipTitle="Dublin Property Inflation"
-            tooltipContent="Annual Dublin housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
+            tooltipTitle="Ireland Property Inflation"
+            tooltipContent="Annual Irish housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
             value={propRate}
             min={0.0}
             max={0.15}
@@ -332,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           <SliderControl
             label="Mortgage Rate (AIB 2026)"
             tooltipTitle="AIB Green Benchmark"
-            tooltipContent="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Dublin homes)."
+            tooltipContent="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Irish homes)."
             value={mortgageRate}
             min={0.02}
             max={0.07}
@@ -344,11 +344,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
             onChange={handleMortgageChange}
           />
 
-          {/* 5. Dublin Rent Inflation (RPZ) */}
+          {/* 5. Ireland Rent Inflation (RPZ) */}
           <SliderControl
-            label="Rent Inflation (Dublin RPZ)"
+            label="Rent Inflation (Irish RPZ)"
             tooltipTitle="RPZ Statutory Rent Cap"
-            tooltipContent="Dublin Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
+            tooltipContent="Irish Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
             value={rentRate}
             min={0.0}
             max={0.08}
@@ -374,7 +374,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
                     ⬅ Move Left (&lt; 0%): USD Weakens / EUR Rises
                   </div>
                   <div className="text-slate-400 pl-2">
-                    USD-denominated stock converts into <strong>fewer Euros</strong>, reducing your Dublin purchasing power.
+                    USD-denominated stock converts into <strong>fewer Euros</strong>, reducing your Irish purchasing power.
                   </div>
                   <div className="text-emerald-300 font-semibold pt-0.5">
                     ➡ Move Right (&gt; 0%): USD Strengthens / EUR Drops

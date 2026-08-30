@@ -77,7 +77,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                <span>Sensitivity Heatmap: Stock Growth vs Dublin Property Growth</span>
+                <span>Sensitivity Heatmap: Stock Growth vs Ireland Property Growth</span>
                 <InfoTooltip
                   title="2D Sensitivity Matrix"
                   content="Evaluates the optimal action across 55 economic permutations. Use the slider to test whether buying early or waiting wins at Month 12, Month 24, or Month 60."
