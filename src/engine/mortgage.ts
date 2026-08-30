@@ -156,3 +156,145 @@ export function getEffectiveMaxMortgage(
     : getTotalGrossSalary(mortgage);
   return calculateMaxBorrowingCapacity(totalSalary, mortgage.cbi_max_lti_multiple);
 }
+
+export interface MortgageOverpaymentOptions {
+  principal: number;
+  annualRate: number;
+  termYears: number;
+  fixedRateYears?: number; // Initial fixed lock period where overpayments are 0 (e.g. 2 years)
+  monthlyOverpayment?: number; // Regular monthly overpayment amount after fixed period
+  annualLumpSumOverpayment?: number; // Optional annual lump sum after fixed period
+}
+
+export interface AmortizationSchedulePoint {
+  month: number;
+  dateStr?: string;
+  balance: number;
+  interestPaid: number;
+  principalPaid: number;
+  overpaymentPaid: number;
+  totalPayment: number;
+  isFixedPeriod: boolean;
+}
+
+export interface MortgageOverpaymentResult {
+  standardMonthlyPayment: number;
+  effectiveMonthlyPayment: number;
+  scheduledPayoffMonths: number;
+  actualPayoffMonths: number;
+  yearsSaved: number;
+  monthsSaved: number;
+  totalInterestStandard: number;
+  totalInterestWithOverpayment: number;
+  totalInterestSaved: number;
+  totalPrincipalPaid: number;
+  totalOverpaymentsPaid: number;
+  schedule: AmortizationSchedulePoint[];
+}
+
+export function calculateMortgageWithOverpayments(
+  options: MortgageOverpaymentOptions,
+  startDateStr: string = '2026-08-01'
+): MortgageOverpaymentResult {
+  const {
+    principal,
+    annualRate,
+    termYears,
+    fixedRateYears = 2,
+    monthlyOverpayment = 0,
+    annualLumpSumOverpayment = 0,
+  } = options;
+
+  if (principal <= 0 || termYears <= 0) {
+    return {
+      standardMonthlyPayment: 0,
+      effectiveMonthlyPayment: 0,
+      scheduledPayoffMonths: 0,
+      actualPayoffMonths: 0,
+      yearsSaved: 0,
+      monthsSaved: 0,
+      totalInterestStandard: 0,
+      totalInterestWithOverpayment: 0,
+      totalInterestSaved: 0,
+      totalPrincipalPaid: 0,
+      totalOverpaymentsPaid: 0,
+      schedule: [],
+    };
+  }
+
+  const standardMonthlyPayment = calculateMonthlyMortgagePayment(principal, annualRate, termYears);
+  const totalStandardMonths = termYears * 12;
+  const standardAmort = calculateMortgageAmortization(principal, annualRate, termYears, totalStandardMonths);
+  const totalInterestStandard = standardAmort.cumulativeInterestPaid;
+
+  const monthlyRate = annualRate / 12;
+  const fixedMonths = Math.max(0, fixedRateYears * 12);
+  const schedule: AmortizationSchedulePoint[] = [];
+
+  let balance = principal;
+  let cumulativeInterestWithOverpayment = 0;
+  let cumulativePrincipal = 0;
+  let cumulativeOverpayments = 0;
+  let actualPayoffMonths = totalStandardMonths;
+
+  const [startYear, startMonth] = startDateStr.split('-').map((v) => parseInt(v, 10));
+
+  for (let m = 1; m <= totalStandardMonths; m++) {
+    const isFixedPeriod = m <= fixedMonths;
+    const regularOverpayment = isFixedPeriod ? 0 : Math.max(0, monthlyOverpayment);
+    const isLumpSumMonth = !isFixedPeriod && m % 12 === 0;
+    const lumpSumOverpayment = isLumpSumMonth ? Math.max(0, annualLumpSumOverpayment) : 0;
+    const targetOverpayment = regularOverpayment + lumpSumOverpayment;
+
+    const interest = balance * monthlyRate;
+    const scheduledPrincipal = Math.min(balance, Math.max(0, standardMonthlyPayment - interest));
+    const extraPrincipal = Math.min(Math.max(0, balance - scheduledPrincipal), targetOverpayment);
+    const principalPaidThisMonth = scheduledPrincipal + extraPrincipal;
+
+    balance -= principalPaidThisMonth;
+    cumulativeInterestWithOverpayment += interest;
+    cumulativePrincipal += principalPaidThisMonth;
+    cumulativeOverpayments += extraPrincipal;
+
+    // Date computation
+    const curYear = startYear + Math.floor((startMonth - 1 + m) / 12);
+    const curMonthNum = ((startMonth - 1 + m) % 12) + 1;
+    const dateStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
+
+    schedule.push({
+      month: m,
+      dateStr,
+      balance: balance <= 0.001 ? 0 : balance,
+      interestPaid: interest,
+      principalPaid: scheduledPrincipal,
+      overpaymentPaid: extraPrincipal,
+      totalPayment: interest + principalPaidThisMonth,
+      isFixedPeriod,
+    });
+
+    if (balance <= 0.001) {
+      actualPayoffMonths = m;
+      balance = 0;
+      break;
+    }
+  }
+
+  const monthsSaved = Math.max(0, totalStandardMonths - actualPayoffMonths);
+  const yearsSaved = Math.floor(monthsSaved / 12) + (monthsSaved % 12) / 12;
+  const totalInterestSaved = Math.max(0, totalInterestStandard - cumulativeInterestWithOverpayment);
+
+  return {
+    standardMonthlyPayment,
+    effectiveMonthlyPayment: standardMonthlyPayment + Math.max(0, monthlyOverpayment),
+    scheduledPayoffMonths: totalStandardMonths,
+    actualPayoffMonths,
+    yearsSaved,
+    monthsSaved,
+    totalInterestStandard,
+    totalInterestWithOverpayment: cumulativeInterestWithOverpayment,
+    totalInterestSaved,
+    totalPrincipalPaid: cumulativePrincipal,
+    totalOverpaymentsPaid: cumulativeOverpayments,
+    schedule,
+  };
+}
