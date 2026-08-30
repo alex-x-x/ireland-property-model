@@ -21,6 +21,7 @@ import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
 import { addMonthsToDate, getCalendarMonthOffset } from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
 import { calculateIrishTaxBreakdown } from '../engine/tax';
+import { InfoTooltip } from './InfoTooltip';
 
 interface PersonalProfileHeaderProps {
   config: SimulationConfig;
@@ -295,9 +296,15 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
           <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${isProfileLocked ? 'opacity-85 pointer-events-none' : ''}`}>
             {/* Column 1: Target Home & Deposit */}
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Home className="w-4 h-4 text-brand-400" />
-                <h4 className="font-bold text-slate-200">Target Home & Deposit</h4>
+              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Home className="w-4 h-4 text-brand-400" />
+                  <h4 className="font-bold text-slate-200">Target Home & Deposit</h4>
+                </div>
+                <InfoTooltip
+                  title="Target Property & Deposit"
+                  content="Enter the purchase price and deposit. First-Time Buyers in Ireland require a minimum 10% deposit. Tiered Stamp Duty (1% up to €1M, 2% excess) and €3,000 legal fees are automatically computed."
+                />
               </div>
 
               <div>
@@ -403,9 +410,15 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
             {/* Column 2: Income Breakdown & AIP Borrowing Capacity */}
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Landmark className="w-4 h-4 text-emerald-400" />
-                <h4 className="font-bold text-slate-200">Income & AIP Borrowing</h4>
+              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Landmark className="w-4 h-4 text-emerald-400" />
+                  <h4 className="font-bold text-slate-200">Income & AIP Borrowing</h4>
+                </div>
+                <InfoTooltip
+                  title="Income & Borrowing Limits"
+                  content="Enter Base Salary and Annual Bonus. Central Bank of Ireland rules cap standard borrowing at 4.0x Loan-To-Income (LTI). You can also type an explicit bank Approval in Principle (AIP) limit."
+                />
               </div>
 
               {/* Base Salary and Dual Bonus % / € */}
@@ -685,9 +698,15 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
             {/* Column 3: Cash & Liquid Investments */}
             <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Wallet className="w-4 h-4 text-sky-400" />
-                <h4 className="font-bold text-slate-200">Cash, Trading & Vested Shares</h4>
+              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-sky-400" />
+                  <h4 className="font-bold text-slate-200">Cash, Trading & Vested Shares</h4>
+                </div>
+                <InfoTooltip
+                  title="Liquid Wealth Portfolio"
+                  content="Separates liquid bank cash, personal trading accounts (ETFs/stocks), and already-vested company shares (held at 0% tax). These form your upfront purchasing power."
+                />
               </div>
 
               {/* Liquid Cash */}

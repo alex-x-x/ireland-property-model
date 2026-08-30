@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sliders } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
+import { InfoTooltip } from './InfoTooltip';
 
 interface SidebarProps {
   config: SimulationConfig;
@@ -54,7 +55,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 1. Google GSU Stock Growth */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-purple-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-purple-300">Google Stock Growth (p.a.)</span>
+              <span className="text-purple-300 flex items-center gap-1">
+                <span>Google Stock Growth (p.a.)</span>
+                <InfoTooltip
+                  title="Alphabet Stock Growth"
+                  content="Annual nominal growth rate of Alphabet Inc. equity. Governs how fast unvested and retained GSU shares compound."
+                />
+              </span>
               <span className="font-mono font-bold text-sm text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
                 {(config.equity_engine.stock_yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -78,7 +85,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 2. Dublin Property Inflation */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-brand-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-brand-300">Property Inflation (p.a.)</span>
+              <span className="text-brand-300 flex items-center gap-1">
+                <span>Property Inflation (p.a.)</span>
+                <InfoTooltip
+                  title="Dublin Property Inflation"
+                  content="Annual Dublin housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
+                />
+              </span>
               <span className="font-mono font-bold text-sm text-brand-400 bg-brand-950/40 px-2 py-0.5 rounded border border-brand-500/30">
                 {(config.property.yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -102,7 +115,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 3. Base Index Investments Return */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-sky-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-sky-300">Base Investment Yield (p.a.)</span>
+              <span className="text-sky-300 flex items-center gap-1">
+                <span>Base Investment Yield (p.a.)</span>
+                <InfoTooltip
+                  title="Trading Account Yield"
+                  content="Annual nominal return on non-GSU personal trading investments (e.g. global index funds / ETFs)."
+                />
+              </span>
               <span className="font-mono font-bold text-sm text-sky-400 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-500/30">
                 {(config.liquid_assets.investments_yearly_growth_rate * 100).toFixed(1)}%
               </span>
@@ -126,7 +145,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 4. Mortgage Interest Rate */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-emerald-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-emerald-300">Mortgage Rate (AIB 2026)</span>
+              <span className="text-emerald-300 flex items-center gap-1">
+                <span>Mortgage Rate (AIB 2026)</span>
+                <InfoTooltip
+                  title="AIB Green Benchmark"
+                  content="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Dublin homes)."
+                />
+              </span>
               <span className="font-mono font-bold text-sm text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
                 {(config.mortgage.mortgage_interest_rate * 100).toFixed(2)}%
               </span>
@@ -150,7 +175,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 5. Dublin Rent Inflation (RPZ) */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-rose-500/20 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-rose-300">Rent Inflation (Dublin RPZ)</span>
+              <span className="text-rose-300 flex items-center gap-1">
+                <span>Rent Inflation (Dublin RPZ)</span>
+                <InfoTooltip
+                  title="RPZ Statutory Rent Cap"
+                  content="Dublin Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
+                />
+              </span>
               <span className="font-mono font-bold text-sm text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30">
                 {((config.macro.rent_yearly_growth_rate || 0) * 100).toFixed(1)}%
               </span>
@@ -174,7 +205,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
           {/* 6. EUR/USD Drift */}
           <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-1.5">
             <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span>EUR/USD Spot Drift (p.a.)</span>
+              <span className="flex items-center gap-1">
+                <span>EUR/USD Spot Drift (p.a.)</span>
+                <InfoTooltip
+                  title="FX Rate Drift"
+                  content="Annual change in the EUR/USD exchange rate. A weakening dollar reduces the EUR value of USD-denominated stock."
+                />
+              </span>
               <span className="font-mono font-bold text-slate-200 bg-slate-800 px-2 py-0.5 rounded">
                 {((config.macro.eur_usd_yearly_drift || 0) * 100).toFixed(1)}%
               </span>
