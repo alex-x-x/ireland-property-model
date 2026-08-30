@@ -42,6 +42,8 @@ export interface LiquidAssetsConfig {
   investments_usd: number;
   investments_yearly_growth_rate: number;
   monthly_salary_savings_eur: number;
+  cash_safety_buffer_eur?: number; // Cash safety pot in EUR reserved from mortgage/deposit
+  cash_safety_buffer_usd?: number; // Cash safety pot in USD reserved from mortgage/deposit
 }
 
 export interface Grant {
@@ -115,6 +117,8 @@ export interface MonthlyDataPoint {
   stockPriceUsd: number;
   fxRate: number;
   totalLiquidWealth: number;
+  safetyBufferEur?: number;
+  usableLiquidWealth?: number;
   surplus: number;
   isAffordable: boolean;
   vestEvents: MonthlyVestEvent[];

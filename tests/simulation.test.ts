@@ -620,4 +620,34 @@ describe('Simulation Engine', () => {
       expect(sim[m].cash - sim[m - 1].cash).toBe(1000);
     }
   });
+
+  it('correctly reserves EUR & USD Cash Safety Pot from purchasing power and surplus', () => {
+    const safetyConfig = {
+      ...DEFAULT_CONFIG,
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 50000,
+        cash_usd: 0,
+        investments_eur: 0,
+        investments_usd: 0,
+        cash_safety_buffer_eur: 30000, // €30k safety pot
+        cash_safety_buffer_usd: 10000, // $10k safety pot
+      },
+    };
+
+    const sim = runSimulation(safetyConfig);
+    const fxM0 = safetyConfig.macro.eur_usd_spot;
+    const expectedSafetyBufferM0 = 30000 + 10000 * fxM0;
+
+    expect(sim[0].safetyBufferEur).toBeCloseTo(expectedSafetyBufferM0, 2);
+    expect(sim[0].usableLiquidWealth).toBeCloseTo(Math.max(0, sim[0].totalLiquidWealth - expectedSafetyBufferM0), 2);
+    expect(sim[0].surplus).toBeCloseTo(sim[0].totalLiquidWealth - (sim[0].targetCapital + expectedSafetyBufferM0), 2);
+
+    for (let m = 0; m <= 60; m++) {
+      const expectedBuffer = 30000 + 10000 * sim[m].fxRate;
+      expect(sim[m].safetyBufferEur).toBeCloseTo(expectedBuffer, 2);
+      expect(sim[m].usableLiquidWealth).toBeCloseTo(Math.max(0, sim[m].totalLiquidWealth - expectedBuffer), 2);
+      expect(sim[m].isAffordable).toBe(sim[m].totalLiquidWealth >= sim[m].targetCapital + expectedBuffer);
+    }
+  });
 });

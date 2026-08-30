@@ -251,4 +251,27 @@ describe('Decision Engine', () => {
     expect(['buy_asap', 'wait_and_compound']).toContain(decision.recommendedAction);
     expect(decision.scenarios.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('preserves cash safety pot in post-purchase liquidation waterfall and cash balance', () => {
+    const safetyConfig = {
+      ...DEFAULT_CONFIG,
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 100000,
+        cash_usd: 0,
+        investments_eur: 50000,
+        investments_usd: 0,
+        cash_safety_buffer_eur: 25000, // €25k cash safety pot
+        cash_safety_buffer_usd: 0,
+      },
+    };
+
+    const monthlyPoints = runSimulation(safetyConfig);
+    const decision = runDecisionAnalysis(safetyConfig, monthlyPoints);
+
+    const buyAsap = decision.scenarios.find((s) => s.id === 'buy_asap');
+    expect(buyAsap).toBeDefined();
+    // At M60, remaining liquid wealth must be greater than or equal to the unspent cash safety buffer
+    expect(buyAsap!.remainingLiquidWealthAtM60).toBeGreaterThanOrEqual(25000);
+  });
 });

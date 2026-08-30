@@ -150,7 +150,8 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
 ## 🧩 Widget-by-Widget In-Depth Guide
 
 ### 1. Personal Profile & Baseline Financial Facts (Header)
-* **Purpose:** Sets the foundational truth of your finances (target property price, salary, cash, investments, held GSUs, active grant cliffs, and Irish tax credits).
+* **Purpose:** Sets the foundational truth of your finances (target property price, salary, cash, investments, held GSUs, active grant cliffs, Cash Safety Pot, and Irish tax credits).
+* **Cash Safety Pot (Emergency Buffer):** Enter reserved cash in EUR and USD that will **never be spent** on property deposit, stamp duty, or legal fees. Includes a **"⚡ Set 6M Expenses"** quick action button.
 * **Locked vs. Unlocked Mode:**
   * Click **"🔓 Unlock to Edit Profile"** to customize your personal numbers.
   * Click **"🔒 Lock Profile"** once entered. Locking protects your facts from accidental edits when switching macroeconomic presets or moving sliders.
@@ -269,11 +270,14 @@ Under CBI Macroprudential Lending Rules:
 * **Maximum Standard Loan (FTB):**
 $$\text{Max CBI Loan} = 4.0 \times \text{Gross Annual Base Salary}$$
 
-* **Target Capital Required to Close at Month $m$:**
+* **Target Capital & Affordability Condition with Cash Safety Pot:**
 $$\text{Base Deposit} = P_m \times \text{deposit\_pct}$$
 $$\text{Required Loan} = P_m - \text{Base Deposit}$$
 $$\text{Borrowing Shortfall} = \max(0, \text{Required Loan} - \text{Max Available Loan})$$
 $$\text{Target Capital}_m = \text{Base Deposit} + \text{Stamp Duty}(P_m) + \text{Legal Fees} + \text{Borrowing Shortfall}$$
+$$\text{Safety Buffer}_m = \text{Safety Pot}_{\text{EUR}} + \text{Safety Pot}_{\text{USD}} \times \text{FX}_m$$
+$$\text{Surplus}_m = \text{Total Liquid Wealth}_m - (\text{Target Capital}_m + \text{Safety Buffer}_m)$$
+$$\text{Is Affordable} \iff \text{Surplus}_m \ge 0$$
 </details>
 
 <details>
@@ -308,12 +312,13 @@ $$\text{Balance}_k = \text{Balance}_{k-1} - \text{Principal Paid}_k$$
 </details>
 
 <details>
-<summary><strong>📐 6. Capital Liquidation Waterfall Hierarchy (Click to expand)</strong></summary>
+<summary><strong>📐 6. Capital Liquidation Waterfall & Emergency Cash Protection (Click to expand)</strong></summary>
 
-When purchasing a home at month $t$, the required deposit and closing costs are funded using a **cost-minimizing liquidation waterfall**:
-1. **Tier 1 — Uninvested EUR Cash & USD Cash:** Non-yielding cash is drained first.
+When purchasing a home at month $t$, the required deposit and closing costs are funded using a **cost-minimizing liquidation waterfall** that strictly protects your emergency cash pot:
+1. **Tier 1 — Usable Cash ($\text{Cash} - \text{Safety Buffer}$):** Uninvested bank cash above the protected emergency reserve is deployed first.
 2. **Tier 2 — General Trading Investments (ETFs / Stocks):** Liquidated next (yields ~8%/yr).
 3. **Tier 3 — Retained GSU Shares:** Drained last (preserves high-beta ~10%–20% equity upside).
+4. **Post-Purchase Cash:** Your bank cash balance immediately after closing remains $\ge \text{Safety Buffer}$.
 </details>
 
 <details>

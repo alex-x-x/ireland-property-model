@@ -297,12 +297,12 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       />
                     </span>
                   </th>
-                  <th className="py-2 px-2 font-semibold text-right w-[100px]">
+                  <th className="py-2 px-2 font-semibold text-right w-[105px]">
                     <span className="inline-flex items-center justify-end gap-1">
                       <span>Surplus / Deficit</span>
                       <InfoTooltip
-                        title="Capital Buffer"
-                        content="Total Liquid Wealth minus Required Upfront Capital. Positive (Green) means you can execute the purchase immediately."
+                        title="Purchasing Capital Buffer"
+                        content="Total Liquid Wealth minus (Required Upfront Capital + Cash Safety Pot). Positive (Green) means you can execute the purchase immediately while fully preserving your emergency cash buffer."
                       />
                     </span>
                   </th>
@@ -465,9 +465,14 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
 
                       {/* Surplus / Deficit */}
                       <td className="py-2 px-2 text-right">
-                        <span className={`font-bold whitespace-nowrap ${p.surplus >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <div className={`font-bold whitespace-nowrap ${p.surplus >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {p.surplus >= 0 ? '+' : ''}€{Math.round(p.surplus).toLocaleString()}
-                        </span>
+                        </div>
+                        {p.safetyBufferEur && p.safetyBufferEur > 0 ? (
+                          <div className="text-[9px] text-sky-400/80 font-sans whitespace-nowrap" title={`Reserved Cash Safety Buffer: €${Math.round(p.safetyBufferEur).toLocaleString()}`}>
+                            (after €{Math.round(p.safetyBufferEur / 1000)}k pot)
+                          </div>
+                        ) : null}
                       </td>
 
                       {/* Status */}
