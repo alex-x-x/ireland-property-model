@@ -8,6 +8,7 @@ import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { MonthlyCashflowWidget } from './components/MonthlyCashflowWidget';
 import { MarketDataModal } from './components/MarketDataModal';
 import { MonthlyTableModal } from './components/MonthlyTableModal';
+import { HelpGuideModal } from './components/HelpGuideModal';
 import { DEFAULT_CONFIG } from './engine/constants';
 import { SimulationConfig, Grant } from './engine/types';
 import { runSimulation } from './engine/simulation';
@@ -31,6 +32,7 @@ export const App: React.FC = () => {
   const [marketData, setMarketData] = useState<MarketDataResult | null>(null);
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // Debounce saving config changes to localStorage
   useEffect(() => {
@@ -181,6 +183,7 @@ export const App: React.FC = () => {
         marketData={marketData}
         onOpenMarketDataModal={() => setIsMarketModalOpen(true)}
         onOpenTableModal={() => setIsTableModalOpen(true)}
+        onOpenHelpModal={() => setIsHelpModalOpen(true)}
         monthlyPoints={monthlyPoints}
         onSyncMarketData={handleQuickSync}
       />
@@ -232,6 +235,11 @@ export const App: React.FC = () => {
         isOpen={isTableModalOpen}
         onClose={() => setIsTableModalOpen(false)}
         monthlyPoints={monthlyPoints}
+      />
+
+      <HelpGuideModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
       />
 
       {/* Footer */}
