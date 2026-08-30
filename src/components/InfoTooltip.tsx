@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { HelpCircle, Info } from 'lucide-react';
 
 interface InfoTooltipProps {
@@ -15,12 +16,52 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   content,
   iconType = 'help',
   size = 'sm',
-  position = 'top',
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const [coords, setCoords] = useState<{ top: number; left: number; placement: 'top' | 'bottom' }>({
+    top: 0,
+    left: 0,
+    placement: 'top',
+  });
+
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const tooltipWidth = 320;
+    const tooltipEstimatedHeight = 120;
+    const padding = 12;
+
+    // Determine if placing above or below
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement = spaceAbove < tooltipEstimatedHeight && spaceBelow > spaceAbove ? 'bottom' : 'top';
+
+    const top = placement === 'top' ? rect.top - 8 : rect.bottom + 8;
+    // Center horizontally on trigger
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+
+    // Clamp left within window boundaries
+    left = Math.max(padding, Math.min(window.innerWidth - tooltipWidth - padding, left));
+
+    setCoords({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      const handleScrollOrResize = () => updatePosition();
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      window.addEventListener('resize', handleScrollOrResize);
+      return () => {
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+        window.removeEventListener('resize', handleScrollOrResize);
+      };
+    }
+  }, [isOpen]);
 
   // Close on outside click
   useEffect(() => {
@@ -44,17 +85,10 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
 
   const iconSizeClass = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
-  const positionClasses = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-  };
-
   return (
     <div
       ref={triggerRef}
-      className={`relative inline-flex items-center align-middle group ${className}`}
+      className={`inline-flex items-center align-middle ${className}`}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
       onClick={(e) => {
@@ -74,23 +108,31 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         )}
       </button>
 
-      {isOpen && (
-        <div
-          ref={tooltipRef}
-          className={`absolute z-50 w-72 sm:w-80 p-3 rounded-xl bg-slate-900/98 backdrop-blur-md border border-slate-700/80 shadow-2xl text-slate-200 text-xs font-normal leading-relaxed pointer-events-none animate-in fade-in zoom-in-95 duration-150 ${positionClasses[position]}`}
-          style={{ maxWidth: 'calc(100vw - 32px)' }}
-        >
-          {title && (
-            <div className="font-bold text-white mb-1 pb-1 border-b border-slate-800 flex items-center justify-between">
-              <span>{title}</span>
-              <span className="text-[10px] text-brand-400 uppercase font-semibold">Tip</span>
+      {isOpen &&
+        createPortal(
+          <div
+            ref={tooltipRef}
+            className={`fixed z-[99999] w-72 sm:w-80 p-3 rounded-xl bg-slate-900/98 backdrop-blur-md border border-slate-700 shadow-2xl text-slate-200 text-xs font-normal leading-relaxed pointer-events-none animate-in fade-in zoom-in-95 duration-100 ${
+              coords.placement === 'top' ? '-translate-y-full' : ''
+            }`}
+            style={{
+              top: `${coords.top}px`,
+              left: `${coords.left}px`,
+              maxWidth: 'calc(100vw - 24px)',
+            }}
+          >
+            {title && (
+              <div className="font-bold text-white mb-1 pb-1 border-b border-slate-800 flex items-center justify-between">
+                <span>{title}</span>
+                <span className="text-[10px] text-brand-400 uppercase font-semibold">Tip</span>
+              </div>
+            )}
+            <div className="text-slate-300 text-[11px] leading-normal space-y-1">
+              {content}
             </div>
-          )}
-          <div className="text-slate-300 text-[11px] leading-normal space-y-1">
-            {content}
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
