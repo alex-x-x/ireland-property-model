@@ -8,6 +8,159 @@ interface SidebarProps {
   onChange: (updated: SimulationConfig) => void;
 }
 
+interface SliderControlProps {
+  label: string;
+  tooltipTitle: string;
+  tooltipContent: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  inputStep?: number;
+  precision?: number;
+  colorTheme: 'purple' | 'brand' | 'sky' | 'emerald' | 'rose' | 'slate';
+  ticks?: [string, string, string];
+  onChange: (val: number) => void;
+}
+
+const SliderControl: React.FC<SliderControlProps> = ({
+  label,
+  tooltipTitle,
+  tooltipContent,
+  value,
+  min,
+  max,
+  step,
+  inputStep = 0.1,
+  precision = 1,
+  colorTheme,
+  ticks,
+  onChange,
+}) => {
+  const [textVal, setTextVal] = useState<string>((value * 100).toFixed(precision));
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTextVal((value * 100).toFixed(precision));
+    }
+  }, [value, precision, isFocused]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setTextVal(raw);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed)) {
+      onChange(parsed / 100);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const parsed = parseFloat(textVal);
+    if (isNaN(parsed)) {
+      setTextVal((value * 100).toFixed(precision));
+    } else {
+      setTextVal(parsed.toFixed(precision));
+    }
+  };
+
+  const themeStyles = {
+    purple: {
+      card: 'border-purple-500/20',
+      label: 'text-purple-300',
+      box: 'bg-purple-950/40 border-purple-500/30 focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/40',
+      input: 'text-purple-300',
+      suffix: 'text-purple-400',
+      slider: 'accent-purple-500',
+    },
+    brand: {
+      card: 'border-brand-500/20',
+      label: 'text-brand-300',
+      box: 'bg-brand-950/40 border-brand-500/30 focus-within:border-brand-400 focus-within:ring-1 focus-within:ring-brand-400/40',
+      input: 'text-brand-300',
+      suffix: 'text-brand-400',
+      slider: 'accent-brand-500',
+    },
+    sky: {
+      card: 'border-sky-500/20',
+      label: 'text-sky-300',
+      box: 'bg-sky-950/40 border-sky-500/30 focus-within:border-sky-400 focus-within:ring-1 focus-within:ring-sky-400/40',
+      input: 'text-sky-300',
+      suffix: 'text-sky-400',
+      slider: 'accent-sky-500',
+    },
+    emerald: {
+      card: 'border-emerald-500/20',
+      label: 'text-emerald-300',
+      box: 'bg-emerald-950/40 border-emerald-500/30 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400/40',
+      input: 'text-emerald-300',
+      suffix: 'text-emerald-400',
+      slider: 'accent-emerald-500',
+    },
+    rose: {
+      card: 'border-rose-500/20',
+      label: 'text-rose-300',
+      box: 'bg-rose-950/40 border-rose-500/30 focus-within:border-rose-400 focus-within:ring-1 focus-within:ring-rose-400/40',
+      input: 'text-rose-300',
+      suffix: 'text-rose-400',
+      slider: 'accent-rose-500',
+    },
+    slate: {
+      card: 'border-slate-750',
+      label: 'text-slate-300',
+      box: 'bg-slate-800 border-slate-700 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-500/40',
+      input: 'text-slate-200',
+      suffix: 'text-slate-400',
+      slider: 'accent-slate-400',
+    },
+  }[colorTheme];
+
+  return (
+    <div className={`bg-slate-850/80 p-3 rounded-xl border ${themeStyles.card} space-y-1.5`}>
+      <div className="flex justify-between items-center text-slate-300 font-medium">
+        <span className={`${themeStyles.label} flex items-center gap-1`}>
+          <span>{label}</span>
+          <InfoTooltip title={tooltipTitle} content={tooltipContent} />
+        </span>
+        <div className={`flex items-center px-2 py-0.5 rounded border transition-all ${themeStyles.box}`}>
+          <input
+            type="number"
+            step={inputStep}
+            value={textVal}
+            onChange={handleInputChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={handleBlur}
+            className={`w-14 bg-transparent text-right font-mono font-bold text-xs ${themeStyles.input} focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+            title="Click to type a custom percentage value directly"
+          />
+          <span className={`font-mono font-bold text-xs ml-0.5 ${themeStyles.suffix}`}>%</span>
+        </div>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => {
+          const val = parseFloat(e.target.value);
+          setTextVal((val * 100).toFixed(precision));
+          onChange(val);
+        }}
+        className={`w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer ${themeStyles.slider}`}
+      />
+      {ticks && (
+        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+          <span>{ticks[0]}</span>
+          <span>{ticks[1]}</span>
+          <span>{ticks[2]}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
   const [, startTransition] = useTransition();
 
@@ -128,179 +281,100 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         {/* Sliders Container */}
         <div className="space-y-3.5 text-xs">
           {/* 1. Google GSU Stock Growth */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-purple-500/20 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-purple-300 flex items-center gap-1">
-                <span>Google Stock Growth (p.a.)</span>
-                <InfoTooltip
-                  title="Alphabet Stock Growth"
-                  content="Annual nominal growth rate of Alphabet Inc. equity. Governs how fast unvested and retained GSU shares compound."
-                />
-              </span>
-              <span className="font-mono font-bold text-sm text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
-                {(stockRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="-0.10"
-              max="0.30"
-              step="0.005"
-              value={stockRate}
-              onChange={(e) => handleStockChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>-10%</span>
-              <span>+10%</span>
-              <span>+30%</span>
-            </div>
-          </div>
+          <SliderControl
+            label="Google Stock Growth (p.a.)"
+            tooltipTitle="Alphabet Stock Growth"
+            tooltipContent="Annual nominal growth rate of Alphabet Inc. equity. Governs how fast unvested and retained GSU shares compound."
+            value={stockRate}
+            min={-0.10}
+            max={0.30}
+            step={0.005}
+            inputStep={0.1}
+            precision={1}
+            colorTheme="purple"
+            ticks={['-10%', '+10%', '+30%']}
+            onChange={handleStockChange}
+          />
 
           {/* 2. Dublin Property Inflation */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-brand-500/20 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-brand-300 flex items-center gap-1">
-                <span>Property Inflation (p.a.)</span>
-                <InfoTooltip
-                  title="Dublin Property Inflation"
-                  content="Annual Dublin housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
-                />
-              </span>
-              <span className="font-mono font-bold text-sm text-brand-400 bg-brand-950/40 px-2 py-0.5 rounded border border-brand-500/30">
-                {(propRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0.0"
-              max="0.15"
-              step="0.005"
-              value={propRate}
-              onChange={(e) => handlePropChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0%</span>
-              <span>+5%</span>
-              <span>+15%</span>
-            </div>
-          </div>
+          <SliderControl
+            label="Property Inflation (p.a.)"
+            tooltipTitle="Dublin Property Inflation"
+            tooltipContent="Annual Dublin housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
+            value={propRate}
+            min={0.0}
+            max={0.15}
+            step={0.005}
+            inputStep={0.1}
+            precision={1}
+            colorTheme="brand"
+            ticks={['0%', '+5%', '+15%']}
+            onChange={handlePropChange}
+          />
 
           {/* 3. Base Index Investments Return */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-sky-500/20 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-sky-300 flex items-center gap-1">
-                <span>Base Investment Yield (p.a.)</span>
-                <InfoTooltip
-                  title="Trading Account Yield"
-                  content="Annual nominal return on non-GSU personal trading investments (e.g. global index funds / ETFs)."
-                />
-              </span>
-              <span className="font-mono font-bold text-sm text-sky-400 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-500/30">
-                {(invRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0.0"
-              max="0.20"
-              step="0.005"
-              value={invRate}
-              onChange={(e) => handleInvChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0%</span>
-              <span>+8%</span>
-              <span>+20%</span>
-            </div>
-          </div>
+          <SliderControl
+            label="Base Investment Yield (p.a.)"
+            tooltipTitle="Trading Account Yield"
+            tooltipContent="Annual nominal return on non-GSU personal trading investments (e.g. global index funds / ETFs)."
+            value={invRate}
+            min={0.0}
+            max={0.20}
+            step={0.005}
+            inputStep={0.1}
+            precision={1}
+            colorTheme="sky"
+            ticks={['0%', '+8%', '+20%']}
+            onChange={handleInvChange}
+          />
 
           {/* 4. Mortgage Interest Rate */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-emerald-500/20 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-emerald-300 flex items-center gap-1">
-                <span>Mortgage Rate (AIB 2026)</span>
-                <InfoTooltip
-                  title="AIB Green Benchmark"
-                  content="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Dublin homes)."
-                />
-              </span>
-              <span className="font-mono font-bold text-sm text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
-                {(mortgageRate * 100).toFixed(2)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0.02"
-              max="0.07"
-              step="0.001"
-              value={mortgageRate}
-              onChange={(e) => handleMortgageChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>2.0%</span>
-              <span>3.5%</span>
-              <span>7.0%</span>
-            </div>
-          </div>
+          <SliderControl
+            label="Mortgage Rate (AIB 2026)"
+            tooltipTitle="AIB Green Benchmark"
+            tooltipContent="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Dublin homes)."
+            value={mortgageRate}
+            min={0.02}
+            max={0.07}
+            step={0.001}
+            inputStep={0.05}
+            precision={2}
+            colorTheme="emerald"
+            ticks={['2.0%', '3.5%', '7.0%']}
+            onChange={handleMortgageChange}
+          />
 
           {/* 5. Dublin Rent Inflation (RPZ) */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-rose-500/20 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="text-rose-300 flex items-center gap-1">
-                <span>Rent Inflation (Dublin RPZ)</span>
-                <InfoTooltip
-                  title="RPZ Statutory Rent Cap"
-                  content="Dublin Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
-                />
-              </span>
-              <span className="font-mono font-bold text-sm text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30">
-                {(rentRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0.0"
-              max="0.08"
-              step="0.005"
-              value={rentRate}
-              onChange={(e) => handleRentChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0%</span>
-              <span>2.0% (Cap)</span>
-              <span>8.0%</span>
-            </div>
-          </div>
+          <SliderControl
+            label="Rent Inflation (Dublin RPZ)"
+            tooltipTitle="RPZ Statutory Rent Cap"
+            tooltipContent="Dublin Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
+            value={rentRate}
+            min={0.0}
+            max={0.08}
+            step={0.005}
+            inputStep={0.1}
+            precision={1}
+            colorTheme="rose"
+            ticks={['0%', '2.0% (Cap)', '8.0%']}
+            onChange={handleRentChange}
+          />
 
           {/* 6. EUR/USD Drift */}
-          <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-300 font-medium">
-              <span className="flex items-center gap-1">
-                <span>EUR/USD Spot Drift (p.a.)</span>
-                <InfoTooltip
-                  title="FX Rate Drift"
-                  content="Annual change in the EUR/USD exchange rate. A weakening dollar reduces the EUR value of USD-denominated stock."
-                />
-              </span>
-              <span className="font-mono font-bold text-slate-200 bg-slate-800 px-2 py-0.5 rounded">
-                {(driftRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="-0.05"
-              max="0.05"
-              step="0.005"
-              value={driftRate}
-              onChange={(e) => handleDriftChange(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-slate-400"
-            />
-          </div>
+          <SliderControl
+            label="EUR/USD Spot Drift (p.a.)"
+            tooltipTitle="FX Rate Drift"
+            tooltipContent="Annual change in the EUR/USD exchange rate. A weakening dollar reduces the EUR value of USD-denominated stock."
+            value={driftRate}
+            min={-0.05}
+            max={0.05}
+            step={0.005}
+            inputStep={0.1}
+            precision={1}
+            colorTheme="slate"
+            ticks={['-5%', '0%', '+5%']}
+            onChange={handleDriftChange}
+          />
         </div>
       </div>
     </aside>
