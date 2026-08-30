@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { MonthlyDataPoint, SimulationConfig } from '../engine/types';
 import { exportMonthlyPointsToCsv, downloadCsvFile } from '../engine/export';
+import { getGrantLifecycleEvents, GrantLifecycleEvent } from '../engine/vesting';
 import { InfoTooltip } from './InfoTooltip';
 
 interface MonthlyCashflowWidgetProps {
@@ -19,10 +20,29 @@ interface MonthlyCashflowWidgetProps {
   config?: SimulationConfig;
 }
 
-export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ data }) => {
+export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ data, config }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'y1' | 'y2' | 'y3' | 'y4' | 'y5' | 'milestones'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const grantLifecycleEvents = useMemo<GrantLifecycleEvent[]>(() => {
+    if (!config?.equity_engine?.grants || !config?.meta?.start_date) return [];
+    return getGrantLifecycleEvents(
+      config.equity_engine.grants,
+      config.meta.start_date,
+      config.meta.forecast_months ?? 60
+    );
+  }, [config]);
+
+  const eventsByMonth = useMemo(() => {
+    const map = new Map<number, GrantLifecycleEvent[]>();
+    for (const ev of grantLifecycleEvents) {
+      const list = map.get(ev.month) || [];
+      list.push(ev);
+      map.set(ev.month, list);
+    }
+    return map;
+  }, [grantLifecycleEvents]);
 
   const handleDownloadCsv = () => {
     const csvContent = exportMonthlyPointsToCsv(data);
@@ -46,6 +66,7 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
       if (selectedFilter === 'y4') return p.month >= 37 && p.month <= 48;
       if (selectedFilter === 'y5') return p.month >= 49 && p.month <= 60;
       if (selectedFilter === 'milestones') {
+        const hasLifecycleEvent = eventsByMonth.has(p.month);
         return (
           p.month === 0 ||
           p.isAffordable ||
@@ -54,12 +75,13 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
           p.month === 36 ||
           p.month === 48 ||
           p.month === 60 ||
+          hasLifecycleEvent ||
           Boolean(p.netBonusReceivedEur && p.netBonusReceivedEur > 0)
         );
       }
       return true;
     });
-  }, [data, selectedFilter, searchTerm]);
+  }, [data, selectedFilter, searchTerm, eventsByMonth]);
 
   // Aggregate KPI highlights
   const totalRentPaid = data[data.length - 1]?.cumulativeRent || 0;
@@ -241,10 +263,10 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                   </th>
                   <th className="py-2.5 px-3 font-semibold text-right text-purple-300">
                     <span className="inline-flex items-center justify-end gap-1">
-                      <span>GSU Pool & Shares (Δ)</span>
+                      <span>GSU Pool & Stocks Vested (Δ)</span>
                       <InfoTooltip
-                        title="GSU Equity Holdings"
-                        content="Cumulative un-sold GSU shares and their EUR valuation at current stock price and FX rate."
+                        title="GSU Equity Holdings & Vests"
+                        content="Cumulative un-sold GSU shares, current EUR valuation, monthly share vest deltas (net & gross shares), and net vest value after 52% Irish tax."
                       />
                     </span>
                   </th>
@@ -298,6 +320,14 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                   const hasMarchBonus = p.netBonusReceivedEur && p.netBonusReceivedEur > 0;
                   const hasVesting = p.vestEvents && p.vestEvents.length > 0;
 
+                  const monthLifecycleEvents = eventsByMonth.get(p.month) || [];
+                  const newGrantEvents = monthLifecycleEvents.filter((e) => e.type === 'grant_awarded');
+                  const completedGrantEvents = monthLifecycleEvents.filter((e) => e.type === 'grant_completed');
+
+                  const netSharesVested = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.netShares, 0) : 0;
+                  const grossSharesVested = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.grossShares, 0) : 0;
+                  const netVestEur = p.vestEvents ? p.vestEvents.reduce((sum, e) => sum + e.netAmountEur, 0) : 0;
+
                   return (
                     <tr
                       key={p.month}
@@ -306,25 +336,63 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       }`}
                     >
                       {/* Month & Date with Badges */}
-                      <td className="py-2 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-white">M{p.month}</span>
-                          <span className="text-slate-400 font-sans text-[11px]">{p.date}</span>
-                          {hasMarchBonus && (
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-sans font-bold border border-emerald-500/30">
-                              🎁 Bonus
-                            </span>
+                      <td className="py-2.5 px-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-white">M{p.month}</span>
+                            <span className="text-slate-400 font-sans text-[11px]">{p.date}</span>
+                            {hasMarchBonus && (
+                              <span
+                                className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-sans font-bold border border-emerald-500/30"
+                                title={`Annual bonus payout (+€${Math.round(p.netBonusReceivedEur!).toLocaleString()} net after 52% tax)`}
+                              >
+                                🎁 Bonus
+                              </span>
+                            )}
+                            {hasVesting && (
+                              <span
+                                className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-sans font-bold border border-purple-500/30"
+                                title={`Monthly stock vesting (+${netSharesVested.toFixed(1)} net shs / ${grossSharesVested.toFixed(0)} gross)`}
+                              >
+                                💎 Vest
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Grant Lifecycle Badges (New Grant & Grant Completion) */}
+                          {newGrantEvents.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {newGrantEvents.map((ev) => (
+                                <span
+                                  key={ev.grantId}
+                                  className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-sans font-bold border border-indigo-500/40 flex items-center gap-1"
+                                  title={`Grant Awarded: ${ev.grantName} (${ev.totalShares} total shares)`}
+                                >
+                                  <span>✨ New Grant: {ev.grantName}</span>
+                                  <span className="text-indigo-200 font-mono">+{ev.totalShares} shs</span>
+                                </span>
+                              ))}
+                            </div>
                           )}
-                          {hasVesting && (
-                            <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-sans font-bold border border-purple-500/30">
-                              💎 Vest
-                            </span>
+
+                          {completedGrantEvents.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {completedGrantEvents.map((ev) => (
+                                <span
+                                  key={ev.grantId}
+                                  className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-sans font-bold border border-amber-500/40 flex items-center gap-1"
+                                  title={`Grant Finished (Cliff): ${ev.grantName} has reached its final vest milestone.`}
+                                >
+                                  <span>🏁 Grant Complete: {ev.grantName}</span>
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </td>
 
                       {/* Cash & Cash Inflow Diff */}
-                      <td className="py-2 px-3 text-right">
+                      <td className="py-2.5 px-3 text-right">
                         <div className="font-semibold text-slate-200">€{Math.round(p.cash).toLocaleString()}</div>
                         {prevPoint && (
                           <div className="text-[10px] text-emerald-400">
@@ -339,22 +407,31 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                       </td>
 
                       {/* Rent Drag */}
-                      <td className="py-2 px-3 text-right">
+                      <td className="py-2.5 px-3 text-right">
                         <div className="text-rose-400">-€{Math.round(p.monthlyRent).toLocaleString()}/mo</div>
                         <div className="text-[10px] text-slate-500 font-sans">
                           Cum: -€{Math.round(p.cumulativeRent).toLocaleString()}
                         </div>
                       </td>
 
-                      {/* GSU Pool & Retained Shares */}
-                      <td className="py-2 px-3 text-right text-purple-300">
-                        <div className="font-semibold">€{Math.round(p.gsuPool).toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400 font-sans flex items-center justify-end gap-1">
-                          <span>{Math.round(p.retainedShares)} shs</span>
-                          {prevPoint && (
-                            <span className="text-purple-400">
-                              (Δ {gsuDiff >= 0 ? '+' : ''}€{Math.round(gsuDiff).toLocaleString()})
-                            </span>
+                      {/* GSU Pool & Retained Shares & Stocks Vested Delta */}
+                      <td className="py-2.5 px-3 text-right text-purple-300">
+                        <div className="font-semibold text-purple-200">€{Math.round(p.gsuPool).toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-300 font-sans flex flex-col items-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{Math.round(p.retainedShares).toLocaleString()} shs held</span>
+                            {prevPoint && (
+                              <span className="text-purple-400 font-mono">
+                                (Δ {gsuDiff >= 0 ? '+' : ''}€{Math.round(gsuDiff).toLocaleString()})
+                              </span>
+                            )}
+                          </div>
+                          {netSharesVested > 0 && (
+                            <div className="text-[9.5px] text-purple-300 bg-purple-950/70 px-1.5 py-0.5 rounded border border-purple-800/50 flex items-center gap-1 font-sans">
+                              <span className="font-semibold text-emerald-300 font-mono">+{netSharesVested.toFixed(1)} net shs</span>
+                              <span className="text-slate-400 font-mono">({grossSharesVested.toFixed(0)} gross)</span>
+                              <span className="text-purple-300 font-semibold font-mono">• +€{Math.round(netVestEur).toLocaleString()}</span>
+                            </div>
                           )}
                         </div>
                       </td>
