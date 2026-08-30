@@ -234,31 +234,85 @@ export interface GrantVestingSummary {
   pastVestedGrossShares: number;
   unvestedGrossShares: number;
   unvestedWithinHorizonGrossShares: number;
+  // Multi-currency valuation totals
+  totalGrantedEur: number;
+  totalGrantedUsd: number;
+  unvestedGrossEur: number;
+  unvestedGrossUsd: number;
+  unvestedNetEur: number;
+  unvestedNetUsd: number;
+  pastVestedGrossEur: number;
+  pastVestedGrossUsd: number;
+  pastVestedNetEur: number;
+  pastVestedNetUsd: number;
 }
 
 export function calculateGrantVestingSummary(
   grants: Grant[],
   startDateStr: string,
   horizonMonths: number = 60,
-  marketContext?: MarketRateContext
+  marketContext?: MarketRateContext,
+  taxRate: number = 0.52
 ): GrantVestingSummary {
   let totalGrantedShares = 0;
   let pastVestedGrossShares = 0;
   let unvestedGrossShares = 0;
   let unvestedWithinHorizonGrossShares = 0;
 
+  let totalGrantedEur = 0;
+  let totalGrantedUsd = 0;
+  let unvestedGrossEur = 0;
+  let unvestedGrossUsd = 0;
+  let pastVestedGrossEur = 0;
+  let pastVestedGrossUsd = 0;
+
+  const currentPrice = marketContext?.currentSharePriceUsd ?? 150;
+  const stockGrowth = marketContext?.stockYearlyGrowthRate ?? 0;
+  const spotFx = marketContext?.eurUsdSpot ?? 0.91;
+  const fxDrift = marketContext?.eurUsdYearlyDrift ?? 0;
+
   for (const grant of grants) {
     const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
     totalGrantedShares += totalShares;
+
+    const projected = getProjectedMarketRatesAtDate(
+      grant.grant_date,
+      startDateStr,
+      currentPrice,
+      stockGrowth,
+      spotFx,
+      fxDrift
+    );
+
+    const priceUsd = grant.grant_price_usd && grant.grant_price_usd > 0
+      ? grant.grant_price_usd
+      : projected.projectedStockPriceUsd;
+
+    const fxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
+      ? grant.grant_fx_rate
+      : projected.projectedFxRate;
+
+    const grantValUsd = totalShares * priceUsd;
+    const grantValEur = grantValUsd * fxRate;
+    totalGrantedUsd += grantValUsd;
+    totalGrantedEur += grantValEur;
+
     const milestones = getGrantMilestones(grant);
     for (const milestone of milestones) {
       const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
       const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
       const grossShares = totalShares * milestone.percent;
+      const milestoneUsd = grossShares * priceUsd;
+      const milestoneEur = milestoneUsd * fxRate;
+
       if (offset <= 0) {
         pastVestedGrossShares += grossShares;
+        pastVestedGrossUsd += milestoneUsd;
+        pastVestedGrossEur += milestoneEur;
       } else {
         unvestedGrossShares += grossShares;
+        unvestedGrossUsd += milestoneUsd;
+        unvestedGrossEur += milestoneEur;
         if (offset <= horizonMonths) {
           unvestedWithinHorizonGrossShares += grossShares;
         }
@@ -266,20 +320,79 @@ export function calculateGrantVestingSummary(
     }
   }
 
+  const unvestedNetUsd = unvestedGrossUsd * (1 - taxRate);
+  const unvestedNetEur = unvestedGrossEur * (1 - taxRate);
+  const pastVestedNetUsd = pastVestedGrossUsd * (1 - taxRate);
+  const pastVestedNetEur = pastVestedGrossEur * (1 - taxRate);
+
   return {
     totalGrantedShares: Math.round(totalGrantedShares),
     pastVestedGrossShares: Math.round(pastVestedGrossShares),
     unvestedGrossShares: Math.round(unvestedGrossShares),
     unvestedWithinHorizonGrossShares: Math.round(unvestedWithinHorizonGrossShares),
+    totalGrantedEur: Math.round(totalGrantedEur),
+    totalGrantedUsd: Math.round(totalGrantedUsd),
+    unvestedGrossEur: Math.round(unvestedGrossEur),
+    unvestedGrossUsd: Math.round(unvestedGrossUsd),
+    unvestedNetEur: Math.round(unvestedNetEur),
+    unvestedNetUsd: Math.round(unvestedNetUsd),
+    pastVestedGrossEur: Math.round(pastVestedGrossEur),
+    pastVestedGrossUsd: Math.round(pastVestedGrossUsd),
+    pastVestedNetEur: Math.round(pastVestedNetEur),
+    pastVestedNetUsd: Math.round(pastVestedNetUsd),
   };
+}
+
+export interface SingleGrantVestingBreakdown {
+  totalShares: number;
+  pastGross: number;
+  unvestedGross: number;
+  pastNet: number;
+  unvestedNet: number;
+  grantPriceUsd: number;
+  grantFxRate: number;
+  grantPriceEur: number;
+  totalGrossEur: number;
+  totalGrossUsd: number;
+  totalNetEur: number;
+  totalNetUsd: number;
+  unvestedGrossEur: number;
+  unvestedGrossUsd: number;
+  unvestedNetEur: number;
+  unvestedNetUsd: number;
 }
 
 export function calculateSingleGrantVesting(
   grant: Grant,
   startDateStr: string,
-  marketContext?: MarketRateContext
-): { pastGross: number; unvestedGross: number } {
+  marketContext?: MarketRateContext,
+  taxRate: number = 0.52
+): SingleGrantVestingBreakdown {
   const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
+  const currentPrice = marketContext?.currentSharePriceUsd ?? 150;
+  const stockGrowth = marketContext?.stockYearlyGrowthRate ?? 0;
+  const spotFx = marketContext?.eurUsdSpot ?? 0.91;
+  const fxDrift = marketContext?.eurUsdYearlyDrift ?? 0;
+
+  const projected = getProjectedMarketRatesAtDate(
+    grant.grant_date,
+    startDateStr,
+    currentPrice,
+    stockGrowth,
+    spotFx,
+    fxDrift
+  );
+
+  const grantPriceUsd = grant.grant_price_usd && grant.grant_price_usd > 0
+    ? grant.grant_price_usd
+    : projected.projectedStockPriceUsd;
+
+  const grantFxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
+    ? grant.grant_fx_rate
+    : projected.projectedFxRate;
+
+  const grantPriceEur = grantPriceUsd * grantFxRate;
+
   const milestones = getGrantMilestones(grant);
   let pastGross = 0;
   let unvestedGross = 0;
@@ -293,9 +406,37 @@ export function calculateSingleGrantVesting(
       unvestedGross += grossShares;
     }
   }
+
+  const pastNet = Math.round(pastGross * (1 - taxRate));
+  const unvestedNet = Math.round(unvestedGross * (1 - taxRate));
+
+  const totalGrossUsd = totalShares * grantPriceUsd;
+  const totalGrossEur = totalGrossUsd * grantFxRate;
+  const totalNetEur = totalGrossEur * (1 - taxRate);
+  const totalNetUsd = totalGrossUsd * (1 - taxRate);
+
+  const unvestedGrossUsd = unvestedGross * grantPriceUsd;
+  const unvestedGrossEur = unvestedGrossUsd * grantFxRate;
+  const unvestedNetEur = unvestedGrossEur * (1 - taxRate);
+  const unvestedNetUsd = unvestedGrossUsd * (1 - taxRate);
+
   return {
+    totalShares: Math.round(totalShares),
     pastGross: Math.round(pastGross),
     unvestedGross: Math.round(unvestedGross),
+    pastNet,
+    unvestedNet,
+    grantPriceUsd,
+    grantFxRate,
+    grantPriceEur,
+    totalGrossEur: Math.round(totalGrossEur),
+    totalGrossUsd: Math.round(totalGrossUsd),
+    totalNetEur: Math.round(totalNetEur),
+    totalNetUsd: Math.round(totalNetUsd),
+    unvestedGrossEur: Math.round(unvestedGrossEur),
+    unvestedGrossUsd: Math.round(unvestedGrossUsd),
+    unvestedNetEur: Math.round(unvestedNetEur),
+    unvestedNetUsd: Math.round(unvestedNetUsd),
   };
 }
 

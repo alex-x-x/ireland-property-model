@@ -5,7 +5,8 @@ import {
   addMonthsToDate,
   getCalendarMonthOffset,
   resolveEffectiveGrantShares,
-  getProjectedMarketRatesAtDate,
+  calculateGrantVestingSummary,
+  calculateSingleGrantVesting,
   MarketRateContext,
 } from '../engine/vesting';
 
@@ -30,6 +31,14 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
     eurUsdSpot: config.macro.eur_usd_spot,
     eurUsdYearlyDrift: config.macro.eur_usd_yearly_drift,
   };
+
+  const summary = calculateGrantVestingSummary(
+    grants,
+    config.meta.start_date,
+    config.meta.forecast_months,
+    marketContext,
+    config.equity_engine.marginal_tax_rate_ireland
+  );
 
   const handleAddInitialGrant = () => {
     if (isProfileLocked && onUnlockProfile) {
@@ -78,7 +87,6 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
       grants.map((g) => {
         if (g.id !== id) return g;
         const updated = { ...g, ...updates };
-        // Synchronize total_shares with effective calculated shares
         const effectiveShares = resolveEffectiveGrantShares(updated, config.meta.start_date, marketContext);
         return {
           ...updated,
@@ -107,7 +115,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-400">
-              Nominate in EUR target value (€), USD ($), or direct shares with 52% Irish marginal tax
+              Clear side-by-side valuation in <strong>EUR (€)</strong>, <strong>USD ($)</strong>, and <strong>Stock Units (#)</strong> with 52% Irish marginal tax
             </p>
           </div>
         </div>
@@ -131,29 +139,84 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
         </div>
       </div>
 
+      {/* Portfolio Multi-Currency KPI Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+            Unvested GSU Portfolio
+          </span>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-sm font-bold text-purple-300 font-mono">
+              {summary.unvestedGrossShares.toLocaleString()} shs
+            </span>
+            <span className="text-xs font-semibold text-emerald-400 font-mono">
+              €{summary.unvestedGrossEur.toLocaleString()}
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              (${summary.unvestedGrossUsd.toLocaleString()})
+            </span>
+          </div>
+          <span className="text-[10px] text-purple-400 block font-mono">
+            Net Retained: {Math.round(summary.unvestedGrossShares * (1 - config.equity_engine.marginal_tax_rate_ireland)).toLocaleString()} shs • €{summary.unvestedNetEur.toLocaleString()} (${summary.unvestedNetUsd.toLocaleString()})
+          </span>
+        </div>
+
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+            Past Vested / Retained
+          </span>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-sm font-bold text-slate-200 font-mono">
+              {summary.pastVestedGrossShares.toLocaleString()} shs
+            </span>
+            <span className="text-xs font-semibold text-slate-300 font-mono">
+              €{summary.pastVestedGrossEur.toLocaleString()}
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              (${summary.pastVestedGrossUsd.toLocaleString()})
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 block font-mono">
+            Net Retained: {Math.round(summary.pastVestedGrossShares * (1 - config.equity_engine.marginal_tax_rate_ireland)).toLocaleString()} shs • €{summary.pastVestedNetEur.toLocaleString()}
+          </span>
+        </div>
+
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+            Total Granted Lifetime
+          </span>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-sm font-bold text-indigo-300 font-mono">
+              {summary.totalGrantedShares.toLocaleString()} shs
+            </span>
+            <span className="text-xs font-semibold text-indigo-200 font-mono">
+              €{summary.totalGrantedEur.toLocaleString()}
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              (${summary.totalGrantedUsd.toLocaleString()})
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 block font-mono">
+            Across {grants.length} active grant tranches
+          </span>
+        </div>
+      </div>
+
       {/* Grant Cards List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {grants.map((grant) => {
           const mode = grant.nomination_mode || 'shares';
-          const effectiveShares = resolveEffectiveGrantShares(grant, config.meta.start_date, marketContext);
-          const projectedRates = getProjectedMarketRatesAtDate(
-            grant.grant_date,
+          const breakdown = calculateSingleGrantVesting(
+            grant,
             config.meta.start_date,
-            config.equity_engine.current_share_price_usd,
-            config.equity_engine.stock_yearly_growth_rate,
-            config.macro.eur_usd_spot,
-            config.macro.eur_usd_yearly_drift
+            marketContext,
+            config.equity_engine.marginal_tax_rate_ireland
           );
 
-          const activeGrantPrice = grant.grant_price_usd && grant.grant_price_usd > 0
-            ? grant.grant_price_usd
-            : projectedRates.projectedStockPriceUsd;
-
-          const activeFxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
-            ? grant.grant_fx_rate
-            : projectedRates.projectedFxRate;
-
-          const netShares = Math.round(effectiveShares * (1 - config.equity_engine.marginal_tax_rate_ireland));
+          const effectiveShares = breakdown.totalShares;
+          const activeGrantPrice = breakdown.grantPriceUsd;
+          const activeFxRate = breakdown.grantFxRate;
+          const netShares = breakdown.pastNet + breakdown.unvestedNet;
 
           return (
             <div
@@ -197,16 +260,35 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                 )}
               </div>
 
+              {/* 3-Unit Value Display (EUR / USD / Shares) */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-center font-mono">
+                <div>
+                  <span className="text-[9px] text-slate-400 block uppercase font-semibold">EUR (€)</span>
+                  <strong className="text-xs text-purple-200 block">€{breakdown.totalGrossEur.toLocaleString()}</strong>
+                  <span className="text-[9px] text-emerald-400 block">Net: €{breakdown.totalNetEur.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 block uppercase font-semibold">USD ($)</span>
+                  <strong className="text-xs text-slate-200 block">${breakdown.totalGrossUsd.toLocaleString()}</strong>
+                  <span className="text-[9px] text-slate-400 block">Net: ${breakdown.totalNetUsd.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 block uppercase font-semibold">Shares (#)</span>
+                  <strong className="text-xs text-amber-300 block">{effectiveShares.toLocaleString()} shs</strong>
+                  <span className="text-[9px] text-amber-400 block">Net: {netShares.toLocaleString()} shs</span>
+                </div>
+              </div>
+
               {/* Nomination Mode Switcher */}
               <div className="bg-slate-900/60 p-1 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-400 text-[11px] font-semibold px-1.5">Nomination:</span>
+                <span className="text-slate-400 text-[11px] font-semibold px-1.5">Input Mode:</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     disabled={isProfileLocked}
                     onClick={() => handleUpdateGrant(grant.id, {
                       nomination_mode: 'eur',
-                      target_value_eur: grant.target_value_eur || 80000,
+                      target_value_eur: grant.target_value_eur || breakdown.totalGrossEur || 80000,
                     })}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
                       mode === 'eur'
@@ -222,7 +304,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                     disabled={isProfileLocked}
                     onClick={() => handleUpdateGrant(grant.id, {
                       nomination_mode: 'usd',
-                      target_value_usd: grant.target_value_usd || 100000,
+                      target_value_usd: grant.target_value_usd || breakdown.totalGrossUsd || 100000,
                     })}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
                       mode === 'usd'
@@ -305,7 +387,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                           min="0"
                           disabled={isProfileLocked}
                           value={grant.grant_price_usd ?? ''}
-                          placeholder={projectedRates.projectedStockPriceUsd.toFixed(1)}
+                          placeholder={activeGrantPrice.toFixed(1)}
                           onChange={(e) => handleUpdateGrant(grant.id, { grant_price_usd: e.target.value ? parseFloat(e.target.value) : undefined })}
                           className="w-full bg-transparent font-mono text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
                         />
@@ -324,7 +406,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                           min="0"
                           disabled={isProfileLocked}
                           value={grant.grant_fx_rate ?? ''}
-                          placeholder={projectedRates.projectedFxRate.toFixed(2)}
+                          placeholder={activeFxRate.toFixed(2)}
                           onChange={(e) => handleUpdateGrant(grant.id, { grant_fx_rate: e.target.value ? parseFloat(e.target.value) : undefined })}
                           className="w-full bg-transparent font-mono text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
                         />
@@ -394,7 +476,7 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                           min="0"
                           disabled={isProfileLocked}
                           value={grant.grant_price_usd ?? ''}
-                          placeholder={projectedRates.projectedStockPriceUsd.toFixed(1)}
+                          placeholder={activeGrantPrice.toFixed(1)}
                           onChange={(e) => handleUpdateGrant(grant.id, { grant_price_usd: e.target.value ? parseFloat(e.target.value) : undefined })}
                           className="w-full bg-transparent font-mono text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
                         />
@@ -412,9 +494,14 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
               )}
 
               {mode === 'shares' && (
-                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                  <span className="text-[11px] text-slate-400 block font-medium">Total Gross Shares</span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 block font-medium">Total Gross Shares</span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      ≈ €{breakdown.totalGrossEur.toLocaleString()} (${breakdown.totalGrossUsd.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="number"
                       disabled={isProfileLocked}
@@ -424,9 +511,10 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                     />
                     <span className="text-xs text-slate-400 font-mono">shs</span>
                   </div>
-                  <span className="text-[10px] text-purple-400 mt-1 block font-mono">
-                    Net: ~{netShares} shs (post-52% tax)
-                  </span>
+                  <div className="flex justify-between items-center text-[10px] text-purple-400 font-mono pt-0.5 border-t border-slate-800">
+                    <span>Net Retained: ~{netShares} shs</span>
+                    <span>Net Value: €{breakdown.totalNetEur.toLocaleString()} (${breakdown.totalNetUsd.toLocaleString()})</span>
+                  </div>
                 </div>
               )}
 
@@ -453,9 +541,14 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
 
               {/* Milestones Visual Timeline */}
               <div className="pt-1">
-                <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block mb-1.5">
-                  Vesting Cliff Schedule ({effectiveShares} total shs)
-                </span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block">
+                    Vesting Cliff Schedule
+                  </span>
+                  <span className="text-[10px] text-purple-300 font-mono">
+                    {effectiveShares} shs • €{breakdown.totalGrossEur.toLocaleString()} • ${breakdown.totalGrossUsd.toLocaleString()}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {grant.schedule_percents.map((pct, idx) => {
                     const milestoneMonths = (idx + 1) * grant.vest_frequency_months;
@@ -463,6 +556,10 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                     const offset = getCalendarMonthOffset(config.meta.start_date, milestoneDate);
                     const isPast = offset <= 0;
                     const grossShares = effectiveShares * pct;
+                    const milestoneGrossUsd = Math.round(grossShares * activeGrantPrice);
+                    const milestoneGrossEur = Math.round(milestoneGrossUsd * activeFxRate);
+                    const milestoneNetEur = Math.round(milestoneGrossEur * (1 - config.equity_engine.marginal_tax_rate_ireland));
+                    const milestoneNetShares = Math.round(grossShares * (1 - config.equity_engine.marginal_tax_rate_ireland));
 
                     return (
                       <div
@@ -472,11 +569,9 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                             ? 'bg-slate-800/80 border-slate-700 text-slate-400'
                             : 'bg-purple-950/40 border-purple-500/40 text-purple-200'
                         }`}
-                        title={
-                          isPast
-                            ? `Vested in past on ${milestoneDate.toISOString().slice(0, 10)} (${Math.round(grossShares)} shs)`
-                            : `Vests at Month ${offset} (${milestoneDate.toISOString().slice(0, 10)}) - ${Math.round(grossShares)} shs`
-                        }
+                        title={`${isPast ? 'Vested in past' : `Vests at Month ${offset}`} on ${milestoneDate.toISOString().slice(0, 10)}
+• Gross: ${Math.round(grossShares)} shs = €${milestoneGrossEur.toLocaleString()} ($${milestoneGrossUsd.toLocaleString()})
+• Net Retained (post-52% tax): ${milestoneNetShares} shs = €${milestoneNetEur.toLocaleString()}`}
                       >
                         {isPast ? (
                           <CheckCircle2 className="w-3 h-3 text-slate-500" />
@@ -485,8 +580,8 @@ export const GrantsManager: React.FC<GrantsManagerProps> = ({
                         )}
                         <span>
                           {grant.vest_frequency_months === 1
-                            ? `Yr ${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`
-                            : `Q${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`}
+                            ? `Yr ${idx + 1}`
+                            : `Q${idx + 1}`}: {Math.round(pct * 100)}% ({Math.round(grossShares)} shs • €{Math.round(milestoneGrossEur / 1000)}k)
                         </span>
                         {isPast ? (
                           <span className="text-[9px] text-slate-500 uppercase">Past</span>
