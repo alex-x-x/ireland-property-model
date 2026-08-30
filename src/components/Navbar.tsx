@@ -115,8 +115,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
 
   return (
-    <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 lg:px-8 py-3">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3">
+      <div className="max-w-[1720px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Title & Branding */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
