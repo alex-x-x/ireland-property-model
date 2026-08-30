@@ -159,4 +159,54 @@ describe('Mortgage Engine', () => {
     expect(getSalaryAtDate('2027-06-01', unSortedMortgage).baseSalary).toBe(180000);
     expect(getSalaryAtDate('2028-06-01', unSortedMortgage).baseSalary).toBe(220000);
   });
+
+  it('correctly calculates dynamic bonus and CBI 4.0x borrowing capacity on future salary increases', () => {
+    // Initial: €160,000 base, 15% bonus (€24k) -> €184,000 total -> Max CBI Loan €736,000
+    // Step 1 at 2027-07-01: Base increases to €190,000 with percentage bonus increased to 20% (€38k) -> €228k total -> Max CBI Loan €912,000
+    // Step 2 at 2028-01-01: Base increases to €220,000 with fixed bonus €50,000 -> €270k total -> Max CBI Loan €1,080,000
+    const configWithDynamicBonus = {
+      mortgage_interest_rate: 0.035,
+      mortgage_term_years: 25,
+      yearly_maintenance_rate: 0.01,
+      buyer_gross_annual_base_salary_eur: 160000,
+      buyer_annual_bonus_pct: 0.15,
+      cbi_max_lti_multiple: 4.0,
+      salary_adjustments: [
+        {
+          id: 'step_1',
+          effective_date: '2027-07-01',
+          base_salary_eur: 190000,
+          bonus_pct: 0.20,
+        },
+        {
+          id: 'step_2',
+          effective_date: '2028-01-01',
+          base_salary_eur: 220000,
+          bonus_eur: 50000,
+        },
+      ],
+    };
+
+    // Prior to Step 1 (e.g. 2027-01-01)
+    const salEarly = getSalaryAtDate('2027-01-01', configWithDynamicBonus);
+    expect(salEarly.baseSalary).toBe(160000);
+    expect(salEarly.bonusEur).toBe(24000);
+    expect(salEarly.totalGrossSalary).toBe(184000);
+    expect(getEffectiveMaxMortgage(configWithDynamicBonus, '2027-01-01')).toBe(736000);
+
+    // After Step 1 (e.g. 2027-08-01)
+    const salStep1 = getSalaryAtDate('2027-08-01', configWithDynamicBonus);
+    expect(salStep1.baseSalary).toBe(190000);
+    expect(salStep1.bonusEur).toBe(38000);
+    expect(salStep1.totalGrossSalary).toBe(228000);
+    expect(getEffectiveMaxMortgage(configWithDynamicBonus, '2027-08-01')).toBe(912000);
+
+    // After Step 2 (e.g. 2028-03-01)
+    const salStep2 = getSalaryAtDate('2028-03-01', configWithDynamicBonus);
+    expect(salStep2.baseSalary).toBe(220000);
+    expect(salStep2.bonusEur).toBe(50000);
+    expect(salStep2.bonusPct).toBeCloseTo(50000 / 220000, 4);
+    expect(salStep2.totalGrossSalary).toBe(270000);
+    expect(getEffectiveMaxMortgage(configWithDynamicBonus, '2028-03-01')).toBe(1080000);
+  });
 });

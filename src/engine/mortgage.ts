@@ -28,7 +28,9 @@ export function getSalaryAtDate(
       a.effective_date.localeCompare(b.effective_date)
     );
     for (const adj of sortedAdjustments) {
-      if (adj.effective_date <= currentDateStr) {
+      const adjMonth = adj.effective_date.slice(0, 7);
+      const targetMonth = currentDateStr.slice(0, 7);
+      if (adjMonth <= targetMonth) {
         base = adj.base_salary_eur;
         if (adj.bonus_pct !== undefined && adj.bonus_pct !== null) {
           bonusPct = adj.bonus_pct;

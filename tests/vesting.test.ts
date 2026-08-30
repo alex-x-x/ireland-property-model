@@ -231,4 +231,58 @@ describe('Vesting Engine', () => {
     expect(oldSummary.pastGross).toBe(800);
     expect(oldSummary.unvestedGross).toBe(0);
   });
+
+  it('correctly calculates future stock refresher grant milestones awarded after model start date', () => {
+    // Model start date: 2026-08-01
+    // Future refresher awarded at 2027-04-01 (Month 8 of simulation)
+    // 400 shares, quarterly (25% every 3 months)
+    const futureQuarterlyRefresher: Grant = {
+      id: 'future_refresher_2027',
+      type: 'refresher',
+      grant_date: '2027-04-01',
+      total_shares: 400,
+      schedule_percents: [0.25, 0.25, 0.25, 0.25],
+      vest_frequency_months: 3, // Vests at Month 3, 6, 9, 12 from grant date (July 2027, Oct 2027, Jan 2028, Apr 2028)
+    };
+
+    const startDate = '2026-08-01';
+
+    // Summary as of 2026-08-01: 0 past vested, 400 unvested
+    const summary = calculateSingleGrantVesting(futureQuarterlyRefresher, startDate);
+    expect(summary.pastGross).toBe(0);
+    expect(summary.unvestedGross).toBe(400);
+
+    // Month 1 to 10 (Aug 2026 to May 2027): 0 vests from this grant
+    for (let m = 1; m <= 10; m++) {
+      const events = getVestingMilestonesForMonth(m, startDate, [futureQuarterlyRefresher], 200, 0.86, 0.52);
+      expect(events.length).toBe(0);
+    }
+
+    // Month 11 (July 2027 = 3 months after 2027-04-01): 1st quarterly vest (100 gross -> 48 net shares)
+    const eventsM11 = getVestingMilestonesForMonth(11, startDate, [futureQuarterlyRefresher], 200, 0.86, 0.52);
+    expect(eventsM11.length).toBe(1);
+    expect(eventsM11[0].grossShares).toBe(100);
+    expect(eventsM11[0].netShares).toBe(48); // 100 * (1 - 0.52)
+    expect(eventsM11[0].netAmountEur).toBeCloseTo(48 * 200 * 0.86, 2);
+
+    // Month 14 (Oct 2027 = 6 months after grant): 2nd quarterly vest
+    const eventsM14 = getVestingMilestonesForMonth(14, startDate, [futureQuarterlyRefresher], 210, 0.86, 0.52);
+    expect(eventsM14.length).toBe(1);
+    expect(eventsM14[0].grossShares).toBe(100);
+    expect(eventsM14[0].netShares).toBe(48);
+
+    // Month 17 (Jan 2028 = 9 months after grant): 3rd quarterly vest
+    const eventsM17 = getVestingMilestonesForMonth(17, startDate, [futureQuarterlyRefresher], 220, 0.86, 0.52);
+    expect(eventsM17.length).toBe(1);
+    expect(eventsM17[0].netShares).toBe(48);
+
+    // Month 20 (Apr 2028 = 12 months after grant): 4th and final quarterly vest
+    const eventsM20 = getVestingMilestonesForMonth(20, startDate, [futureQuarterlyRefresher], 230, 0.86, 0.52);
+    expect(eventsM20.length).toBe(1);
+    expect(eventsM20[0].netShares).toBe(48);
+
+    // Month 21+ (May 2028 onwards): 0 vests remaining
+    const eventsM21 = getVestingMilestonesForMonth(21, startDate, [futureQuarterlyRefresher], 240, 0.86, 0.52);
+    expect(eventsM21.length).toBe(0);
+  });
 });
