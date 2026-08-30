@@ -19,7 +19,7 @@ interface HelpGuideModalProps {
   onClose: () => void;
 }
 
-type TabType = 'overview' | 'widgets' | 'interpretation' | 'math';
+type TabType = 'overview' | 'playbook' | 'widgets' | 'interpretation' | 'math';
 
 export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -47,7 +47,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Intuitive walkthroughs, widget breakdowns, interpretation tips & mathematical proofs
+                Intuitive walkthroughs, decision playbook, widget breakdowns & mathematical proofs
               </p>
             </div>
           </div>
@@ -72,7 +72,19 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>1. Core Dilemma & Overview</span>
+            <span>1. Core Dilemma</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('playbook')}
+            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'playbook'
+                ? 'border-brand-500 text-brand-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Compass className="w-4 h-4 text-emerald-400" />
+            <span>2. How to Decide (Playbook & Cases)</span>
           </button>
 
           <button
@@ -84,7 +96,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>2. Widget-by-Widget Guide</span>
+            <span>3. Widget Guide</span>
           </button>
 
           <button
@@ -95,8 +107,8 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Compass className="w-4 h-4" />
-            <span>3. Key Interpretation Tips</span>
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>4. Key Interpretation Tips</span>
           </button>
 
           <button
@@ -107,8 +119,8 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Scale className="w-4 h-4" />
-            <span>4. Mathematical Deep Dive</span>
+            <Scale className="w-4 h-4 text-purple-400" />
+            <span>5. Mathematical Deep Dive</span>
           </button>
         </div>
 
@@ -190,7 +202,188 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             </div>
           )}
 
-          {/* TAB 2: WIDGET-BY-WIDGET GUIDE */}
+          {/* TAB 2: HOW TO DECIDE (PLAYBOOK & CASE STUDIES) */}
+          {activeTab === 'playbook' && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Introduction Banner */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-slate-850 to-brand-950/30 border border-emerald-500/30 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-sm sm:text-base font-bold text-white">How to Use This Model to Make Your Decision</h3>
+                </div>
+                <p className="text-slate-300 leading-normal">
+                  Follow this 4-step framework to navigate the trade-offs between property inflation, rental drag, and equity compounding with mathematical clarity.
+                </p>
+              </div>
+
+              {/* 4-Step Playbook Cards */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
+                  📋 The 4-Step Decision Playbook
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Step 1 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold font-mono text-xs flex items-center justify-center">1</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">Set Personal Facts & Lock Profile</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Enter your exact target home price, base salary, bonus target, monthly non-housing living expenses, existing cash/ETFs, and unvested GSU grants.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Action:</strong> Click <strong>"🔒 Lock Profile"</strong> in the top header so your baseline facts remain fixed when you adjust macro sliders.
+                    </p>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-300 font-bold font-mono text-xs flex items-center justify-center">2</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">Find Your Earliest Affordability Point (t*)</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Look at the <strong>60-Month Trajectory Chart</strong>. Find where the purple Liquid Wealth line crosses the cyan Target Capital staircase.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Action:</strong> If <code className="text-sky-300">t* = 0</code>, you can buy today. If <code className="text-sky-300">t* &gt; 0</code>, note how many months of saving and vesting are needed to eliminate any CBI borrowing shortfall.
+                    </p>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-300 font-bold font-mono text-xs flex items-center justify-center">3</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">Audit 5-Year Wealth in Opportunity Matrix</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Examine the <strong>Opportunity Cost Matrix</strong> for Year-5 Total Net Wealth ($M60$) across Buy ASAP, Wait 12M, Wait 24M, Wait 36M, and Rent 60M.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Action:</strong> If <code className="text-emerald-300">+Δ Delta</code> is positive for waiting, compounding beats immediate purchase. If <code className="text-rose-300">-Δ Delta</code> is negative, waiting destroys wealth.
+                    </p>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-300 font-bold font-mono text-xs flex items-center justify-center">4</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">Find Your Breakeven on the Heatmap</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Scan the <strong>2D Sensitivity Heatmap</strong> to find the boundary between <strong>BUY NOW (Emerald)</strong> and <strong>WAIT & COMPOUND (Purple)</strong>.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Action:</strong> Identify the <em>Equilibrium Stock Growth Rate</em> (e.g. 15%/yr). If you expect tech to beat that rate, wait; otherwise, buy now.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Real-World Case Studies */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
+                  🎯 Real-World Dublin Decision Case Studies
+                </h4>
+
+                <div className="space-y-3">
+                  {/* Case 1 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-purple-500/30 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <h5 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                        <Award className="w-4 h-4 text-purple-400" />
+                        <span>Case A: The GSU Bull (High Stock Compounding)</span>
+                      </h5>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 w-fit">
+                        Verdict: WAIT 24M–36M
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Profile & Assumptions:</strong> Senior engineer with 1,200 unvested GSUs, €190k base, €2,500/mo rent. Alphabet stock expected to compound at <strong>18%/yr</strong> vs Dublin property at <strong>5%/yr</strong>.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-750 text-xs text-purple-300 font-mono space-y-0.5">
+                      <div>• 5-Year Delta (Wait 24M): <strong className="text-emerald-400">+€58,400</strong> higher net wealth vs Buy ASAP</div>
+                      <div>• Liquid Portfolio at M60: €820k (Wait 24M) vs €340k (Buy ASAP)</div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      <strong>Why this works:</strong> Even after the 52% Irish marginal tax at vest, 18% equity appreciation massively outperforms property inflation. Delaying purchase allows building a 30%+ deposit, taking a smaller loan, and maintaining large liquid reserves.
+                    </p>
+                  </div>
+
+                  {/* Case 2 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-emerald-500/30 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <h5 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                        <Building className="w-4 h-4 text-emerald-400" />
+                        <span>Case B: The High-Rent Sunk Cost Trap</span>
+                      </h5>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 w-fit">
+                        Verdict: BUY ASAP
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Profile & Assumptions:</strong> Tech couple renting in Grand Canal Dock at <strong>€3,500/mo</strong> (€42k/yr in 100% sunk cost). Conservative stock outlook (<strong>6%/yr</strong>) with Dublin house inflation at <strong>6%/yr</strong>.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-750 text-xs text-emerald-300 font-mono space-y-0.5">
+                      <div>• 5-Year Delta (Wait 24M): <strong className="text-rose-400">-€49,200</strong> loss vs Buy ASAP</div>
+                      <div>• Cumulative Sunk Rent Paid if Waiting 24M: €86,400</div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      <strong>Why this works:</strong> High rental bleed is an unrecoverable destruction of capital. Buying immediately redirects that €3,500/mo into monthly mortgage principal paydown and captures home equity appreciation from Day 1.
+                    </p>
+                  </div>
+
+                  {/* Case 3 */}
+                  <div className="p-4 rounded-xl bg-slate-850 border border-sky-500/30 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <h5 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-sky-400" />
+                        <span>Case C: The Promotion & Grant Cliff Target</span>
+                      </h5>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 w-fit">
+                        Verdict: TARGET MONTH 12 (t* = 12)
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Profile & Assumptions:</strong> Engineer targeting an €850k home. Current €140k salary caps borrowing at €560k (CBI 4.0x), leaving a €205k cash shortfall that makes buying impossible today at Month 0.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-750 text-xs text-sky-300 font-mono space-y-0.5">
+                      <div>• Month 0-11: CBI Shortfall = €205,000 (Target Capital €314k &gt; Liquid Wealth €110k)</div>
+                      <div>• Month 12: L6 Promotion (€180k base) + 100-share vest eliminates shortfall (isAffordable = true)</div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      <strong>Why this works:</strong> The model clearly demonstrates that waiting until the exact promo/vest milestone at Month 12 unlocks full borrowing capacity and avoids settling for a suboptimal compromise.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3-Question Pre-Purchase Checklist */}
+              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-750 space-y-2">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>🧭 The 3-Question Pre-Purchase Decision Checklist</span>
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-300">
+                  <div className="flex items-start gap-2">
+                    <span className="font-bold text-emerald-400">1.</span>
+                    <span><strong>5-Year Wealth Test:</strong> Does buying ASAP or waiting generate a higher net worth on the 5-Year Opportunity Cost Matrix?</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-bold text-emerald-400">2.</span>
+                    <span><strong>Downside Stress Test:</strong> If you move the Google Stock slider to <code className="text-rose-300">-15%</code> in the sidebar, do you still have enough liquid wealth to close without an emergency shortfall?</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-bold text-emerald-400">3.</span>
+                    <span><strong>Cashflow Buffer Test:</strong> In the Personal Profile Header, is your post-purchase net cashflow positive (<code className="text-emerald-300">Net Pay - Mortgage - Maintenance - Living Expenses &gt; 0</code>)?</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: WIDGET-BY-WIDGET GUIDE */}
           {activeTab === 'widgets' && (
             <div className="space-y-4 animate-fadeIn">
               {/* Widget 1 */}
