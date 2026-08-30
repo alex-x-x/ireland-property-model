@@ -41,11 +41,26 @@ export const App: React.FC = () => {
     }
   }, [config]);
 
-  // Fetch initial market data
+  // Fetch initial market data and auto-sync if manual override is disabled
   useEffect(() => {
     let isMounted = true;
     fetchMarketData(config.meta.stock_symbol || 'GOOGL', config.meta.start_date).then((res) => {
-      if (isMounted) setMarketData(res);
+      if (isMounted) {
+        setMarketData(res);
+        if (!config.macro.use_manual_market_override) {
+          setConfig((prev) => ({
+            ...prev,
+            equity_engine: {
+              ...prev.equity_engine,
+              current_share_price_usd: res.stockPriceUsd,
+            },
+            macro: {
+              ...prev.macro,
+              eur_usd_spot: res.eurUsdRate,
+            },
+          }));
+        }
+      }
     });
     return () => {
       isMounted = false;
@@ -55,9 +70,31 @@ export const App: React.FC = () => {
   const handleRefreshMarketData = async (symbol: string) => {
     const res = await fetchMarketData(symbol, config.meta.start_date);
     setMarketData(res);
+    if (!config.macro.use_manual_market_override) {
+      setConfig((prev) => ({
+        ...prev,
+        meta: {
+          ...prev.meta,
+          stock_symbol: symbol,
+        },
+        equity_engine: {
+          ...prev.equity_engine,
+          current_share_price_usd: res.stockPriceUsd,
+        },
+        macro: {
+          ...prev.macro,
+          eur_usd_spot: res.eurUsdRate,
+        },
+      }));
+    }
   };
 
-  const handleApplyMarketData = (stockPrice: number, fxRate: number, symbol: string) => {
+  const handleApplyMarketData = (
+    stockPrice: number,
+    fxRate: number,
+    symbol: string,
+    isManualOverride: boolean = false
+  ) => {
     setConfig((prev) => ({
       ...prev,
       meta: {
@@ -71,13 +108,34 @@ export const App: React.FC = () => {
       macro: {
         ...prev.macro,
         eur_usd_spot: fxRate,
+        use_manual_market_override: isManualOverride,
       },
     }));
   };
 
+  const handleToggleManualOverride = (enabled: boolean) => {
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        macro: {
+          ...prev.macro,
+          use_manual_market_override: enabled,
+        },
+      };
+      if (!enabled && marketData) {
+        nextConfig.equity_engine = {
+          ...nextConfig.equity_engine,
+          current_share_price_usd: marketData.stockPriceUsd,
+        };
+        nextConfig.macro.eur_usd_spot = marketData.eurUsdRate;
+      }
+      return nextConfig;
+    });
+  };
+
   const handleQuickSync = () => {
     if (marketData) {
-      handleApplyMarketData(marketData.stockPriceUsd, marketData.eurUsdRate, marketData.stockSymbol);
+      handleApplyMarketData(marketData.stockPriceUsd, marketData.eurUsdRate, marketData.stockSymbol, false);
     }
   };
 
@@ -156,6 +214,7 @@ export const App: React.FC = () => {
         config={config}
         onRefresh={handleRefreshMarketData}
         onApplyManualData={handleApplyMarketData}
+        onToggleManualOverride={handleToggleManualOverride}
       />
 
       <MonthlyTableModal

@@ -892,7 +892,16 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     Google Stock Unit (GSU) Grants Baseline & Future Cliffs
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    Total: {totalGrantShares} gross shares across {grants.length} grants • Baseline: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$
+                    Total: {totalGrantShares} gross shares across {grants.length} grants •
+                    {config.macro.use_manual_market_override ? (
+                      <span className="text-rose-400 font-semibold ml-1 font-mono">
+                        [OVERRIDE: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$]
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 font-medium ml-1 font-mono">
+                        [MARKET FEED: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$]
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -905,8 +914,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                       type="number"
                       step="1"
                       value={config.equity_engine.current_share_price_usd}
-                      onChange={(e) => updateEquityEngine('current_share_price_usd', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        updateEquityEngine('current_share_price_usd', parseFloat(e.target.value) || 0);
+                        updateMacro('use_manual_market_override', true);
+                      }}
                       className="w-16 bg-transparent text-white font-bold font-mono focus:outline-none"
+                      title="Set custom stock price (activates manual override)"
                     />
                   </div>
 
@@ -916,8 +929,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                       type="number"
                       step="0.005"
                       value={config.macro.eur_usd_spot}
-                      onChange={(e) => updateMacro('eur_usd_spot', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        updateMacro('eur_usd_spot', parseFloat(e.target.value) || 0);
+                        updateMacro('use_manual_market_override', true);
+                      }}
                       className="w-16 bg-transparent text-white font-bold font-mono focus:outline-none"
+                      title="Set custom EUR/USD spot rate (activates manual override)"
                     />
                   </div>
 

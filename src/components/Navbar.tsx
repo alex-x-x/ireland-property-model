@@ -99,17 +99,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const isOverrideActive = !!config.macro.use_manual_market_override;
+
   const isSynced =
     marketData &&
     config.equity_engine.current_share_price_usd === marketData.stockPriceUsd &&
     config.macro.eur_usd_spot === marketData.eurUsdRate;
 
-  const statusColor =
-    marketData?.status === 'live'
-      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-      : marketData?.status === 'cached'
-      ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-      : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+  const statusColor = isOverrideActive
+    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm shadow-rose-950'
+    : marketData?.status === 'live'
+    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+    : marketData?.status === 'cached'
+    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+    : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
 
   return (
     <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 lg:px-8 py-3">
@@ -156,18 +159,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenMarketDataModal}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${statusColor}`}
-              title="Click to view market data feed details or configure rates"
+              title={
+                isOverrideActive
+                  ? 'Manual rate override active. Click to view or toggle back to market feed.'
+                  : 'Click to view market data feed details or configure rates'
+              }
             >
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
-              <span>{marketData?.stockSymbol || 'GOOGL'}: ${marketData?.stockPriceUsd?.toFixed(1) || '185.0'}</span>
+              <Radio className={`w-3.5 h-3.5 ${isOverrideActive ? 'text-rose-400 animate-pulse' : 'animate-pulse'}`} />
+              <span>
+                {config.meta.stock_symbol || 'GOOGL'}: $
+                {config.equity_engine.current_share_price_usd?.toFixed(1) || '185.0'}
+              </span>
               <span className="text-slate-400">•</span>
-              <span>€/$ {marketData?.eurUsdRate?.toFixed(3) || '0.915'}</span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1 py-0.2 rounded bg-slate-900/50">
-                {marketData?.status === 'live' ? 'Live' : marketData?.status === 'cached' ? 'Cached' : 'Offline Mode'}
+              <span>€/$ {config.macro.eur_usd_spot?.toFixed(3) || '0.915'}</span>
+              <span
+                className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
+                  isOverrideActive
+                    ? 'bg-rose-900/80 text-rose-200 border border-rose-500/50'
+                    : 'bg-slate-900/50 text-slate-300'
+                }`}
+              >
+                {isOverrideActive
+                  ? 'OVERRIDE'
+                  : marketData?.status === 'live'
+                  ? 'Live'
+                  : marketData?.status === 'cached'
+                  ? 'Cached'
+                  : 'Offline Mode'}
               </span>
             </button>
 
-            {onSyncMarketData && marketData && !isSynced && (
+            {onSyncMarketData && marketData && !isSynced && !isOverrideActive && (
               <button
                 onClick={onSyncMarketData}
                 className="px-2 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-colors flex items-center gap-1"
