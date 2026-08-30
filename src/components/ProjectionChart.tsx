@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -29,21 +29,23 @@ export const ProjectionChart: React.FC<ProjectionChartProps> = ({ data, decision
     return `€${val}`;
   };
 
-  const chartData = data.map((d) => ({
-    month: `M${d.month}`,
-    monthNum: d.month,
-    date: d.date,
-    totalLiquidWealth: Math.round(d.totalLiquidWealth),
-    targetCapital: Math.round(d.targetCapital),
-    cash: Math.round(d.cash),
-    investments: Math.round(d.investments),
-    gsuPool: Math.round(d.gsuPool),
-    cumulativeRent: Math.round(d.cumulativeRent),
-    propertyPrice: Math.round(d.propertyPrice),
-    surplus: Math.round(d.surplus),
-    isAffordable: d.isAffordable,
-    vestEvents: d.vestEvents,
-  }));
+  const chartData = useMemo(() => {
+    return data.map((d) => ({
+      month: `M${d.month}`,
+      monthNum: d.month,
+      date: d.date,
+      totalLiquidWealth: Math.round(d.totalLiquidWealth),
+      targetCapital: Math.round(d.targetCapital),
+      cash: Math.round(d.cash),
+      investments: Math.round(d.investments),
+      gsuPool: Math.round(d.gsuPool),
+      cumulativeRent: Math.round(d.cumulativeRent),
+      propertyPrice: Math.round(d.propertyPrice),
+      surplus: Math.round(d.surplus),
+      isAffordable: d.isAffordable,
+      vestEvents: d.vestEvents,
+    }));
+  }, [data]);
 
   const earliestMonth = decision.earliestBuyMonth;
 

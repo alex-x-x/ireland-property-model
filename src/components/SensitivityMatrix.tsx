@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Grid } from 'lucide-react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
+import { Grid, Loader2 } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import { runSimulation } from '../engine/simulation';
 import { runDecisionAnalysis } from '../engine/decision';
@@ -13,6 +13,11 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
   const [horizonMonths, setHorizonMonths] = useState<number>(60);
   const horizonYears = (horizonMonths / 12).toFixed(1).replace(/\.0$/, '');
 
+  // Defer heavy 55-permutation matrix computation to prevent slider lag
+  const deferredConfig = useDeferredValue(config);
+  const deferredHorizon = useDeferredValue(horizonMonths);
+  const isCalculating = deferredConfig !== config || deferredHorizon !== horizonMonths;
+
   // Stock Growth Rates in 5% brackets from -20% to +30%
   const stockRates = [-0.20, -0.15, -0.10, -0.05, 0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
   // Property Growth Rates: -3%, 0%, 3%, 5%, 8%
@@ -22,17 +27,17 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
     return stockRates.map((stockRate) => {
       const row = propRates.map((propRate) => {
         const testConfig: SimulationConfig = {
-          ...config,
+          ...deferredConfig,
           meta: {
-            ...config.meta,
-            forecast_months: horizonMonths,
+            ...deferredConfig.meta,
+            forecast_months: deferredHorizon,
           },
           property: {
-            ...config.property,
+            ...deferredConfig.property,
             yearly_growth_rate: propRate,
           },
           equity_engine: {
-            ...config.equity_engine,
+            ...deferredConfig.equity_engine,
             stock_yearly_growth_rate: stockRate,
           },
         };
@@ -60,7 +65,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
 
       return { stockRate, cells: row };
     });
-  }, [config, horizonMonths]);
+  }, [deferredConfig, deferredHorizon]);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
@@ -70,13 +75,21 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
             <Grid className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-              <span>Sensitivity Heatmap: Stock Growth vs Dublin Property Growth</span>
-              <InfoTooltip
-                title="2D Sensitivity Matrix"
-                content="Evaluates the optimal action across 55 economic permutations. Use the slider to test whether buying early or waiting wins at Month 12, Month 24, or Month 60."
-              />
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+                <span>Sensitivity Heatmap: Stock Growth vs Dublin Property Growth</span>
+                <InfoTooltip
+                  title="2D Sensitivity Matrix"
+                  content="Evaluates the optimal action across 55 economic permutations. Use the slider to test whether buying early or waiting wins at Month 12, Month 24, or Month 60."
+                />
+              </h3>
+              {isCalculating && (
+                <span className="flex items-center gap-1 text-[11px] text-brand-400 font-semibold animate-pulse bg-brand-500/10 border border-brand-500/30 px-2 py-0.5 rounded-full">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Computing...</span>
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               Evaluates <strong className="text-brand-300">Month {horizonMonths} ({horizonYears} Yr{horizonYears === '1' ? '' : 's'})</strong> Net Wealth Advantage (Wait & Compound vs Buy ASAP)
               {horizonMonths < 60 && (
@@ -141,7 +154,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
       </div>
 
       {/* 2D Matrix Table */}
-      <div className="overflow-x-auto">
+      <div className={`overflow-x-auto transition-opacity duration-200 ${isCalculating ? 'opacity-60' : 'opacity-100'}`}>
         <table className="w-full text-xs text-center border-collapse">
           <thead>
             <tr>
