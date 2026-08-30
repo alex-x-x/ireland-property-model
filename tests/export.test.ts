@@ -31,4 +31,28 @@ describe('Export Service', () => {
     expect(row0[0]).toBe('0'); // Month 0
     expect(row0[1]).toBe('2026-08'); // Date
   });
+
+  it('handles empty data points array gracefully in CSV export', () => {
+    const csv = exportMonthlyPointsToCsv([]);
+    const lines = csv.split('\n');
+    expect(lines.length).toBe(1); // Header only
+    expect(lines[0]).toContain('Month');
+  });
+
+  it('exports valid JSON and CSV for unaffordable and extreme high-value configurations', () => {
+    const extremeConfig = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 10000000, // €10M property
+      },
+    };
+    const jsonStr = exportConfigToJson(extremeConfig);
+    const parsed = JSON.parse(jsonStr);
+    expect(parsed.property.target_price_eur).toBe(10000000);
+
+    const points = runSimulation(extremeConfig);
+    const csv = exportMonthlyPointsToCsv(points);
+    expect(csv).toContain('NO'); // Affordable to Buy column = NO
+  });
 });

@@ -285,4 +285,47 @@ describe('Vesting Engine', () => {
     const eventsM21 = getVestingMilestonesForMonth(21, startDate, [futureQuarterlyRefresher], 240, 0.86, 0.52);
     expect(eventsM21.length).toBe(0);
   });
+
+  it('handles leap-year February 29th grant dates without calendar date drift', () => {
+    const leapDate = '2024-02-29';
+    // +12 months -> 2025-02-28
+    const d12 = addMonthsToDate(leapDate, 12);
+    expect(d12.getUTCFullYear()).toBe(2025);
+    expect(d12.getUTCMonth()).toBe(1); // Feb
+    expect(d12.getUTCDate()).toBe(28);
+
+    // +48 months -> 2028-02-29 (next leap year)
+    const d48 = addMonthsToDate(leapDate, 48);
+    expect(d48.getUTCFullYear()).toBe(2028);
+    expect(d48.getUTCMonth()).toBe(1);
+    expect(d48.getUTCDate()).toBe(29);
+  });
+
+  it('safely processes zero-share and single-share micro grants without precision errors', () => {
+    const zeroGrant: Grant = {
+      id: 'g_zero',
+      type: 'refresher',
+      grant_date: '2026-08-01',
+      total_shares: 0,
+      schedule_percents: [0.25, 0.25, 0.25, 0.25],
+      vest_frequency_months: 3,
+    };
+    const zeroSummary = calculateSingleGrantVesting(zeroGrant, '2026-08-01');
+    expect(zeroSummary.pastGross).toBe(0);
+    expect(zeroSummary.unvestedGross).toBe(0);
+
+    const microGrant: Grant = {
+      id: 'g_one',
+      type: 'refresher',
+      grant_date: '2026-08-01',
+      total_shares: 1,
+      schedule_percents: [1.0],
+      vest_frequency_months: 1,
+    };
+    const events = getVestingMilestonesForMonth(1, '2026-08-01', [microGrant], 200, 0.86, 0.52);
+    expect(events.length).toBe(1);
+    expect(events[0].grossShares).toBe(1);
+    expect(events[0].netShares).toBe(0.48);
+    expect(events[0].netAmountEur).toBeCloseTo(0.48 * 200 * 0.86, 4);
+  });
 });

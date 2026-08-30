@@ -3,11 +3,25 @@ import { calculateStampDuty, runSimulation } from '../src/engine/simulation';
 import { DEFAULT_CONFIG } from '../src/engine/constants';
 
 describe('Simulation Engine', () => {
-  it('calculates Irish Stamp Duty accurately across tiers', () => {
+  it('calculates Irish Stamp Duty accurately across default and custom tiered schedules', () => {
+    // Default 2-tier schedule (1% up to €1M, 2% excess)
+    expect(calculateStampDuty(0)).toBe(0);
+    expect(calculateStampDuty(-500000)).toBe(0);
     expect(calculateStampDuty(800000)).toBe(8000);
     expect(calculateStampDuty(1000000)).toBe(10000);
     expect(calculateStampDuty(1200000)).toBe(14000);
     expect(calculateStampDuty(1500000)).toBe(20000);
+
+    // Custom 3-tier schedule (1% up to €1M, 2% up to €1.5M, 3% excess)
+    const customTiers = [
+      { up_to: 1000000, rate: 0.01 },
+      { up_to: 1500000, rate: 0.02 },
+      { up_to: null, rate: 0.03 },
+    ];
+    // €2M property: €10k + €10k + €15k = €35,000
+    expect(calculateStampDuty(2000000, customTiers)).toBe(35000);
+    // €800k property under custom tiers: €8,000
+    expect(calculateStampDuty(800000, customTiers)).toBe(8000);
   });
 
   it('runs 60-month chronological simulation and computes earliest affordable purchase month', () => {
@@ -485,5 +499,125 @@ describe('Simulation Engine', () => {
     expect(sim[12].targetCapital).toBe(113000);
     expect(sim[12].retainedShares).toBe(96);
     expect(sim[12].totalLiquidWealth).toBeGreaterThan(sim[12].targetCapital);
+  });
+
+  it('safely simulates severe black swan shock scenarios (-70% stock crash, -25% property slump)', () => {
+    const blackSwanConfig = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        yearly_growth_rate: -0.25,
+      },
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        stock_yearly_growth_rate: -0.70,
+        initial_vested_shares_held: 500,
+      },
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        rent_yearly_growth_rate: 0.15, // hyper-rent
+        eur_usd_yearly_drift: -0.05,
+      },
+    };
+
+    const sim = runSimulation(blackSwanConfig);
+    expect(sim.length).toBe(61);
+
+    for (const p of sim) {
+      expect(p.propertyPrice).toBeGreaterThan(0);
+      expect(p.stockPriceUsd).toBeGreaterThan(0);
+      expect(p.stampDuty).toBeGreaterThanOrEqual(0);
+      expect(Number.isFinite(p.totalLiquidWealth)).toBe(true);
+      expect(Number.isFinite(p.targetCapital)).toBe(true);
+    }
+  });
+
+  it('handles 100% deposit / all-cash purchase without negative loan values', () => {
+    const allCashConfig = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 800000,
+        minimum_deposit_pct: 1.0, // 100% deposit
+      },
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        cash_eur: 900000,
+      },
+    };
+
+    const sim = runSimulation(allCashConfig);
+    expect(sim[0].targetCapital).toBe(800000 + 8000 + 3000); // 800k deposit + 8k stamp duty + 3k fees = 811k
+    expect(sim[0].borrowingShortfall).toBe(0);
+    expect(sim[0].isAffordable).toBe(true);
+  });
+
+  it('correctly models customizable bonus payout months (e.g. December payout instead of March)', () => {
+    // Start date 2026-08-01. December payout is Month 4 (2026-12), Month 16 (2027-12), Month 28 (2028-12)...
+    const decBonusConfig = {
+      ...DEFAULT_CONFIG,
+      meta: { ...DEFAULT_CONFIG.meta, start_date: '2026-08-01' },
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        buyer_gross_annual_base_salary_eur: 120000,
+        buyer_annual_bonus_eur: 24000, // €2k/mo accrual
+        bonus_payout_month: 12, // December payout
+      },
+    };
+
+    const sim = runSimulation(decBonusConfig);
+
+    // Month 4 is 2026-12-01 -> Receives bonus payout
+    expect(sim[4].date).toBe('2026-12');
+    expect(sim[4].netBonusReceivedEur).toBeGreaterThan(0);
+
+    // Month 3 (2026-11) and Month 5 (2027-01) receive no payout
+    expect(sim[3].netBonusReceivedEur).toBe(0);
+    expect(sim[5].netBonusReceivedEur).toBe(0);
+
+    // Next payout is Month 16 (2027-12)
+    expect(sim[16].date).toBe('2027-12');
+    expect(sim[16].netBonusReceivedEur).toBeCloseTo(24000 * 0.48, 1); // 12 full months of accrual after 52% tax
+  });
+
+  it('verifies 100% stable wealth accounting in a zero-growth, zero-inflation control environment', () => {
+    const flatConfig = {
+      ...DEFAULT_CONFIG,
+      property: { ...DEFAULT_CONFIG.property, yearly_growth_rate: 0 },
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        stock_yearly_growth_rate: 0,
+        grants: [], // no new grants
+      },
+      liquid_assets: {
+        ...DEFAULT_CONFIG.liquid_assets,
+        investments_yearly_growth_rate: 0,
+        monthly_salary_savings_eur: 1000, // exact +€1,000/mo cash addition
+      },
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        rent_yearly_growth_rate: 0,
+        eur_usd_yearly_drift: 0,
+      },
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        buyer_annual_bonus_eur: 0,
+        buyer_annual_bonus_pct: 0,
+        salary_adjustments: [],
+      },
+      tax: {
+        standard_rate_cutoff_eur: 53000,
+        tax_credits_eur: 9000,
+        savings_calculation_mode: 'explicit' as const,
+      },
+    };
+
+    const sim = runSimulation(flatConfig);
+
+    for (let m = 1; m <= 60; m++) {
+      expect(sim[m].propertyPrice).toBe(sim[0].propertyPrice);
+      expect(sim[m].stockPriceUsd).toBe(sim[0].stockPriceUsd);
+      expect(sim[m].cash - sim[m - 1].cash).toBe(1000);
+    }
   });
 });

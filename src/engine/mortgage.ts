@@ -80,7 +80,7 @@ export function calculateMonthlyMortgagePayment(
   annualRate: number,
   termYears: number
 ): number {
-  if (principal <= 0) return 0;
+  if (principal <= 0 || termYears <= 0) return 0;
   const n = termYears * 12;
   const r = annualRate / 12;
 
@@ -95,7 +95,7 @@ export function calculateMortgageAmortization(
   termYears: number,
   monthsElapsed: number
 ): AmortizationResult {
-  if (principal <= 0 || monthsElapsed <= 0) {
+  if (principal <= 0 || monthsElapsed <= 0 || termYears <= 0) {
     return {
       monthlyPayment: 0,
       remainingBalance: Math.max(0, principal),

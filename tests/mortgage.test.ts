@@ -209,4 +209,57 @@ describe('Mortgage Engine', () => {
     expect(salStep2.totalGrossSalary).toBe(270000);
     expect(getEffectiveMaxMortgage(configWithDynamicBonus, '2028-03-01')).toBe(1080000);
   });
+
+  it('handles short mortgage terms (e.g. 3 years) that are fully paid off before the 60-month horizon', () => {
+    // 3-year term (36 months), €180,000 principal at 3.5%
+    const termYears = 3;
+    const principal = 180000;
+    const rate = 0.035;
+
+    // At month 36 (exact payoff date):
+    const amort36 = calculateMortgageAmortization(principal, rate, termYears, 36);
+    expect(amort36.remainingBalance).toBe(0);
+    expect(amort36.cumulativePrincipalPaid).toBeCloseTo(principal, 0);
+
+    // At month 60 (24 months after payoff):
+    const amort60 = calculateMortgageAmortization(principal, rate, termYears, 60);
+    expect(amort60.remainingBalance).toBe(0);
+    expect(amort60.cumulativePrincipalPaid).toBeCloseTo(principal, 0);
+    // Interest stops accumulating once loan is paid off:
+    expect(amort60.cumulativeInterestPaid).toBeCloseTo(amort36.cumulativeInterestPaid, 1);
+  });
+
+  it('ensures Approval in Principle (AIP) strictly overrides salary-based CBI limits across step-ups', () => {
+    const configWithAipAndStepUp = {
+      mortgage_interest_rate: 0.035,
+      mortgage_term_years: 25,
+      yearly_maintenance_rate: 0.01,
+      buyer_gross_annual_base_salary_eur: 150000,
+      cbi_max_lti_multiple: 4.0,
+      approval_in_principle_amount_eur: 550000, // Explicit bank letter
+      salary_adjustments: [
+        {
+          id: 'step_1',
+          effective_date: '2027-01-01',
+          base_salary_eur: 250000, // Would yield €1,000,000 CBI max loan
+        },
+      ],
+    };
+
+    // Before step-up: AIP of €550,000 is used instead of €600k CBI
+    expect(getEffectiveMaxMortgage(configWithAipAndStepUp, '2026-06-01')).toBe(550000);
+
+    // After step-up: AIP remains strictly €550,000
+    expect(getEffectiveMaxMortgage(configWithAipAndStepUp, '2027-06-01')).toBe(550000);
+  });
+
+  it('safely handles negative principal, zero term, and negative elapsed months without throwing', () => {
+    expect(calculateMonthlyMortgagePayment(-50000, 0.035, 25)).toBe(0);
+    expect(calculateMonthlyMortgagePayment(500000, 0.035, 0)).toBe(0);
+
+    const negAmort = calculateMortgageAmortization(-50000, 0.035, 25, -12);
+    expect(negAmort.monthlyPayment).toBe(0);
+    expect(negAmort.remainingBalance).toBe(0);
+    expect(negAmort.cumulativeInterestPaid).toBe(0);
+  });
 });
