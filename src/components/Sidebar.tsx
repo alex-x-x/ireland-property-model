@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
   };
 
   return (
-    <aside className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20 space-y-4">
+    <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20 space-y-4">
       <div className="bg-slate-900 border-2 border-brand-500/40 rounded-2xl p-5 shadow-2xl space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">

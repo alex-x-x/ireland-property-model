@@ -174,7 +174,7 @@ export const App: React.FC = () => {
         onSyncMarketData={handleQuickSync}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+      <main className="flex-1 max-w-[1720px] w-full mx-auto p-4 sm:p-6 lg:p-8">
         {/* 1. TOP SECTION: Personal Financial Profile & GSU Grants Baseline */}
         <PersonalProfileHeader
           config={config}
@@ -185,12 +185,12 @@ export const App: React.FC = () => {
         />
 
         {/* 2. MAIN 2-COLUMN MODELING WORKSPACE */}
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 items-start justify-center w-full">
           {/* Left Column: Financial Modeling Sliders */}
           <Sidebar config={config} onChange={setConfig} />
 
           {/* Right Column: Decision Analytics & Projections */}
-          <div className="flex-1 w-full space-y-6">
+          <div className="flex-1 min-w-0 w-full space-y-6">
             {/* Core Recommendation & Opportunity Cost Matrix */}
             <DecisionMatrix decision={decision} config={config} />
 
@@ -225,7 +225,7 @@ export const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-6 px-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-[1720px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Dublin Property Acquisition & Equity Decision Engine • Pure Client-Side Simulation</span>
           <span>AIB 2026 Mortgage Benchmark (~3.50% Fixed) • Irish Marginal Tax (52%) • CBI 4.0x LTI</span>
         </div>
