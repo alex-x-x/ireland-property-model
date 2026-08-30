@@ -752,7 +752,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                   <label className="text-slate-400 block font-semibold text-purple-300">
                     Vested {config.meta.stock_symbol || 'GOOGL'} Shares Held (at Start)
                   </label>
-                  <span className="text-[10px] text-purple-300 font-mono">
+                  <span className="text-[10px] text-purple-300 font-mono font-bold">
                     €{Math.round((config.equity_engine.initial_vested_shares_held ?? 0) * config.equity_engine.current_share_price_usd * config.macro.eur_usd_spot).toLocaleString()}
                   </span>
                 </div>
@@ -768,8 +768,8 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                   />
                   <span className="text-slate-400 text-[10px] ml-1">shares</span>
                 </div>
-                <span className="text-[10px] text-slate-500 block mt-0.5">
-                  Shares already vested in Morgan Stanley/Schwab at Model Start Date
+                <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
+                  {(config.equity_engine.initial_vested_shares_held ?? 0)} shs × ${config.equity_engine.current_share_price_usd.toFixed(1)} × {config.macro.eur_usd_spot.toFixed(3)} €/$ (0% tax, already vested)
                 </span>
               </div>
 
@@ -892,13 +892,35 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     Google Stock Unit (GSU) Grants Baseline & Future Cliffs
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    Total: {totalGrantShares} gross shares across {grants.length} grants
+                    Total: {totalGrantShares} gross shares across {grants.length} grants • Baseline: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$
                   </p>
                 </div>
               </div>
 
-              {!isProfileLocked && (
-                <div className="flex items-center gap-2">
+              {!isProfileLocked ? (
+                <div className="flex items-center flex-wrap gap-2">
+                  <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-purple-500/30 text-xs">
+                    <span className="text-purple-300 text-[11px]">Price: $</span>
+                    <input
+                      type="number"
+                      step="1"
+                      value={config.equity_engine.current_share_price_usd}
+                      onChange={(e) => updateEquityEngine('current_share_price_usd', parseFloat(e.target.value) || 0)}
+                      className="w-16 bg-transparent text-white font-bold font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-purple-500/30 text-xs">
+                    <span className="text-purple-300 text-[11px]">€/$:</span>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={config.macro.eur_usd_spot}
+                      onChange={(e) => updateMacro('eur_usd_spot', parseFloat(e.target.value) || 0)}
+                      className="w-16 bg-transparent text-white font-bold font-mono focus:outline-none"
+                    />
+                  </div>
+
                   <button
                     onClick={handleAddRefresherGrant}
                     className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-medium rounded-lg border border-purple-500/30 transition-colors"
@@ -914,7 +936,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     <span>+ Initial (33/33/22/12)</span>
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Grant Cards */}
