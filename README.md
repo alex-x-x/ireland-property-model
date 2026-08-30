@@ -163,7 +163,10 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
   3. **Base Investment Yield (p.a.):** 0% to +20% (index funds / global ETFs).
   4. **Mortgage Interest Rate:** 2.0% to 7.0% (AIB Green Benchmark ~3.50%).
   5. **Rent Inflation (RPZ):** 0% to 8% (statutory 2% RPZ rent cap vs open market).
-  6. **EUR/USD Spot Drift:** -5% to +5% (foreign exchange currency drift).
+  6. **EUR/USD Spot Drift (p.a.):** -5% to +5% (currency exchange rate drift on USD-denominated stock & cash):
+     * *Move Left (< 0%):* Expect USD to weaken vs EUR $\implies$ stock converts into fewer Euros (reduces Dublin buying power).
+     * *Move Right (> 0%):* Expect USD to strengthen vs EUR $\implies$ stock converts into more Euros (boosts deposit).
+     * *Past Year Reference:* EUR/USD traded between ~1.04 and ~1.12 (~±3% to ±5% annual swing) based on ECB vs Fed rate differentials.
 * **Key Insight:** Moving sliders immediately updates the 60-month trajectory and decision cards without lagging the UI.
 
 ### 3. Core Decision Recommendation Banner
