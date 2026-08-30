@@ -3,6 +3,7 @@ import { Grid } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import { runSimulation } from '../engine/simulation';
 import { runDecisionAnalysis } from '../engine/decision';
+import { InfoTooltip } from './InfoTooltip';
 
 interface SensitivityMatrixProps {
   config: SimulationConfig;
@@ -71,6 +72,10 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
           <div>
             <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
               <span>Sensitivity Heatmap: Stock Growth vs Dublin Property Growth</span>
+              <InfoTooltip
+                title="2D Sensitivity Matrix"
+                content="Evaluates the optimal action across 55 economic permutations. Use the slider to test whether buying early or waiting wins at Month 12, Month 24, or Month 60."
+              />
             </h3>
             <p className="text-xs text-slate-400">
               Evaluates <strong className="text-brand-300">Month {horizonMonths} ({horizonYears} Yr{horizonYears === '1' ? '' : 's'})</strong> Net Wealth Advantage (Wait & Compound vs Buy ASAP)

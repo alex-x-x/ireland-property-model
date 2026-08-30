@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { MonthlyDataPoint, SimulationConfig } from '../engine/types';
 import { exportMonthlyPointsToCsv, downloadCsvFile } from '../engine/export';
+import { InfoTooltip } from './InfoTooltip';
 
 interface MonthlyCashflowWidgetProps {
   data: MonthlyDataPoint[];
@@ -48,36 +49,44 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
         return (
           p.month === 0 ||
           p.isAffordable ||
-          (p.netBonusReceivedEur && p.netBonusReceivedEur > 0) ||
-          p.vestEvents.length > 0 ||
-          p.month % 12 === 0
+          p.month === 12 ||
+          p.month === 24 ||
+          p.month === 36 ||
+          p.month === 48 ||
+          p.month === 60 ||
+          Boolean(p.netBonusReceivedEur && p.netBonusReceivedEur > 0)
         );
       }
       return true;
     });
   }, [data, selectedFilter, searchTerm]);
 
-  // Overall 60-Month Aggregate Summary Metrics
-  const lastPoint = data[data.length - 1] || data[0];
-  const totalRentPaid = lastPoint.cumulativeRent;
+  // Aggregate KPI highlights
+  const totalRentPaid = data[data.length - 1]?.cumulativeRent || 0;
   const totalBonusPaid = data.reduce((sum, p) => sum + (p.netBonusReceivedEur || 0), 0);
-  const finalRetainedShares = lastPoint.retainedShares;
-  const earliestAffordableMonth = data.find((p) => p.isAffordable)?.month ?? null;
+  const endRetainedShares = data[data.length - 1]?.retainedShares || 0;
+  const endGsuValue = data[data.length - 1]?.gsuPool || 0;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-      {/* Header */}
-      <div className="p-4 sm:p-5 bg-slate-850 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all">
+      {/* Header Bar */}
+      <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-850 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/30">
+          <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <Table className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-white tracking-tight">Month-by-Month Cashflow & Wealth Breakdown</h3>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                60 Months Dynamic
+              <h3 className="text-sm font-bold text-white tracking-tight">
+                Month-by-Month Cashflow & Equity Ledger
+              </h3>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                60 Months
               </span>
+              <InfoTooltip
+                title="Monthly Cashflow Ledger"
+                content="Tracks month-by-month cash accumulation, March bonus payouts (48% net after 52% tax), un-sold GSU share compounding, and purchase capital requirements."
+              />
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Live ledger tracking cash savings inflows, March bonuses, rental friction, and un-sold GSU share compounding with differentials (Δ)
@@ -138,45 +147,46 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
                 <span>Retained Shares at M60</span>
               </div>
               <div className="text-base font-bold text-purple-300 font-mono">
-                {Math.round(finalRetainedShares).toLocaleString()} shares
+                {Math.round(endRetainedShares).toLocaleString()} shs
               </div>
-              <span className="text-[10px] text-slate-500">Held without selling</span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                €{Math.round(endGsuValue).toLocaleString()} value
+              </span>
             </div>
 
             <div className="bg-slate-850 p-3 rounded-xl border border-slate-800">
               <div className="text-slate-400 flex items-center gap-1 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Earliest Purchase Month</span>
+                <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                <span>End Liquid Wealth (M60)</span>
               </div>
-              <div className="text-base font-bold text-amber-300 font-mono">
-                {earliestAffordableMonth !== null ? `Month ${earliestAffordableMonth} (${data[earliestAffordableMonth]?.date})` : 'Beyond M60'}
+              <div className="text-base font-bold text-brand-300 font-mono">
+                €{Math.round(data[data.length - 1]?.totalLiquidWealth || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] text-slate-500">
-                {earliestAffordableMonth !== null ? '100% Capital threshold met' : 'Accelerate savings / grants'}
-              </span>
+              <span className="text-[10px] text-slate-500">Cash + GSUs + Investments</span>
             </div>
           </div>
 
-          {/* Filter Bar & Search */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 flex-wrap text-xs">
+          {/* Filters & Search Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            {/* Quick Filter Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-xs text-slate-400 font-medium mr-1">Filter:</span>
               {[
                 { id: 'all', label: 'All (60 Mo)' },
+                { id: 'milestones', label: '★ Key Milestones' },
                 { id: 'y1', label: 'Year 1' },
                 { id: 'y2', label: 'Year 2' },
                 { id: 'y3', label: 'Year 3' },
                 { id: 'y4', label: 'Year 4' },
                 { id: 'y5', label: 'Year 5' },
-                { id: 'milestones', label: '★ Key Milestones' },
               ].map((f) => (
                 <button
                   key={f.id}
                   onClick={() => setSelectedFilter(f.id as any)}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors border ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                     selectedFilter === f.id
-                      ? 'bg-brand-500 text-white border-brand-400 shadow-sm'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:bg-slate-750'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
                   }`}
                 >
                   {f.label}
@@ -184,15 +194,15 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
               ))}
             </div>
 
-            {/* Quick Search */}
-            <div className="relative w-full sm:w-48">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search date (e.g. 2027-03)..."
+                placeholder="Search Month or Date (e.g. M12, 2027-03)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-800 pl-8 pr-2.5 py-1 rounded-lg border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                className="pl-8 pr-3 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 w-full sm:w-64"
               />
             </div>
           </div>
@@ -202,14 +212,78 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead className="sticky top-0 bg-slate-850 z-10 border-b border-slate-750 text-slate-300 font-sans text-[11px]">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold">Month / Date</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Cash Balance (Δ)</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Rent Drag</th>
-                  <th className="py-2.5 px-3 font-semibold text-right text-purple-300">GSU Pool & Shares (Δ)</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Investments (Δ)</th>
-                  <th className="py-2.5 px-3 font-semibold text-right text-emerald-400">Total Liquid (Δ)</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Target Capital</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Surplus / Deficit</th>
+                  <th className="py-2.5 px-3 font-semibold">
+                    <span className="inline-flex items-center gap-1">
+                      <span>Month / Date</span>
+                      <InfoTooltip
+                        title="Timeline Month"
+                        content="Chronological simulation month and date. Google GSUs vest monthly; annual performance bonus is injected in March."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Cash Balance (Δ)</span>
+                      <InfoTooltip
+                        title="Liquid Cash"
+                        content="Cash in EUR & USD bank accounts. (Δ) indicates net month-over-month inflow from salary savings and March bonuses."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Rent Drag</span>
+                      <InfoTooltip
+                        title="Monthly Rent"
+                        content="Non-recoverable monthly housing expense compounding under the 2% RPZ statutory cap."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right text-purple-300">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>GSU Pool & Shares (Δ)</span>
+                      <InfoTooltip
+                        title="GSU Equity Holdings"
+                        content="Cumulative un-sold GSU shares and their EUR valuation at current stock price and FX rate."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Investments (Δ)</span>
+                      <InfoTooltip
+                        title="Trading Investments"
+                        content="Personal ETF and index fund trading account balances compounding at the investment yield."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right text-emerald-400">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Total Liquid (Δ)</span>
+                      <InfoTooltip
+                        title="Total Liquid Wealth"
+                        content="Total available capital (Cash + GSU Pool + Investments). Represents total purchasing power if buying this month."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Target Capital</span>
+                      <InfoTooltip
+                        title="Required Purchase Capital"
+                        content="Total upfront cash & equity needed: 10% deposit + borrowing shortfall + stamp duty + €3k legal closing fees."
+                      />
+                    </span>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold text-right">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <span>Surplus / Deficit</span>
+                      <InfoTooltip
+                        title="Capital Buffer"
+                        content="Total Liquid Wealth minus Required Upfront Capital. Positive (Green) means you can execute the purchase immediately."
+                      />
+                    </span>
+                  </th>
                   <th className="py-2.5 px-3 font-semibold text-center">Status</th>
                 </tr>
               </thead>

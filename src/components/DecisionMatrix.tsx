@@ -5,6 +5,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { DecisionComparison, SimulationConfig } from '../engine/types';
+import { InfoTooltip } from './InfoTooltip';
 
 interface DecisionMatrixProps {
   decision: DecisionComparison;
@@ -33,6 +34,10 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
                 Core Recommendation
               </span>
               <span className="text-xs text-slate-400">5-Year Wealth Optimization</span>
+              <InfoTooltip
+                title="Optimization Logic"
+                content="Compares terminal Year 5 net wealth (Home Equity + Liquid Assets) between buying immediately at earliest affordability vs delaying to let GSU stock compound."
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -81,9 +86,15 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
       {/* Side-by-side Opportunity Cost Matrix Cards */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Opportunity Cost Matrix: Buy Now vs. Waiting Scenarios
-          </h4>
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Opportunity Cost Matrix: Buy Now vs. Waiting Scenarios
+            </h4>
+            <InfoTooltip
+              title="Opportunity Cost"
+              content="Evaluates the trade-off: Buying early locks in property price and stops rent leakage; waiting lets your high-growth GSUs compound longer before paying a deposit."
+            />
+          </div>
           <span className="text-xs text-slate-400">All outcomes evaluated at Month 60 (Year 5)</span>
         </div>
 
@@ -190,22 +201,100 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
 
       {/* Detailed Financial Breakdown Comparison Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl overflow-x-auto">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-          Detailed Financial Breakdown (Year 5 Audit)
-        </h4>
+        <div className="flex items-center gap-1.5 mb-3">
+          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            Detailed Financial Breakdown (Year 5 Audit)
+          </h4>
+          <InfoTooltip
+            title="Year 5 Audit Breakdown"
+            content="A complete line-item financial reconciliation at Month 60 across all purchase timing strategies. Net Wealth equals Home Equity plus Liquid Portfolio."
+          />
+        </div>
 
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-slate-800 text-slate-400">
-              <th className="py-2 px-3 font-semibold">Scenario</th>
-              <th className="py-2 px-3 font-semibold text-right">Purchase Price</th>
-              <th className="py-2 px-3 font-semibold text-right">Upfront Deposit + Fees</th>
-              <th className="py-2 px-3 font-semibold text-right">Sunk Rent Drag</th>
-              <th className="py-2 px-3 font-semibold text-right">Mortgage Interest Paid</th>
-              <th className="py-2 px-3 font-semibold text-right">Year 5 Home Equity</th>
-              <th className="py-2 px-3 font-semibold text-right">Year 5 Liquid Wealth</th>
-              <th className="py-2 px-3 font-semibold text-right text-white">Year 5 Net Wealth</th>
-              <th className="py-2 px-3 font-semibold text-right">Net Delta</th>
+              <th className="py-2 px-3 font-semibold">
+                <span className="inline-flex items-center gap-1">
+                  <span>Scenario</span>
+                  <InfoTooltip
+                    title="Timing Scenario"
+                    content="Buy ASAP (earliest month satisfying 10% deposit + CBI limits), Wait 12/24/36 months, or Rent all 60 months."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Purchase Price</span>
+                  <InfoTooltip
+                    title="Purchase Price"
+                    content="Property price at purchase date after compounding yearly property inflation."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Upfront Deposit + Fees</span>
+                  <InfoTooltip
+                    title="Upfront Purchase Costs"
+                    content="Total cash/stock liquidated at closing: 10% deposit (plus borrowing shortfall) + Tiered Stamp Duty (1% up to €1M, 2% excess) + €3,000 legal fees."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Sunk Rent Drag</span>
+                  <InfoTooltip
+                    title="Cumulative Sunk Rent"
+                    content="Total non-recoverable rent paid to landlord prior to purchasing (or across all 5 years if renting)."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Mortgage Interest Paid</span>
+                  <InfoTooltip
+                    title="Cumulative Interest"
+                    content="Total non-recoverable interest paid to lender on the mortgage during the 5-year period."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Year 5 Home Equity</span>
+                  <InfoTooltip
+                    title="Home Equity (Year 5)"
+                    content="Property Market Value at Month 60 minus Remaining Mortgage Debt Balance. This is the unencumbered capital you own in the property."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Year 5 Liquid Wealth</span>
+                  <InfoTooltip
+                    title="Liquid Wealth (Year 5)"
+                    content="Total remaining liquid assets at Month 60: Bank Cash + Unsold Retained GSUs + Personal Trading Investments."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right text-white">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Year 5 Net Wealth</span>
+                  <InfoTooltip
+                    title="Total Net Wealth (Year 5)"
+                    content="Master benchmark: Home Equity (Y5) + Liquid Wealth (Y5). Represents your total combined net worth at Month 60."
+                  />
+                </span>
+              </th>
+              <th className="py-2 px-3 font-semibold text-right">
+                <span className="inline-flex items-center justify-end gap-1">
+                  <span>Net Delta</span>
+                  <InfoTooltip
+                    title="Net Wealth Delta"
+                    content="Advantage vs Buy ASAP: Positive (Green) means waiting gained more wealth; Negative (Red) means buying earlier was financially superior."
+                  />
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
