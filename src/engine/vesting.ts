@@ -46,28 +46,79 @@ export interface HistoricalRateBenchmark {
   label: string;
 }
 
-export function getHistoricalBenchmarkRates(dateStr: string): HistoricalRateBenchmark {
-  const parts = dateStr.split('-');
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1] || '1', 10);
+// Dublin Tech / Google GSU compensation standard:
+// Grants issued in month M use the average closing price & ECB FX rate of preceding month (M - 1).
+const PRECEDING_MONTH_BENCHMARKS: Record<string, { priceUsd: number; fxRate: number; precedingMonthName: string }> = {
+  // 2023 Grants (Preceding month: Dec 2022 - Nov 2023)
+  '2023-01': { priceUsd: 89.50, fxRate: 0.945, precedingMonthName: 'Dec 2022' },
+  '2023-02': { priceUsd: 92.00, fxRate: 0.925, precedingMonthName: 'Jan 2023' },
+  '2023-03': { priceUsd: 96.50, fxRate: 0.933, precedingMonthName: 'Feb 2023' },
+  '2023-04': { priceUsd: 100.20, fxRate: 0.935, precedingMonthName: 'Mar 2023' },
+  '2023-05': { priceUsd: 106.50, fxRate: 0.912, precedingMonthName: 'Apr 2023' },
+  '2023-06': { priceUsd: 122.00, fxRate: 0.920, precedingMonthName: 'May 2023' },
+  '2023-07': { priceUsd: 123.50, fxRate: 0.922, precedingMonthName: 'Jun 2023' },
+  '2023-08': { priceUsd: 122.00, fxRate: 0.905, precedingMonthName: 'Jul 2023' },
+  '2023-09': { priceUsd: 130.50, fxRate: 0.916, precedingMonthName: 'Aug 2023' },
+  '2023-10': { priceUsd: 135.20, fxRate: 0.937, precedingMonthName: 'Sep 2023' },
+  '2023-11': { priceUsd: 137.00, fxRate: 0.947, precedingMonthName: 'Oct 2023' },
+  '2023-12': { priceUsd: 133.50, fxRate: 0.926, precedingMonthName: 'Nov 2023' },
 
-  if (year <= 2023) {
-    return { priceUsd: 130.0, fxRate: 0.92, label: '2023 Benchmark' };
+  // 2024 Grants (Preceding month: Dec 2023 - Nov 2024)
+  '2024-01': { priceUsd: 135.00, fxRate: 0.916, precedingMonthName: 'Dec 2023' },
+  '2024-02': { priceUsd: 145.20, fxRate: 0.917, precedingMonthName: 'Jan 2024' },
+  '2024-03': { priceUsd: 144.50, fxRate: 0.926, precedingMonthName: 'Feb 2024' },
+  '2024-04': { priceUsd: 145.00, fxRate: 0.920, precedingMonthName: 'Mar 2024' },
+  '2024-05': { priceUsd: 158.00, fxRate: 0.932, precedingMonthName: 'Apr 2024' },
+  '2024-06': { priceUsd: 174.50, fxRate: 0.924, precedingMonthName: 'May 2024' },
+  '2024-07': { priceUsd: 180.20, fxRate: 0.930, precedingMonthName: 'Jun 2024' },
+  '2024-08': { priceUsd: 183.00, fxRate: 0.921, precedingMonthName: 'Jul 2024' },
+  '2024-09': { priceUsd: 164.50, fxRate: 0.908, precedingMonthName: 'Aug 2024' },
+  '2024-10': { priceUsd: 158.50, fxRate: 0.900, precedingMonthName: 'Sep 2024' },
+  '2024-11': { priceUsd: 166.00, fxRate: 0.920, precedingMonthName: 'Oct 2024' },
+  '2024-12': { priceUsd: 176.50, fxRate: 0.948, precedingMonthName: 'Nov 2024' },
+
+  // 2025 Grants (Preceding month: Dec 2024 - Nov 2025)
+  '2025-01': { priceUsd: 188.50, fxRate: 0.955, precedingMonthName: 'Dec 2024' },
+  '2025-02': { priceUsd: 194.00, fxRate: 0.965, precedingMonthName: 'Jan 2025' },
+  '2025-03': { priceUsd: 185.00, fxRate: 0.960, precedingMonthName: 'Feb 2025' },
+  '2025-04': { priceUsd: 172.50, fxRate: 0.935, precedingMonthName: 'Mar 2025' },
+  '2025-05': { priceUsd: 164.00, fxRate: 0.920, precedingMonthName: 'Apr 2025' },
+  '2025-06': { priceUsd: 172.00, fxRate: 0.925, precedingMonthName: 'May 2025' },
+  '2025-07': { priceUsd: 180.00, fxRate: 0.928, precedingMonthName: 'Jun 2025' },
+  '2025-08': { priceUsd: 192.00, fxRate: 0.918, precedingMonthName: 'Jul 2025' },
+  '2025-09': { priceUsd: 188.00, fxRate: 0.910, precedingMonthName: 'Aug 2025' },
+  '2025-10': { priceUsd: 195.00, fxRate: 0.905, precedingMonthName: 'Sep 2025' },
+  '2025-11': { priceUsd: 205.00, fxRate: 0.912, precedingMonthName: 'Oct 2025' },
+  '2025-12': { priceUsd: 215.00, fxRate: 0.915, precedingMonthName: 'Nov 2025' },
+
+  // 2026 Grants (Preceding month: Dec 2025 - Jul 2026)
+  '2026-01': { priceUsd: 220.00, fxRate: 0.915, precedingMonthName: 'Dec 2025' },
+  '2026-02': { priceUsd: 230.00, fxRate: 0.910, precedingMonthName: 'Jan 2026' },
+  '2026-03': { priceUsd: 238.00, fxRate: 0.905, precedingMonthName: 'Feb 2026' },
+  '2026-04': { priceUsd: 242.00, fxRate: 0.900, precedingMonthName: 'Mar 2026' },
+  '2026-05': { priceUsd: 245.00, fxRate: 0.895, precedingMonthName: 'Apr 2026' },
+  '2026-06': { priceUsd: 248.00, fxRate: 0.890, precedingMonthName: 'May 2026' },
+  '2026-07': { priceUsd: 250.00, fxRate: 0.885, precedingMonthName: 'Jun 2026' },
+  '2026-08': { priceUsd: 250.00, fxRate: 0.910, precedingMonthName: 'Jul 2026' },
+};
+
+export function getHistoricalBenchmarkRates(dateStr: string): HistoricalRateBenchmark {
+  const ym = dateStr.slice(0, 7);
+  const match = PRECEDING_MONTH_BENCHMARKS[ym];
+  if (match) {
+    return {
+      priceUsd: match.priceUsd,
+      fxRate: match.fxRate,
+      label: `${match.precedingMonthName} Avg`,
+    };
   }
-  if (year === 2024) {
-    if (month <= 4) return { priceUsd: 145.0, fxRate: 0.92, label: 'Q1 2024 Benchmark' };
-    if (month <= 8) return { priceUsd: 175.0, fxRate: 0.92, label: 'Mid 2024 Benchmark' };
-    return { priceUsd: 168.0, fxRate: 0.93, label: 'Q4 2024 Benchmark' };
+
+  const year = parseInt(dateStr.slice(0, 4), 10);
+  if (year <= 2022) {
+    return { priceUsd: 90.0, fxRate: 0.945, label: 'Pre-2023 Avg' };
   }
-  if (year === 2025) {
-    if (month <= 4) return { priceUsd: 182.0, fxRate: 0.95, label: 'Q1 2025 Benchmark' };
-    if (month <= 8) return { priceUsd: 185.0, fxRate: 0.92, label: 'Mid 2025 Benchmark' };
-    return { priceUsd: 195.0, fxRate: 0.91, label: 'Q4 2025 Benchmark' };
-  }
-  if (year === 2026 && month <= 6) {
-    return { priceUsd: 190.0, fxRate: 0.91, label: 'Early 2026 Benchmark' };
-  }
-  return { priceUsd: 185.0, fxRate: 0.91, label: 'Current Benchmark' };
+
+  return { priceUsd: 185.0, fxRate: 0.910, label: 'Benchmark Avg' };
 }
 
 export function getProjectedMarketRatesAtDate(
@@ -82,11 +133,11 @@ export function getProjectedMarketRatesAtDate(
   const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2] || '1', 10)));
   const monthOffset = getCalendarMonthOffset(startDateStr, d);
 
-  if (monthOffset <= 0) {
+  if (monthOffset < 0) {
     const historical = getHistoricalBenchmarkRates(dateStr);
     return {
-      projectedStockPriceUsd: currentSharePriceUsd || historical.priceUsd,
-      projectedFxRate: eurUsdSpot || historical.fxRate,
+      projectedStockPriceUsd: historical.priceUsd,
+      projectedFxRate: historical.fxRate,
       monthOffset,
     };
   }
