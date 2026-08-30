@@ -12,10 +12,10 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
   const [horizonYears, setHorizonYears] = useState<number>(5);
   const horizonMonths = horizonYears * 12;
 
-  // Stock Growth Rates spanning severe bear markets to hyper growth
-  const stockRates = [-0.20, -0.10, -0.05, 0.00, 0.08, 0.15, 0.25];
-  // Property Growth Rates spanning mild correction to supply squeeze
-  const propRates = [-0.05, -0.02, 0.00, 0.03, 0.06, 0.09];
+  // Stock Growth Rates in 5% brackets from -20% to +30%
+  const stockRates = [-0.20, -0.15, -0.10, -0.05, 0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
+  // Property Growth Rates: -3%, 0%, 3%, 5%, 8%
+  const propRates = [-0.03, 0.00, 0.03, 0.05, 0.08];
 
   const gridData = useMemo(() => {
     return stockRates.map((stockRate) => {
@@ -168,7 +168,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
                       }`}
                       title={`Stock Growth: ${(cell.stockRate * 100).toFixed(0)}% p.a. | Property Growth: ${(cell.propRate * 100).toFixed(0)}% p.a.\nOptimal Action: ${
                         isWait ? 'Wait & Compound Equity' : 'Buy ASAP'
-                      }\nYear 5 Net Wealth Advantage: ${cell.delta >= 0 ? '+' : ''}€${Math.round(cell.delta).toLocaleString()}`}
+                      }\nYear ${horizonYears} (${horizonMonths} Mo) Net Wealth Advantage: ${cell.delta >= 0 ? '+' : ''}€${Math.round(cell.delta).toLocaleString()}`}
                     >
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-80">
