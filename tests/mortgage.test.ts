@@ -361,5 +361,175 @@ describe('Mortgage Engine', () => {
       expect(zeroResult.actualPayoffMonths).toBe(0);
       expect(zeroResult.schedule).toHaveLength(0);
     });
+
+    it('enforces mathematical conservation of cashflow across all simulated months', () => {
+      // €650k loan, 3.75%, 25y with €350/mo overpayment and €12k March bonus
+      const result = calculateMortgageWithOverpayments(
+        {
+          principal: 650000,
+          annualRate: 0.0375,
+          termYears: 25,
+          fixedRateYears: 2,
+          monthlyOverpayment: 350,
+          annualLumpSumOverpayment: 12000,
+          lumpSumMonth: 3,
+        },
+        '2026-08-01'
+      );
+
+      let totalPrincipalPaidSum = 0;
+      let totalInterestPaidSum = 0;
+      let totalCashflowSum = 0;
+
+      for (const pt of result.schedule) {
+        // Invariant 1: Total Payment in each month === Principal Paid + Extra Overpayment + Interest Paid
+        const monthPrincipalTotal = pt.principalPaid + pt.overpaymentPaid;
+        expect(pt.totalPayment).toBeCloseTo(monthPrincipalTotal + pt.interestPaid, 2);
+
+        totalPrincipalPaidSum += monthPrincipalTotal;
+        totalInterestPaidSum += pt.interestPaid;
+        totalCashflowSum += pt.totalPayment;
+      }
+
+      // Invariant 2: Total Principal repaid across the whole life of the loan must equal original principal
+      expect(totalPrincipalPaidSum).toBeCloseTo(650000, 1);
+      expect(result.totalPrincipalPaid).toBeCloseTo(650000, 1);
+
+      // Invariant 3: Total Interest paid must equal the sum of month-by-month interest charges
+      expect(totalInterestPaidSum).toBeCloseTo(result.totalInterestWithOverpayment, 1);
+
+      // Invariant 4: Total cash outflows === Principal + Interest
+      expect(totalCashflowSum).toBeCloseTo(650000 + result.totalInterestWithOverpayment, 1);
+
+      // Invariant 5: Final balance is exactly 0
+      const finalPoint = result.schedule[result.schedule.length - 1];
+      expect(finalPoint.balance).toBe(0);
+      expect(result.actualPayoffMonths).toBe(result.schedule.length);
+    });
+
+    it('models Dual-Turbo Mode (Simultaneous Monthly + March Annual Bonus) with massive interest reduction', () => {
+      const standard = calculateMortgageWithOverpayments({
+        principal: 600000,
+        annualRate: 0.035,
+        termYears: 25,
+        fixedRateYears: 2,
+        monthlyOverpayment: 0,
+        annualLumpSumOverpayment: 0,
+      });
+
+      const dualTurbo = calculateMortgageWithOverpayments(
+        {
+          principal: 600000,
+          annualRate: 0.035,
+          termYears: 25,
+          fixedRateYears: 2,
+          monthlyOverpayment: 500, // +€500/mo
+          annualLumpSumOverpayment: 15000, // +€15k every March
+          lumpSumMonth: 3,
+        },
+        '2026-08-01'
+      );
+
+      // 25-year mortgage (300 months) is compressed to ~14.4 years (173 months), saving >10 years!
+      expect(dualTurbo.actualPayoffMonths).toBeLessThan(180);
+      expect(dualTurbo.yearsSaved).toBeGreaterThan(10);
+
+      // Saves over €125,000 in interest!
+      expect(dualTurbo.totalInterestSaved).toBeGreaterThan(120000);
+      expect(dualTurbo.totalInterestWithOverpayment).toBeLessThan(180000);
+      expect(dualTurbo.totalInterestWithOverpayment).toBeLessThan(standard.totalInterestStandard);
+      expect(dualTurbo.totalInterestWithOverpayment + dualTurbo.totalInterestSaved).toBeCloseTo(
+        standard.totalInterestStandard,
+        1
+      );
+    });
+
+    it('models Variable Rate mode (0-Year Fixed Lock) where extra payments begin immediately in Month 1', () => {
+      const varResult = calculateMortgageWithOverpayments(
+        {
+          principal: 450000,
+          annualRate: 0.035,
+          termYears: 25,
+          fixedRateYears: 0, // No fixed lockout
+          monthlyOverpayment: 300,
+          annualLumpSumOverpayment: 8000,
+          lumpSumMonth: 3,
+        },
+        '2026-08-01'
+      );
+
+      // Month 1: immediately active
+      expect(varResult.schedule[0].isFixedPeriod).toBe(false);
+      expect(varResult.schedule[0].overpaymentPaid).toBe(300);
+
+      // Month 7 (2027-03): First March -> lump sum applies in Year 1!
+      expect(varResult.schedule[6].dateStr).toBe('2027-03');
+      expect(varResult.schedule[6].overpaymentPaid).toBe(300 + 8000);
+      expect(varResult.schedule[6].isLumpSumApplied).toBe(true);
+    });
+
+    it('accurately evaluates Irish CBI LTI ratios (3.5x Second-Time Buyer vs 4.0x FTB vs 4.5x Exception)', () => {
+      const income = 180000;
+
+      // 1. First-Time Buyer (FTB) standard multiple: 4.0x
+      expect(calculateMaxBorrowingCapacity(income, 4.0)).toBe(720000);
+
+      // 2. Second-Time Buyer (Mover) standard multiple: 3.5x
+      expect(calculateMaxBorrowingCapacity(income, 3.5)).toBe(630000);
+
+      // 3. Central Bank Discretionary Exception: 4.5x
+      expect(calculateMaxBorrowingCapacity(income, 4.5)).toBe(810000);
+    });
+
+    it('evaluates term boundaries from 10 to 35 years with exact annuity payments', () => {
+      const principal = 500000;
+      const rate = 0.035;
+
+      const terms = [10, 15, 20, 25, 30, 35];
+      let prevPayment = Infinity;
+      let prevInterest = 0;
+
+      for (const term of terms) {
+        const payment = calculateMonthlyMortgagePayment(principal, rate, term);
+        const amort = calculateMortgageAmortization(principal, rate, term, term * 12);
+
+        // As term increases, monthly payment decreases monotonically
+        expect(payment).toBeLessThan(prevPayment);
+        prevPayment = payment;
+
+        // As term increases, total interest paid increases monotonically
+        expect(amort.cumulativeInterestPaid).toBeGreaterThan(prevInterest);
+        prevInterest = amort.cumulativeInterestPaid;
+
+        // Loan must be fully paid off at term end
+        expect(amort.remainingBalance).toBe(0);
+        expect(amort.cumulativePrincipalPaid).toBeCloseTo(principal, 0);
+      }
+    });
+
+    it('stress tests rate shocks from 1.5% Green discounts up to 10.0% stagflation extremes', () => {
+      const principal = 600000;
+      const term = 25;
+
+      const rates = [0.015, 0.035, 0.050, 0.065, 0.100];
+      let prevPayment = 0;
+
+      for (const rate of rates) {
+        const payment = calculateMonthlyMortgagePayment(principal, rate, term);
+        expect(payment).toBeGreaterThan(prevPayment);
+        prevPayment = payment;
+
+        const overpay = calculateMortgageWithOverpayments({
+          principal,
+          annualRate: rate,
+          termYears: term,
+          fixedRateYears: 2,
+          monthlyOverpayment: 200,
+        });
+
+        expect(overpay.standardMonthlyPayment).toBeCloseTo(payment, 2);
+        expect(overpay.schedule[overpay.schedule.length - 1].balance).toBe(0);
+      }
+    });
   });
 });
