@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { PersonalProfileHeader } from './components/PersonalProfileHeader';
@@ -34,6 +34,18 @@ export const App: React.FC = () => {
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  // debouncedConfig trails config by 300ms — simulation & decision engine only run
+  // after the user pauses typing, making all input fields immediately responsive.
+  const [debouncedConfig, setDebouncedConfig] = useState<SimulationConfig>(config);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedConfig(config), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [config]);
 
   // Debounce saving config changes to localStorage
   useEffect(() => {
@@ -170,9 +182,10 @@ export const App: React.FC = () => {
     }));
   };
 
-  // Run pure functional simulation and decision engine
-  const monthlyPoints = useMemo(() => runSimulation(config), [config]);
-  const decision = useMemo(() => runDecisionAnalysis(config, monthlyPoints), [config, monthlyPoints]);
+  // Run pure functional simulation and decision engine — against debouncedConfig only,
+  // so the expensive 60-month loop does not fire on every keystroke.
+  const monthlyPoints = useMemo(() => runSimulation(debouncedConfig), [debouncedConfig]);
+  const decision = useMemo(() => runDecisionAnalysis(debouncedConfig, monthlyPoints), [debouncedConfig, monthlyPoints]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
