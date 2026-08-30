@@ -73,10 +73,77 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Command | Description |
 |---|---|
 | `npm run dev` | Runs the Vite development server with hot module reloading and CORS proxy |
-| `npm test` | Runs the complete Vitest test suite (47 mathematical & integration unit tests) |
+| `npm test` | Runs the complete Vitest test suite (54 mathematical & integration unit tests) |
 | `npm test:watch` | Runs Vitest in interactive watch mode |
 | `npm run build` | Typechecks with `tsc -b` and produces a production bundle in `dist/` |
 | `npm run preview` | Serves the production build locally |
+
+---
+
+## 🎯 How to Use This Model to Make Your Decision
+
+Follow this **4-step decision-making playbook** to transform complex financial trade-offs into an actionable, evidence-based roadmap.
+
+### 📋 The 4-Step Decision Playbook
+
+```
+┌────────────────────────────────┐     ┌────────────────────────────────┐
+│  Step 1: Set Baseline Facts    │ ──> │  Step 2: Check Your Runway     │
+│  Lock your salary, living      │     │  Find Earliest Affordability   │
+│  expenses, cash, and GSUs.     │     │  Crossing Point (t*) on Chart. │
+└────────────────────────────────┘     └────────────────────────────────┘
+               │                                       │
+               ▼                                       ▼
+┌────────────────────────────────┐     ┌────────────────────────────────┐
+│  Step 3: Audit 5-Year Deltas   │ ──> │  Step 4: Stress-Test Heatmap   │
+│  Compare Year-5 Net Wealth     │     │  Find Breakeven Stock Growth   │
+│  across Buy vs Wait scenarios. │     │  Rate between Buy vs Wait.     │
+└────────────────────────────────┘     └────────────────────────────────┘
+```
+
+1. **Step 1: Set Your Personal Facts & Lock Your Profile**
+   * Input your target property price, gross base salary, bonus target, monthly living expenses (excl. rent), existing cash, ETF investments, and unvested GSU grants.
+   * Click **"🔒 Lock Profile"** in the top header so your baseline facts remain fixed when you experiment with macroeconomic sliders.
+2. **Step 2: Check Your Runway & Earliest Purchase Month ($t^*$)**
+   * Look at the **60-Month Trajectory Chart**. Find where your purple Liquid Wealth line rises above the cyan Target Capital staircase.
+   * If $t^* = 0$, you have the cash and CBI 4.0x borrowing capacity to buy today. If $t^* > 0$, the chart tells you exactly how many months of saving, investing, and GSU vesting are needed to eliminate any CBI borrowing shortfall.
+3. **Step 3: Compare 5-Year Total Net Wealth in the Opportunity Cost Matrix**
+   * Check the **Opportunity Cost Matrix**. Compare Year-5 Total Net Wealth ($M60$) for **Buy ASAP** vs. **Wait 12M**, **Wait 24M**, **Wait 36M**, and **Rent all 60M**.
+   * Look at the bottom-line **Delta ($\Delta W$)**: If waiting 12–24 months produces a positive $+\Delta W$ (e.g. $+€45,000$), your investment compounding during that delay generates more wealth than buying today. If $\Delta W$ is negative, waiting costs you more in property inflation and sunk rent than your stock portfolio earns.
+4. **Step 4: Stress-Test on the 2D Heatmap (Find Your Breakeven Rate)**
+   * Scan the **2D Sensitivity Heatmap** to locate the boundary between **BUY NOW (Emerald)** and **WAIT & COMPOUND (Purple)**.
+   * Identify your **Equilibrium Stock Growth Rate** (e.g. 15%/yr): If you are confident tech equities will beat this threshold, wait; otherwise, buy now.
+
+---
+
+### 🎯 Real-World Dublin Decision Case Studies
+
+#### Case A: "The GSU Bull" (High Stock Compounding)
+* **Profile:** Senior Google engineer with 1,200 unvested GSUs, €190k base salary, renting at €2,500/mo.
+* **Macro Assumptions:** Alphabet stock compounding at **18%/yr** vs Dublin property inflation at **5%/yr**.
+* **Engine Verdict:** **WAIT 24M–36M (+€58,400 higher 5-Year Net Wealth)**.
+* **Why:** Even after the 52% Irish marginal tax at vest, 18% equity appreciation massively outperforms property inflation. Delaying purchase allows building a 30%+ deposit, taking a smaller mortgage, and maintaining large liquid reserves.
+
+#### Case B: "The High-Rent Sunk Cost Trap"
+* **Profile:** Tech couple renting a 2-bed in Grand Canal Dock for **€3,500/mo** (€42,000/yr in 100% sunk cost), with modest stock expectations (**6%/yr**).
+* **Macro Assumptions:** Dublin property inflating at **6%/yr**.
+* **Engine Verdict:** **BUY ASAP (+€49,200 gain vs waiting 24 months)**.
+* **Why:** Paying €3,500/mo in sunk rent acts as an intense negative drag on wealth accumulation. Buying immediately stops the rent bleed and redirects cash into mortgage principal amortization and home equity appreciation.
+
+#### Case C: "The Promotion & Grant Cliff Target"
+* **Profile:** L5 engineer targeting an €850k home. Current €140k base salary caps mortgage borrowing at €560k (CBI 4.0x), leaving a €205k cash shortfall that is unaffordable at Month 0 ($t=0$).
+* **Milestone:** Planned L6 promotion at Month 12 (€180k base $\to$ €720k max loan) + an upcoming quarterly vest (+€17k net).
+* **Engine Verdict:** **TARGET MONTH 12 PURCHASE ($t^* = 12$)**.
+* **Why:** Waiting until the planned promotion and vest milestone eliminates the €205k borrowing shortfall and allows purchasing without settling for a smaller, suboptimal property.
+
+---
+
+### 🧭 The 3-Question Pre-Purchase Decision Checklist
+
+Before making a binding bidding offer on a property, run through these 3 sanity checks:
+1. **5-Year Wealth Test:** Does the Opportunity Cost Matrix show a positive financial verdict for your planned timeline?
+2. **Downside Stress Test:** If you slide Google Stock Growth to **-15%** in the sidebar, do you still have enough liquid wealth to complete the purchase without an emergency shortfall?
+3. **Cashflow Buffer Test:** In the Personal Profile Header, is your post-purchase net cashflow positive ($\text{Net Pay} - \text{Mortgage} - \text{Maintenance} - \text{Living Expenses} > 0$)?
 
 ---
 
