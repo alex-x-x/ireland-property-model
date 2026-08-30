@@ -801,7 +801,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
 
               {/* Cash Safety Pot (Untouchable Emergency Reserve) */}
               <div className="pt-2 border-t border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1">
                   <label className="text-slate-300 font-semibold flex items-center gap-1.5">
                     <span className="text-sky-300">🛡️ Cash Safety Pot</span>
                     <InfoTooltip
@@ -810,22 +810,42 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     />
                   </label>
                   {!isProfileLocked && (
-                    <button
-                      onClick={() => {
-                        const sixMonthsExpenses = Math.round((config.tax?.monthly_living_expenses_eur ?? 2500) * 6);
-                        onChange({
-                          ...config,
-                          liquid_assets: {
-                            ...config.liquid_assets,
-                            cash_safety_buffer_eur: sixMonthsExpenses,
-                          },
-                        });
-                      }}
-                      className="text-[9.5px] px-2 py-0.5 rounded font-bold border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 transition-colors flex items-center gap-1"
-                      title="Set emergency fund to 6 months of living expenses"
-                    >
-                      ⚡ Set 6M Expenses (€{Math.round((config.tax?.monthly_living_expenses_eur ?? 2500) * 6).toLocaleString()})
-                    </button>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <button
+                        onClick={() => {
+                          const totalMonthlyBurn = (config.tax?.monthly_living_expenses_eur ?? 2500) + currentRent;
+                          const sixMonthsBurn = Math.round(totalMonthlyBurn * 6);
+                          onChange({
+                            ...config,
+                            liquid_assets: {
+                              ...config.liquid_assets,
+                              cash_safety_buffer_eur: sixMonthsBurn,
+                            },
+                          });
+                        }}
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 transition-colors flex items-center gap-1"
+                        title={`Set emergency fund to 6 months of Total Essential Burn: 6 × (€${livingExpenses.toLocaleString()} living + €${currentRent.toLocaleString()} rent) = €${Math.round(((config.tax?.monthly_living_expenses_eur ?? 2500) + currentRent) * 6).toLocaleString()}`}
+                      >
+                        ⚡ 6M Burn (€{Math.round(((config.tax?.monthly_living_expenses_eur ?? 2500) + currentRent) * 6 / 1000)}k)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const sixMonthsNetPay = Math.round(taxBreakdown.netMonthlyTakeHome * 6);
+                          onChange({
+                            ...config,
+                            liquid_assets: {
+                              ...config.liquid_assets,
+                              cash_safety_buffer_eur: sixMonthsNetPay,
+                            },
+                          });
+                        }}
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30 transition-colors flex items-center gap-1"
+                        title={`Set emergency fund to 6 months of Net Take-Home Pay: 6 × €${Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}/mo = €${Math.round(taxBreakdown.netMonthlyTakeHome * 6).toLocaleString()}`}
+                      >
+                        ⚡ 6M Net Pay (€{Math.round(taxBreakdown.netMonthlyTakeHome * 6 / 1000)}k)
+                      </button>
+                    </div>
                   )}
                 </div>
 
