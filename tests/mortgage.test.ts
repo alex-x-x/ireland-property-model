@@ -6,6 +6,7 @@ import {
   getTotalGrossSalary,
   getEffectiveMaxMortgage,
   getSalaryAtDate,
+  calculateMortgageWithOverpayments,
 } from '../src/engine/mortgage';
 
 describe('Mortgage Engine', () => {
@@ -261,5 +262,90 @@ describe('Mortgage Engine', () => {
     expect(negAmort.monthlyPayment).toBe(0);
     expect(negAmort.remainingBalance).toBe(0);
     expect(negAmort.cumulativeInterestPaid).toBe(0);
+  });
+
+  describe('Mortgage Overpayment Simulator', () => {
+    it('returns exact standard metrics when overpayment is zero', () => {
+      const result = calculateMortgageWithOverpayments({
+        principal: 500000,
+        annualRate: 0.035,
+        termYears: 25,
+        fixedRateYears: 2,
+        monthlyOverpayment: 0,
+        annualLumpSumOverpayment: 0,
+      });
+
+      expect(result.actualPayoffMonths).toBe(300);
+      expect(result.monthsSaved).toBe(0);
+      expect(result.yearsSaved).toBe(0);
+      expect(result.totalInterestSaved).toBe(0);
+      expect(result.totalInterestWithOverpayment).toBeCloseTo(result.totalInterestStandard, 1);
+      expect(result.schedule.length).toBe(300);
+    });
+
+    it('strictly enforces fixed-rate lockout (zero overpayment during fixed term)', () => {
+      const result = calculateMortgageWithOverpayments({
+        principal: 600000,
+        annualRate: 0.035,
+        termYears: 25,
+        fixedRateYears: 2, // 24 months fixed
+        monthlyOverpayment: 500,
+      });
+
+      // Months 1 to 24: marked as isFixedPeriod, overpaymentPaid must be 0
+      for (let m = 1; m <= 24; m++) {
+        expect(result.schedule[m - 1].isFixedPeriod).toBe(true);
+        expect(result.schedule[m - 1].overpaymentPaid).toBe(0);
+      }
+
+      // Month 25: first month off fixed rate -> overpayment is applied
+      expect(result.schedule[24].isFixedPeriod).toBe(false);
+      expect(result.schedule[24].overpaymentPaid).toBe(500);
+    });
+
+    it('shaves significant years and interest off a 25-year mortgage with regular overpayments', () => {
+      const result = calculateMortgageWithOverpayments({
+        principal: 500000,
+        annualRate: 0.035,
+        termYears: 25,
+        fixedRateYears: 2,
+        monthlyOverpayment: 400, // +€400/mo after year 2
+      });
+
+      expect(result.actualPayoffMonths).toBeLessThan(300);
+      expect(result.monthsSaved).toBeGreaterThan(48); // Shaves >4 years
+      expect(result.totalInterestSaved).toBeGreaterThan(30000); // Saves >€30k interest
+      expect(result.totalInterestWithOverpayment + result.totalInterestSaved).toBeCloseTo(result.totalInterestStandard, 1);
+    });
+
+    it('handles annual lump sum overpayments correctly', () => {
+      const result = calculateMortgageWithOverpayments({
+        principal: 500000,
+        annualRate: 0.035,
+        termYears: 25,
+        fixedRateYears: 2,
+        monthlyOverpayment: 0,
+        annualLumpSumOverpayment: 10000, // €10k annual bonus payment after fixed period
+      });
+
+      // Months 12, 24: fixed period, lump sum is 0
+      expect(result.schedule[11].overpaymentPaid).toBe(0);
+      expect(result.schedule[23].overpaymentPaid).toBe(0);
+
+      // Month 36 (3rd year end): lump sum kicks in
+      expect(result.schedule[35].overpaymentPaid).toBe(10000);
+      expect(result.yearsSaved).toBeGreaterThan(5);
+    });
+
+    it('safely handles zero and negative mortgage parameters in overpayment simulation', () => {
+      const zeroResult = calculateMortgageWithOverpayments({
+        principal: 0,
+        annualRate: 0.035,
+        termYears: 25,
+      });
+      expect(zeroResult.standardMonthlyPayment).toBe(0);
+      expect(zeroResult.actualPayoffMonths).toBe(0);
+      expect(zeroResult.schedule).toHaveLength(0);
+    });
   });
 });

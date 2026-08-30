@@ -6,6 +6,7 @@ import { ProjectionChart } from './components/ProjectionChart';
 import { DecisionMatrix } from './components/DecisionMatrix';
 import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { MonthlyCashflowWidget } from './components/MonthlyCashflowWidget';
+import { MortgageStudioWidget } from './components/MortgageStudioWidget';
 import { MarketDataModal } from './components/MarketDataModal';
 import { MonthlyTableModal } from './components/MonthlyTableModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
@@ -216,6 +217,9 @@ export const App: React.FC = () => {
 
             {/* 2D Sensitivity Heatmap */}
             <SensitivityMatrix config={config} />
+
+            {/* Interactive Mortgage Studio & Loan Optimizer */}
+            <MortgageStudioWidget config={config} monthlyPoints={monthlyPoints} />
           </div>
         </div>
       </main>
