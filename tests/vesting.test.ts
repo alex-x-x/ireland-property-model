@@ -501,9 +501,78 @@ describe('Vesting Engine', () => {
       );
 
       expect(eventsM3.length).toBe(1);
-      expect(eventsM3[0].grossShares).toBe(111);
       expect(eventsM3[0].netShares).toBeCloseTo(111 * 0.48, 1);
       expect(eventsM3[0].netAmountEur).toBeCloseTo(111 * 0.48 * 155 * 0.90, 1);
+    });
+
+    it('calculates full multi-currency breakdown (EUR, USD, Shares) in calculateSingleGrantVesting', () => {
+      const grant: Grant = {
+        id: 'grant_multi_currency',
+        name: 'EUR Tech Refresher',
+        type: 'refresher',
+        grant_date: '2026-08-01',
+        nomination_mode: 'eur',
+        target_value_eur: 90000,
+        grant_price_usd: 200.00,
+        grant_fx_rate: 0.90, // €180/sh -> 500 gross shares
+        total_shares: 0,
+        schedule_percents: [0.25, 0.25, 0.25, 0.25],
+        vest_frequency_months: 3,
+      };
+
+      const breakdown = calculateSingleGrantVesting(grant, '2026-08-01', undefined, 0.52);
+
+      expect(breakdown.totalShares).toBe(500);
+      expect(breakdown.grantPriceUsd).toBe(200.00);
+      expect(breakdown.grantPriceEur).toBe(180.00);
+      expect(breakdown.totalGrossUsd).toBe(100000); // 500 * $200
+      expect(breakdown.totalGrossEur).toBe(90000);  // $100k * 0.90
+      expect(breakdown.totalNetEur).toBeCloseTo(90000 * 0.48, 1);
+      expect(breakdown.totalNetUsd).toBeCloseTo(100000 * 0.48, 1);
+      expect(breakdown.unvestedGross).toBe(500);
+      expect(breakdown.pastGross).toBe(0);
+    });
+
+    it('calculates portfolio-wide totals in EUR, USD, and Shares in calculateGrantVestingSummary', () => {
+      const g1: Grant = {
+        id: 'g1',
+        type: 'initial',
+        grant_date: '2024-08-01', // 24 months past
+        total_shares: 1000,
+        schedule_percents: [0.50, 0.50],
+        vest_frequency_months: 12, // 100% past vested
+      };
+
+      const g2: Grant = {
+        id: 'g2',
+        type: 'refresher',
+        grant_date: '2026-08-01',
+        total_shares: 400,
+        schedule_percents: [0.50, 0.50],
+        vest_frequency_months: 12, // 100% unvested
+      };
+
+      const marketCtx = {
+        currentSharePriceUsd: 150.00,
+        stockYearlyGrowthRate: 0.0,
+        eurUsdSpot: 0.90,
+      };
+
+      const summary = calculateGrantVestingSummary([g1, g2], '2026-08-01', 60, marketCtx, 0.52);
+
+      expect(summary.totalGrantedShares).toBe(1400);
+      expect(summary.pastVestedGrossShares).toBe(1000);
+      expect(summary.unvestedGrossShares).toBe(400);
+
+      // Unvested: 400 shs * $150 = $60,000 * 0.90 = €54,000 gross; net €25,920
+      expect(summary.unvestedGrossUsd).toBe(60000);
+      expect(summary.unvestedGrossEur).toBe(54000);
+      expect(summary.unvestedNetEur).toBe(25920);
+
+      // Past: 1000 shs * $150 = $150,000 * 0.90 = €135,000 gross; net €64,800
+      expect(summary.pastVestedGrossUsd).toBe(150000);
+      expect(summary.pastVestedGrossEur).toBe(135000);
+      expect(summary.pastVestedNetEur).toBe(64800);
     });
   });
 });

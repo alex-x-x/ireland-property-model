@@ -24,7 +24,6 @@ import {
   calculateGrantVestingSummary,
   calculateSingleGrantVesting,
   resolveEffectiveGrantShares,
-  getProjectedMarketRatesAtDate,
   MarketRateContext,
 } from '../engine/vesting';
 import { getTotalGrossSalary, getEffectiveMaxMortgage } from '../engine/mortgage';
@@ -1113,7 +1112,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                     Google Stock Unit (GSU) Grants Baseline & Future Cliffs
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    <strong className="text-purple-300 font-semibold">{vestingSummary.unvestedGrossShares.toLocaleString()} unvested shares</strong> ({vestingSummary.totalGrantedShares.toLocaleString()} total granted across {grants.length} grants) •
+                    <strong className="text-purple-300 font-semibold">{vestingSummary.unvestedGrossShares.toLocaleString()} unvested shs</strong> (≈ €{vestingSummary.unvestedGrossEur.toLocaleString()} / ${vestingSummary.unvestedGrossUsd.toLocaleString()} • Net: €{vestingSummary.unvestedNetEur.toLocaleString()}) across {grants.length} grants •
                     {config.macro.use_manual_market_override ? (
                       <span className="text-rose-400 font-semibold ml-1 font-mono">
                         [OVERRIDE: ${config.equity_engine.current_share_price_usd.toFixed(1)}/sh @ {config.macro.eur_usd_spot.toFixed(3)} €/$]
@@ -1181,26 +1180,17 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {grants.map((grant) => {
                 const mode = grant.nomination_mode || 'shares';
-                const effectiveShares = resolveEffectiveGrantShares(grant, config.meta.start_date, marketContext);
-                const grantVesting = calculateSingleGrantVesting(grant, config.meta.start_date, marketContext);
-                const projectedRates = getProjectedMarketRatesAtDate(
-                  grant.grant_date,
+                const breakdown = calculateSingleGrantVesting(
+                  grant,
                   config.meta.start_date,
-                  config.equity_engine.current_share_price_usd,
-                  config.equity_engine.stock_yearly_growth_rate,
-                  config.macro.eur_usd_spot,
-                  config.macro.eur_usd_yearly_drift
+                  marketContext,
+                  config.equity_engine.marginal_tax_rate_ireland
                 );
 
-                const activeGrantPrice = grant.grant_price_usd && grant.grant_price_usd > 0
-                  ? grant.grant_price_usd
-                  : projectedRates.projectedStockPriceUsd;
-
-                const activeFxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
-                  ? grant.grant_fx_rate
-                  : projectedRates.projectedFxRate;
-
-                const netShares = Math.round(effectiveShares * (1 - config.equity_engine.marginal_tax_rate_ireland));
+                const effectiveShares = breakdown.totalShares;
+                const activeGrantPrice = breakdown.grantPriceUsd;
+                const activeFxRate = breakdown.grantFxRate;
+                const netShares = breakdown.pastNet + breakdown.unvestedNet;
 
                 return (
                   <div
@@ -1219,7 +1209,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                             placeholder="Grant Name"
                           />
                           <span className="text-[10px] text-purple-300 font-mono font-semibold">
-                            {grantVesting.unvestedGross.toLocaleString()} unvested
+                            {breakdown.unvestedGross.toLocaleString()} unvested
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 flex-wrap">
@@ -1248,6 +1238,25 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                       )}
                     </div>
 
+                    {/* 3-Unit Value Display (EUR / USD / Shares) */}
+                    <div className="grid grid-cols-3 gap-1.5 bg-slate-850 p-1.5 rounded-lg border border-slate-750 text-center font-mono">
+                      <div>
+                        <span className="text-[8.5px] text-slate-400 block uppercase">EUR (€)</span>
+                        <strong className="text-[11px] text-purple-200 block">€{breakdown.totalGrossEur.toLocaleString()}</strong>
+                        <span className="text-[8.5px] text-emerald-400 block">Net: €{breakdown.totalNetEur.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[8.5px] text-slate-400 block uppercase">USD ($)</span>
+                        <strong className="text-[11px] text-slate-200 block">${breakdown.totalGrossUsd.toLocaleString()}</strong>
+                        <span className="text-[8.5px] text-slate-400 block">Net: ${breakdown.totalNetUsd.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[8.5px] text-slate-400 block uppercase">Shares (#)</span>
+                        <strong className="text-[11px] text-amber-300 block">{effectiveShares.toLocaleString()} shs</strong>
+                        <span className="text-[8.5px] text-amber-400 block">Net: {netShares.toLocaleString()} shs</span>
+                      </div>
+                    </div>
+
                     {/* Nomination Mode Selector */}
                     <div className="bg-slate-850 p-1 rounded-lg border border-slate-750 flex items-center justify-between text-[10px]">
                       <span className="text-slate-400 font-semibold px-1">Nomination:</span>
@@ -1257,7 +1266,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                           disabled={isProfileLocked}
                           onClick={() => handleUpdateGrant(grant.id, {
                             nomination_mode: 'eur',
-                            target_value_eur: grant.target_value_eur || 80000,
+                            target_value_eur: grant.target_value_eur || breakdown.totalGrossEur || 80000,
                           })}
                           className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
                             mode === 'eur'
@@ -1272,7 +1281,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                           disabled={isProfileLocked}
                           onClick={() => handleUpdateGrant(grant.id, {
                             nomination_mode: 'usd',
-                            target_value_usd: grant.target_value_usd || 100000,
+                            target_value_usd: grant.target_value_usd || breakdown.totalGrossUsd || 100000,
                           })}
                           className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
                             mode === 'usd'
@@ -1378,8 +1387,8 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                         <div className="bg-slate-850 p-2 rounded-lg border border-slate-750">
                           <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
                             <span>Total Granted</span>
-                            {grantVesting.pastGross > 0 && (
-                              <span className="text-slate-500">{grantVesting.pastGross} past</span>
+                            {breakdown.pastGross > 0 && (
+                              <span className="text-slate-500">{breakdown.pastGross} past</span>
                             )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
@@ -1419,6 +1428,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                         const offset = getCalendarMonthOffset(config.meta.start_date, milestoneDate);
                         const isPast = offset <= 0;
                         const grossShares = effectiveShares * pct;
+                        const milestoneGrossUsd = Math.round(grossShares * activeGrantPrice);
+                        const milestoneGrossEur = Math.round(milestoneGrossUsd * activeFxRate);
+                        const milestoneNetEur = Math.round(milestoneGrossEur * (1 - config.equity_engine.marginal_tax_rate_ireland));
+                        const milestoneNetShares = Math.round(grossShares * (1 - config.equity_engine.marginal_tax_rate_ireland));
 
                         return (
                           <div
@@ -1428,17 +1441,15 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                                 ? 'bg-slate-800/80 border-slate-700 text-slate-400'
                                 : 'bg-purple-950/40 border-purple-500/40 text-purple-200'
                             }`}
-                            title={
-                              isPast
-                                ? `Vested in past on ${milestoneDate.toISOString().slice(0, 10)} (${Math.round(grossShares)} shs)`
-                                : `Vests at Month ${offset} (${milestoneDate.toISOString().slice(0, 10)}) - ${Math.round(grossShares)} shs`
-                            }
+                            title={`${isPast ? 'Vested in past' : `Vests at Month ${offset}`} on ${milestoneDate.toISOString().slice(0, 10)}
+• Gross: ${Math.round(grossShares)} shs = €${milestoneGrossEur.toLocaleString()} ($${milestoneGrossUsd.toLocaleString()})
+• Net Retained (post-52% tax): ${milestoneNetShares} shs = €${milestoneNetEur.toLocaleString()}`}
                           >
                             {isPast ? <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" /> : <Clock className="w-2.5 h-2.5 text-purple-400" />}
                             <span>
                               {grant.vest_frequency_months === 1
-                                ? `Yr ${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`
-                                : `Q${idx + 1}: ${Math.round(pct * 100)}% (${Math.round(grossShares)} shs)`}
+                                ? `Yr ${idx + 1}`
+                                : `Q${idx + 1}`}: {Math.round(pct * 100)}% ({Math.round(grossShares)} shs • €{Math.round(milestoneGrossEur / 1000)}k)
                             </span>
                             <span className={isPast ? 'text-slate-500' : 'text-purple-300 font-bold'}>{isPast ? 'PAST' : `M${offset}`}</span>
                           </div>
