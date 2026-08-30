@@ -9,7 +9,6 @@ import {
   Award,
   ChevronDown,
   CheckCircle2,
-  AlertTriangle,
   Scale,
   Compass,
 } from 'lucide-react';
@@ -469,48 +468,117 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               </div>
 
               {/* Widget 6 */}
-              <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-white text-sm flex items-center gap-2">
                     <span className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-300 flex items-center justify-center font-mono text-xs">6</span>
-                    <span>Sensitivity Heatmap (2D Grid)</span>
+                    <span>Sensitivity Heatmap: Stock vs Property (2D Matrix)</span>
                   </h4>
                   <span className="text-[10px] uppercase font-bold text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30">Stress Test</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  <strong>What it is:</strong> A matrix evaluating 55 economic permutations (-20% to +30% stock growth vs -3% to +8% property growth).
+                  <strong>What it is:</strong> A multi-scenario matrix evaluating <strong>55 macroeconomic combinations</strong> (11 stock growth rates from -20% to +30% vs 5 property growth rates from -3% to +8%).
                 </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-750 space-y-1">
+                    <strong className="text-purple-300 block">📊 What VARIES on the Grid (The 2 Axes):</strong>
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-400">
+                      <li><strong>Y-Axis (Rows):</strong> Alphabet stock growth (-20% to +30% p.a.).</li>
+                      <li><strong>X-Axis (Columns):</strong> Dublin property inflation (-3% to +8% p.a.).</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-750 space-y-1">
+                    <strong className="text-sky-300 block">🔒 What is FIXED Behind the Grid:</strong>
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-400">
+                      <li>Your personal profile (Salary, Living Expenses, Cash, GSUs).</li>
+                      <li>Fixed macro rates (Mortgage rate 3.50%, RPZ rent inflation 2.0%, FX drift 0%).</li>
+                      <li>The <strong>Selected Horizon ($H$)</strong> chosen at the top of the heatmap.</li>
+                    </ul>
+                  </div>
+                </div>
                 <p className="text-xs text-slate-400">
-                  <strong>Key Insight:</strong> Shows where the "tipping point" lies. Green cells show where Waiting wins; Blue/Brand cells show where Buying ASAP wins.
+                  <strong>How to Read Each Cell:</strong> Every cell shows the winning action (<code>WAIT</code> in Emerald or <code>BUY NOW</code> in Brand Amber) and the <strong>Net Wealth Advantage (+€Xk)</strong> that the winner delivers over the other.
                 </p>
               </div>
             </div>
           )}
 
-          {/* TAB 3: INTERPRETATION TIPS */}
+          {/* TAB 4: INTERPRETATION TIPS */}
           {activeTab === 'interpretation' && (
-            <div className="space-y-5 animate-fadeIn">
-              {/* Critical Horizon Tip */}
-              <div className="p-5 rounded-2xl bg-amber-950/30 border border-amber-500/40 space-y-3">
-                <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                  <AlertTriangle className="w-5 h-5 text-amber-400" />
-                  <span>Crucial Tip: Understanding the Horizon Slider (1Y vs 5Y)</span>
+            <div className="space-y-6 animate-fadeIn">
+              {/* Deep Dive on Heatmap & Timeline */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-slate-850 to-purple-950/30 border border-indigo-500/30 space-y-3">
+                <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+                  <Compass className="w-5 h-5 text-indigo-400" />
+                  <span>How to Interpret the Heatmap & Timeline Horizons</span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                  The Sensitivity Heatmap includes a <strong>Horizon Slider</strong> (1Y / 2Y / 3Y / 5Y). It is essential to understand what changing the horizon means:
+                  The Sensitivity Heatmap is your <strong>macro risk engine</strong>. Here is how to understand the timeline slider and determine exactly how much time you should wait:
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-750">
-                    <strong className="text-amber-300 block mb-1">1-Year Horizon (Month 12 Closing Day):</strong>
-                    <p className="text-slate-400">
-                      Evaluates your balance sheet <em>on the exact day you close at Month 12</em>. On closing day, buying immediately absorbs <strong>sunk legal fees (€3k) and 1% stamp duty (~€8k)</strong>, so waiting can look temporarily better simply because the transaction costs haven't had time to amortize.
+
+                <div className="space-y-3 text-xs">
+                  {/* Timeline logic */}
+                  <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2">
+                    <h5 className="font-bold text-white text-xs sm:text-sm text-brand-300">
+                      1. How to Think About the Horizon Slider (1Y, 2Y, 3Y, 5Y)
+                    </h5>
+                    <p className="text-slate-300">
+                      The decision to wait is never open-ended — it is always evaluated over a <strong>specific comparison timeframe ($H$)</strong>:
                     </p>
+                    <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
+                      <li>
+                        <strong>1-Year Horizon (M12):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 12"</em>. Sunk rent is low (~€30k), so a moderate stock return (~10%–12%) is often enough for waiting to win.
+                      </li>
+                      <li>
+                        <strong>2-Year Horizon (M24):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 24"</em>. Gives your unvested GSUs two years of compounding, but accumulates ~€60k–€70k in sunk rent.
+                      </li>
+                      <li>
+                        <strong>3-Year Horizon (M36):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 36"</em>. Sunk rent approaches ~€90k–€100k+, raising the bar: tech stock must grow at 16%–20%+ to justify waiting this long.
+                      </li>
+                      <li>
+                        <strong>5-Year Horizon (M60 - Recommended Benchmark):</strong> Evaluates the complete 5-year balance sheet (Remaining Liquid Assets + Amortized Home Equity) across all waiting options.
+                      </li>
+                    </ul>
                   </div>
-                  <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-750">
-                    <strong className="text-emerald-300 block mb-1">5-Year Horizon (Month 60 - Recommended):</strong>
-                    <p className="text-slate-400">
-                      Evaluates your wealth after <strong>4 full years of mortgage principal paydown and home price appreciation</strong>. This is the true financial benchmark for property decisions because real estate is a multi-year illiquid asset.
+
+                  {/* Finding how much time to wait */}
+                  <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2">
+                    <h5 className="font-bold text-white text-xs sm:text-sm text-emerald-300">
+                      2. How to Determine "How Much Time to Wait"
+                    </h5>
+                    <p className="text-slate-300">
+                      To find your personal optimal waiting duration, use the <strong>Peak Delta Rule</strong>:
                     </p>
+                    <ol className="list-decimal pl-5 space-y-1 text-slate-400 font-sans">
+                      <li>Open the <strong>Opportunity Cost Matrix</strong> in the main dashboard.</li>
+                      <li>Look across the scenario columns: <strong>Wait 12M</strong>, <strong>Wait 24M</strong>, and <strong>Wait 36M</strong>.</li>
+                      <li>
+                        Check where the <strong>Net Wealth Delta (+Δ) reaches its highest peak</strong>:
+                        <div className="mt-1 p-2 rounded bg-slate-950 font-mono text-[11px] text-purple-300">
+                          Example: Wait 12M (+€25k) → <strong>Wait 24M (+€58k [PEAK])</strong> → Wait 36M (+€30k)
+                          <br />
+                          👉 Optimal Waiting Period = <strong>24 Months</strong>
+                        </div>
+                      </li>
+                      <li>
+                        Now switch the <strong>Heatmap Horizon to 2Y (M24)</strong> to verify that your 24-month strategy remains inside the green <code className="text-emerald-300">WAIT</code> zone even if market conditions fluctuate.
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* The Breakeven Frontier */}
+                  <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2">
+                    <h5 className="font-bold text-white text-xs sm:text-sm text-purple-300">
+                      3. The Breakeven Frontier (Tipping Point)
+                    </h5>
+                    <p className="text-slate-300">
+                      On the heatmap grid, locate the diagonal boundary where cells switch from <strong className="text-emerald-400">WAIT (Green)</strong> to <strong className="text-brand-400">BUY NOW (Amber)</strong>:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-1 text-slate-400">
+                      <li><strong>Above the Frontier (High Stock, Low Property):</strong> Waiting compounds your equity faster than property appreciates.</li>
+                      <li><strong>Below the Frontier (Low Stock, High Property):</strong> Property inflation and sunk rent erode your capital faster than your portfolio grows — <strong>Buy ASAP</strong>.</li>
+                      <li><strong>The Active Cell:</strong> Your current sidebar slider settings are highlighted on the grid so you instantly see how close you are to the tipping point.</li>
+                    </ul>
                   </div>
                 </div>
               </div>

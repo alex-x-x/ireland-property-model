@@ -193,25 +193,41 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
   * **Sunk Rent Paid:** Total money paid to landlords over the 5 years.
 
 ### 6. Sensitivity Heatmap (2D Grid: Stock Growth vs. Property Growth)
-* **Purpose:** Evaluates 55 economic permutations ($11 \text{ stock rates} \times 5 \text{ property rates}$) simultaneously to show the boundary where buying beats waiting.
-* **Key Insight:** Green cells indicate where Waiting wins; Brand/Blue cells indicate where Buying ASAP wins.
-* **Horizon Slider:** Adjust between 1Y, 2Y, 3Y, and 5Y horizons to test how time horizon shifts the decision.
+* **Purpose:** Evaluates **55 macroeconomic permutations** ($11 \text{ stock rates} \times 5 \text{ property rates}$) simultaneously to show the exact boundary where buying immediately beats waiting.
+* **What VARIES on the Grid (The 2 Axes):**
+  * **Y-Axis (Rows):** Alphabet / Tech stock annual growth rate ($-20\%$ to $+30\%$).
+  * **X-Axis (Columns):** Dublin property price inflation ($-3\%$ to $+8\%$).
+* **What is FIXED Behind the Grid:**
+  * Your personal financial profile (Base Salary, Living Expenses, Cash, Held GSUs, Unvested Grants).
+  * Fixed macro parameters (Mortgage Interest Rate ~3.50%, RPZ Rent Cap ~2.0%, FX Drift 0%).
+  * The **Selected Horizon ($H$)** chosen at the top of the widget.
+* **How to Read a Cell:**
+  * **`WAIT +€Xk` (Emerald):** Waiting for that horizon and compounding your stock beats buying ASAP by $+€X,000$.
+  * **`BUY NOW +€Xk` (Brand Amber):** Buying ASAP generates $+€X,000$ *more* net wealth than waiting for that horizon (i.e. waiting costs you €X,000 in sunk rent and price escalation).
 
 ---
 
 ## 💡 Practical Usage & Critical Interpretation Tips
 
-### 1. How to Correctly Interpret the Horizon Slider (1Y vs 5Y)
-* **1-Year Horizon ($M12$):** Measures the balance sheet immediately on closing day at Month 12. At Month 12, buying takes an immediate upfront hit due to **sunk transaction friction** (€3,000 legal fees + 1% Irish Stamp Duty = €11,000+).
-* **5-Year Horizon ($M60$ - Recommended):** Measures wealth after **4 years of mortgage principal amortization and home price compounding**. 
-* **Rule of Thumb:** Short horizons penalize buying due to upfront closing costs. The 5-Year Horizon ($M60$) is the true benchmark for property decisions because real estate is an illiquid, medium-to-long term asset.
+### 1. How to Think About the Horizon Slider (1Y vs 2Y vs 3Y vs 5Y)
+The decision to wait is never open-ended — it is always evaluated over a **specific comparison timeframe ($H$)**:
+* **1-Year Horizon ($M12$):** Measures buying at Month 0 vs waiting until Month 12. Sunk rent paid is relatively modest (~€30,000), so a moderate stock return (~10%–12%) is often enough for waiting to win.
+* **2-Year Horizon ($M24$):** Tests buying at Month 0 vs waiting until Month 24. Gives your unvested GSUs two years of compounding, but accumulates ~€60,000–€70,000 in sunk rent.
+* **3-Year Horizon ($M36$):** Tests buying at Month 0 vs waiting until Month 36. Sunk rent approaches ~€90,000–€100,000+, raising the bar: tech stocks must grow aggressively (16%–20%+) to overcome the sunk rental drag.
+* **5-Year Horizon ($M60$ - Recommended Benchmark):** Evaluates the complete 5-year balance sheet (Remaining Liquid Assets + Amortized Home Equity) across all waiting options.
 
-### 2. The Golden Rules of the Model
-* **When "Buy ASAP" Wins:**
+### 2. How to Determine Exactly "How Much Time to Wait" (The Peak Delta Rule)
+1. **Check the Opportunity Cost Matrix:** Compare the scenario columns: **Wait 12M**, **Wait 24M**, and **Wait 36M**.
+2. **Find the Peak Net Wealth Delta ($+\Delta W$):**
+   * If $\Delta W$ is $+€25\text{k}$ at 12M, reaches $+€58\text{k}$ at 24M, and drops to $+€30\text{k}$ at 36M $\implies$ **24 Months is your mathematically optimal wait period!**
+3. **Stress-Test on the Heatmap:** Switch the Heatmap Horizon slider to **2Y ($M24$)** to confirm that your 24-month strategy remains inside the green `WAIT` regime across a range of realistic stock and property rates.
+
+### 3. The Golden Rules of the Model
+* **When "Buy ASAP" Typically Wins:**
   * Dublin property inflation ($\ge 5\%$) outpaces net GSU growth.
   * High monthly rent ($\ge €2,500/\text{mo}$) inflicts heavy cumulative cash bleed.
   * Mortgage interest rate is low ($\le 3.5\%$), so monthly payments aggressively amortize principal.
-* **When "Wait & Compound" Wins:**
+* **When "Wait & Compound" Typically Wins:**
   * Stock equity grows rapidly ($\ge 15\%-20\%/\text{yr}$), exceeding Dublin property appreciation.
   * You have major unvested GSU cliffs arriving in the next 12–24 months that are better left compounding in USD equity.
   * Rent is relatively low or controlled by RPZ regulations.
