@@ -40,6 +40,36 @@ export function getCalendarMonthOffset(startDateStr: string, targetDate: Date): 
   return (targetYear - startYear) * 12 + (targetMonth - startMonth);
 }
 
+export interface HistoricalRateBenchmark {
+  priceUsd: number;
+  fxRate: number;
+  label: string;
+}
+
+export function getHistoricalBenchmarkRates(dateStr: string): HistoricalRateBenchmark {
+  const parts = dateStr.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1] || '1', 10);
+
+  if (year <= 2023) {
+    return { priceUsd: 130.0, fxRate: 0.92, label: '2023 Benchmark' };
+  }
+  if (year === 2024) {
+    if (month <= 4) return { priceUsd: 145.0, fxRate: 0.92, label: 'Q1 2024 Benchmark' };
+    if (month <= 8) return { priceUsd: 175.0, fxRate: 0.92, label: 'Mid 2024 Benchmark' };
+    return { priceUsd: 168.0, fxRate: 0.93, label: 'Q4 2024 Benchmark' };
+  }
+  if (year === 2025) {
+    if (month <= 4) return { priceUsd: 182.0, fxRate: 0.95, label: 'Q1 2025 Benchmark' };
+    if (month <= 8) return { priceUsd: 185.0, fxRate: 0.92, label: 'Mid 2025 Benchmark' };
+    return { priceUsd: 195.0, fxRate: 0.91, label: 'Q4 2025 Benchmark' };
+  }
+  if (year === 2026 && month <= 6) {
+    return { priceUsd: 190.0, fxRate: 0.91, label: 'Early 2026 Benchmark' };
+  }
+  return { priceUsd: 185.0, fxRate: 0.91, label: 'Current Benchmark' };
+}
+
 export function getProjectedMarketRatesAtDate(
   dateStr: string,
   startDateStr: string,
@@ -53,9 +83,10 @@ export function getProjectedMarketRatesAtDate(
   const monthOffset = getCalendarMonthOffset(startDateStr, d);
 
   if (monthOffset <= 0) {
+    const historical = getHistoricalBenchmarkRates(dateStr);
     return {
-      projectedStockPriceUsd: currentSharePriceUsd,
-      projectedFxRate: eurUsdSpot,
+      projectedStockPriceUsd: currentSharePriceUsd || historical.priceUsd,
+      projectedFxRate: eurUsdSpot || historical.fxRate,
       monthOffset,
     };
   }
@@ -352,6 +383,10 @@ export interface SingleGrantVestingBreakdown {
   grantPriceUsd: number;
   grantFxRate: number;
   grantPriceEur: number;
+  isHistorical: boolean;
+  benchmarkPriceUsd: number;
+  benchmarkFxRate: number;
+  benchmarkLabel: string;
   totalGrossEur: number;
   totalGrossUsd: number;
   totalNetEur: number;
@@ -382,6 +417,9 @@ export function calculateSingleGrantVesting(
     spotFx,
     fxDrift
   );
+
+  const historical = getHistoricalBenchmarkRates(grant.grant_date);
+  const isHistorical = projected.monthOffset <= 0;
 
   const grantPriceUsd = grant.grant_price_usd && grant.grant_price_usd > 0
     ? grant.grant_price_usd
@@ -429,6 +467,10 @@ export function calculateSingleGrantVesting(
     grantPriceUsd,
     grantFxRate,
     grantPriceEur,
+    isHistorical,
+    benchmarkPriceUsd: historical.priceUsd,
+    benchmarkFxRate: historical.fxRate,
+    benchmarkLabel: historical.label,
     totalGrossEur: Math.round(totalGrossEur),
     totalGrossUsd: Math.round(totalGrossUsd),
     totalNetEur: Math.round(totalNetEur),
