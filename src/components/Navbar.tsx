@@ -106,14 +106,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     config.equity_engine.current_share_price_usd === marketData.stockPriceUsd &&
     config.macro.eur_usd_spot === marketData.eurUsdRate;
 
-  const statusColor = isOverrideActive
-    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm shadow-rose-950'
-    : marketData?.status === 'live'
-    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-    : marketData?.status === 'cached'
-    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-    : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-
   return (
     <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3">
       <div className="max-w-[1720px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -155,37 +147,56 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Market Data Badge & Sync */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={onOpenMarketDataModal}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${statusColor}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                isOverrideActive
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm shadow-rose-950'
+                  : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:bg-slate-750'
+              }`}
               title={
                 isOverrideActive
                   ? 'Manual rate override active. Click to view or toggle back to market feed.'
-                  : 'Click to view market data feed details or configure rates'
+                  : `Market Data Feeds:\n• ${config.meta.stock_symbol || 'GOOGL'}: $${config.equity_engine.current_share_price_usd?.toFixed(2)} [${marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}]\n• USD/EUR: €${config.macro.eur_usd_spot?.toFixed(4)} per $1 (1 EUR = $${(1 / (config.macro.eur_usd_spot || 0.86)).toFixed(3)}) [${marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'}]`
               }
             >
-              <Radio className={`w-3.5 h-3.5 ${isOverrideActive ? 'text-rose-400 animate-pulse' : 'animate-pulse'}`} />
-              <span>
-                {config.meta.stock_symbol || 'GOOGL'}: $
-                {config.equity_engine.current_share_price_usd?.toFixed(1) || '185.0'}
-              </span>
-              <span className="text-slate-400">•</span>
-              <span>€/$ {config.macro.eur_usd_spot?.toFixed(3) || '0.915'}</span>
-              <span
-                className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
+              <Radio className={`w-3.5 h-3.5 ${isOverrideActive ? 'text-rose-400 animate-pulse' : 'text-emerald-400 animate-pulse'}`} />
+
+              {/* Stock Price Pill */}
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-white">{config.meta.stock_symbol || 'GOOGL'}:</span>
+                <span className="font-mono text-purple-300">${config.equity_engine.current_share_price_usd?.toFixed(1) || '346.5'}</span>
+                <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
                   isOverrideActive
-                    ? 'bg-rose-900/80 text-rose-200 border border-rose-500/50'
-                    : 'bg-slate-900/50 text-slate-300'
-                }`}
-              >
-                {isOverrideActive
-                  ? 'OVERRIDE'
-                  : marketData?.status === 'live'
-                  ? 'Live'
-                  : marketData?.status === 'cached'
-                  ? 'Cached'
-                  : 'Offline Mode'}
+                    ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
+                    : marketData?.stockStatus === 'live'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : marketData?.stockStatus === 'cached'
+                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {isOverrideActive ? 'OVERRIDE' : marketData?.stockStatus || 'BENCHMARK'}
+                </span>
+              </span>
+
+              <span className="text-slate-600">|</span>
+
+              {/* FX Rate Pill */}
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-white">USD/EUR:</span>
+                <span className="font-mono text-amber-300">€{config.macro.eur_usd_spot?.toFixed(3) || '0.860'}</span>
+                <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
+                  isOverrideActive
+                    ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
+                    : marketData?.fxStatus === 'live'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : marketData?.fxStatus === 'cached'
+                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {isOverrideActive ? 'OVERRIDE' : marketData?.fxStatus || 'BENCHMARK'}
+                </span>
               </span>
             </button>
 

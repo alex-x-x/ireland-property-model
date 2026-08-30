@@ -1,13 +1,16 @@
+export type MarketMetricStatus = 'live' | 'cached' | 'benchmark' | 'override';
 export type MarketDataStatus = 'live' | 'cached' | 'fallback';
 
 export interface MarketDataResult {
   status: MarketDataStatus;
+  stockStatus: 'live' | 'cached' | 'benchmark';
+  fxStatus: 'live' | 'cached' | 'benchmark';
   source: string;
   timestamp: string;
   stockSymbol: string;
   stockPriceUsd: number;
   historicalStockPriceUsd?: number;
-  eurUsdRate: number; // 1 USD = X EUR
+  eurUsdRate: number; // 1 USD = X EUR (e.g. 0.860 €/$)
   historicalEurUsdRate?: number;
   isLiveStock: boolean;
   isLiveFx: boolean;
@@ -17,34 +20,57 @@ export interface MarketDataResult {
 export function getFallbackMarketData(symbol: string = 'GOOGL', _startDate?: string): MarketDataResult {
   return {
     status: 'fallback',
-    source: 'Offline Benchmark Fallback (Alphabet $185.00, EUR/USD 0.9150)',
+    stockStatus: 'benchmark',
+    fxStatus: 'benchmark',
+    source: 'Offline Benchmark Fallback (Alphabet $346.50, USD/EUR €0.8600)',
     timestamp: new Date().toISOString(),
     stockSymbol: symbol,
-    stockPriceUsd: 185.0,
-    historicalStockPriceUsd: 165.0,
-    eurUsdRate: 0.915,
-    historicalEurUsdRate: 0.91,
+    stockPriceUsd: 346.50,
+    historicalStockPriceUsd: 320.00,
+    eurUsdRate: 0.860,
+    historicalEurUsdRate: 0.880,
     isLiveStock: false,
     isLiveFx: false,
-    errorMessage: 'Running with offline benchmarks. You can edit rates manually or use live dev proxy.',
+    errorMessage: 'Running with offline benchmarks ($346.50 USD, €0.860 / $1). You can edit rates manually or use live sync.',
   };
 }
 
-let cachedResult: MarketDataResult | null = null;
-let lastFetchTime = 0;
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const STORAGE_CACHE_KEY = 'dublin_property_model_market_cache';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours persistent session cache
+
+function loadCachedData(symbol: string): MarketDataResult | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed: MarketDataResult = JSON.parse(raw);
+    const age = Date.now() - new Date(parsed.timestamp).getTime();
+    if (parsed.stockSymbol === symbol && parsed.stockPriceUsd > 0 && parsed.eurUsdRate > 0 && age < CACHE_TTL_MS) {
+      return {
+        ...parsed,
+        status: 'cached',
+        stockStatus: 'cached',
+        fxStatus: 'cached',
+      };
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return null;
+}
+
+function saveCachedData(data: MarketDataResult): void {
+  try {
+    localStorage.setItem(STORAGE_CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 export async function fetchMarketData(
   symbol: string = 'GOOGL',
   startDateStr: string = '2026-08-29'
 ): Promise<MarketDataResult> {
-  const now = Date.now();
-  if (cachedResult && now - lastFetchTime < CACHE_TTL_MS && cachedResult.stockSymbol === symbol) {
-    return {
-      ...cachedResult,
-      status: 'cached',
-    };
-  }
+  const localCache = loadCachedData(symbol);
 
   let liveFxRate: number | null = null;
   let historicalFxRate: number | null = null;
@@ -54,9 +80,9 @@ export async function fetchMarketData(
 
   // 1. Fetch EUR/USD FX Rate (Frankfurter / ECB or Open ER API)
   const fxEndpoints = [
-    'https://api.frankfurter.app/latest?from=USD&to=EUR',
-    'https://open.er-api.com/v6/latest/USD',
     '/api/fx/latest?from=USD&to=EUR',
+    'https://open.er-api.com/v6/latest/USD',
+    'https://api.frankfurter.app/latest?from=USD&to=EUR',
   ];
 
   for (const endpoint of fxEndpoints) {
@@ -78,8 +104,8 @@ export async function fetchMarketData(
   // 2. Fetch Historical FX Rate if date provided
   if (startDateStr) {
     const histEndpoints = [
-      `https://api.frankfurter.app/${startDateStr}?from=USD&to=EUR`,
       `/api/fx/${startDateStr}?from=USD&to=EUR`,
+      `https://api.frankfurter.app/${startDateStr}?from=USD&to=EUR`,
     ];
     for (const hEndpoint of histEndpoints) {
       try {
@@ -97,11 +123,13 @@ export async function fetchMarketData(
     }
   }
 
-  // 3. Fetch Stock Price (Local Vite Proxy first, then direct Yahoo)
+  // 3. Fetch Stock Price (Local Vite Proxy first, direct Yahoo, then CORS-friendly proxies)
+  const rawYahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
   const stockEndpoints = [
     `/api/yahoo/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
+    rawYahooUrl,
+    `https://corsproxy.io/?url=${encodeURIComponent(rawYahooUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(rawYahooUrl)}`,
   ];
 
   for (const endpoint of stockEndpoints) {
@@ -134,27 +162,44 @@ export async function fetchMarketData(
   const isLiveStock = liveStockPrice !== null;
   const isLiveFx = liveFxRate !== null;
 
-  if (isLiveStock || isLiveFx) {
-    const finalResult: MarketDataResult = {
-      status: 'live',
-      source: sources.join(' & ') || 'Live Public Feed',
-      timestamp: new Date().toISOString(),
-      stockSymbol: symbol,
-      stockPriceUsd: liveStockPrice ?? 185.0,
-      historicalStockPriceUsd: historicalStockPrice ?? 165.0,
-      eurUsdRate: liveFxRate ?? 0.915,
-      historicalEurUsdRate: historicalFxRate ?? 0.91,
-      isLiveStock,
-      isLiveFx,
-      errorMessage: !isLiveStock
-        ? 'Live stock feed CORS-restricted in direct browser mode; live ECB FX active. When running "npm run dev", local proxy fetches live stock data.'
-        : undefined,
-    };
+  // Determine individual metric statuses
+  const stockStatus: 'live' | 'cached' | 'benchmark' = isLiveStock
+    ? 'live'
+    : localCache?.stockPriceUsd
+    ? 'cached'
+    : 'benchmark';
 
-    cachedResult = finalResult;
-    lastFetchTime = now;
-    return finalResult;
-  }
+  const fxStatus: 'live' | 'cached' | 'benchmark' = isLiveFx
+    ? 'live'
+    : localCache?.eurUsdRate
+    ? 'cached'
+    : 'benchmark';
 
-  return getFallbackMarketData(symbol, startDateStr);
+  const finalStockPrice = liveStockPrice ?? localCache?.stockPriceUsd ?? 346.50;
+  const finalFxRate = liveFxRate ?? localCache?.eurUsdRate ?? 0.860;
+
+  const finalStatus: MarketDataStatus =
+    isLiveStock && isLiveFx ? 'live' : isLiveStock || isLiveFx || localCache ? 'cached' : 'fallback';
+
+  const finalResult: MarketDataResult = {
+    status: finalStatus,
+    stockStatus,
+    fxStatus,
+    source: sources.join(' & ') || (localCache ? 'Cached Local Session Data' : 'Offline Benchmark Fallback'),
+    timestamp: new Date().toISOString(),
+    stockSymbol: symbol,
+    stockPriceUsd: finalStockPrice,
+    historicalStockPriceUsd: historicalStockPrice ?? localCache?.historicalStockPriceUsd ?? 320.00,
+    eurUsdRate: finalFxRate,
+    historicalEurUsdRate: historicalFxRate ?? localCache?.historicalEurUsdRate ?? 0.880,
+    isLiveStock,
+    isLiveFx,
+    errorMessage: !isLiveStock && !localCache
+      ? 'Live stock feed unreachable in direct browser mode; using Alphabet $346.50 benchmark. Run with "npm run dev" for live proxy.'
+      : undefined,
+  };
+
+  // Save successful live or mixed fetch to persistent storage
+  saveCachedData(finalResult);
+  return finalResult;
 }
