@@ -7,6 +7,8 @@ import {
   calculateGrantVestingSummary,
   calculateSingleGrantVesting,
   getGrantLifecycleEvents,
+  resolveEffectiveGrantShares,
+  getProjectedMarketRatesAtDate,
 } from '../src/engine/vesting';
 import { Grant } from '../src/engine/types';
 
@@ -377,5 +379,131 @@ describe('Vesting Engine', () => {
     expect(refCompletion).toBeDefined();
     expect(refCompletion?.month).toBe(20);
     expect(refCompletion?.date).toBe('2028-04');
+  });
+
+  describe('Currency-Nominated Grants (EUR & USD Tech Refresher Modeling)', () => {
+    it('converts EUR-nominated grant into shares using explicit preceding-month average stock price and FX', () => {
+      const eurGrant: Grant = {
+        id: 'refresher_eur_manual',
+        name: '2025 EUR Refresher',
+        type: 'refresher',
+        grant_date: '2025-03-01',
+        nomination_mode: 'eur',
+        target_value_eur: 80000, // €80k target
+        grant_price_usd: 185.00, // Preceding February average price: $185.00
+        grant_fx_rate: 0.91, // EUR/USD FX rate
+        total_shares: 0, // Should be resolved
+        schedule_percents: [0.25, 0.25, 0.25, 0.25],
+        vest_frequency_months: 3,
+      };
+
+      const shares = resolveEffectiveGrantShares(eurGrant, '2026-08-01');
+      // €80,000 / ($185.00 * 0.91) = €80,000 / €168.35 = 475.19 -> 475 gross shares
+      expect(shares).toBe(475);
+    });
+
+    it('converts USD-nominated grant into shares using explicit stock price', () => {
+      const usdGrant: Grant = {
+        id: 'refresher_usd_manual',
+        name: '2025 USD Refresher',
+        type: 'refresher',
+        grant_date: '2025-03-01',
+        nomination_mode: 'usd',
+        target_value_usd: 100000, // $100k target
+        grant_price_usd: 200.00, // $200 stock price
+        total_shares: 0,
+        schedule_percents: [0.25, 0.25, 0.25, 0.25],
+        vest_frequency_months: 3,
+      };
+
+      const shares = resolveEffectiveGrantShares(usdGrant, '2026-08-01');
+      // $100,000 / $200.00 = 500 gross shares
+      expect(shares).toBe(500);
+    });
+
+    it('automatically projects stock price and FX for future EUR refreshers when price is omitted', () => {
+      const startDate = '2026-08-01';
+      // Grant date is 12 months after start date (2027-08-01)
+      const futureEurGrant: Grant = {
+        id: 'future_eur_2027',
+        name: '2027 Future EUR Refresher',
+        type: 'refresher',
+        grant_date: '2027-08-01',
+        nomination_mode: 'eur',
+        target_value_eur: 80000, // €80k target
+        total_shares: 0,
+        schedule_percents: [0.25, 0.25, 0.25, 0.25],
+        vest_frequency_months: 3,
+      };
+
+      const marketCtx = {
+        currentSharePriceUsd: 150.00,
+        stockYearlyGrowthRate: 0.10, // 10% annual stock appreciation -> $165.00 after 12 months
+        eurUsdSpot: 0.91,
+        eurUsdYearlyDrift: 0.0,
+      };
+
+      const rates = getProjectedMarketRatesAtDate(
+        futureEurGrant.grant_date,
+        startDate,
+        marketCtx.currentSharePriceUsd,
+        marketCtx.stockYearlyGrowthRate,
+        marketCtx.eurUsdSpot,
+        marketCtx.eurUsdYearlyDrift
+      );
+
+      expect(rates.projectedStockPriceUsd).toBeCloseTo(165.00, 1);
+      expect(rates.projectedFxRate).toBeCloseTo(0.91, 2);
+
+      const shares = resolveEffectiveGrantShares(futureEurGrant, startDate, marketCtx);
+      // €80,000 / ($165.00 * 0.91) = €80,000 / €150.15 = 532.79 -> 532 gross shares
+      expect(shares).toBe(532);
+    });
+
+    it('preserves backward compatibility with direct share count nomination', () => {
+      const legacyGrant: Grant = {
+        id: 'legacy_grant',
+        name: 'Legacy Share Grant',
+        type: 'initial',
+        grant_date: '2024-08-01',
+        total_shares: 600,
+        schedule_percents: [0.33, 0.33, 0.22, 0.12],
+        vest_frequency_months: 1,
+      };
+
+      expect(resolveEffectiveGrantShares(legacyGrant, '2026-08-01')).toBe(600);
+    });
+
+    it('seamlessly integrates currency-nominated grants into monthly vesting simulation events', () => {
+      const startDate = '2026-08-01';
+      const eurGrant: Grant = {
+        id: 'refresher_eur_m12',
+        name: 'EUR Refresher',
+        type: 'refresher',
+        grant_date: '2026-08-01', // Grant date = start date
+        nomination_mode: 'eur',
+        target_value_eur: 60000,
+        grant_price_usd: 150.00,
+        grant_fx_rate: 0.90, // Share price in EUR = €135 -> 60,000 / 135 = 444 shares
+        total_shares: 0,
+        schedule_percents: [0.25, 0.25, 0.25, 0.25], // 4 quarterly vests of 111 shares each
+        vest_frequency_months: 3,
+      };
+
+      // Month 3: First quarterly vest (25% of 444 = 111 shares)
+      const eventsM3 = getVestingMilestonesForMonth(
+        3,
+        startDate,
+        [eurGrant],
+        155, // Stock price at M3
+        0.90,
+        0.52 // 52% Irish marginal tax
+      );
+
+      expect(eventsM3.length).toBe(1);
+      expect(eventsM3[0].grossShares).toBe(111);
+      expect(eventsM3[0].netShares).toBeCloseTo(111 * 0.48, 1);
+      expect(eventsM3[0].netAmountEur).toBeCloseTo(111 * 0.48 * 155 * 0.90, 1);
+    });
   });
 });

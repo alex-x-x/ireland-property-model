@@ -1,5 +1,12 @@
 import { Grant, MonthlyVestEvent } from './types';
 
+export interface MarketRateContext {
+  currentSharePriceUsd: number;
+  stockYearlyGrowthRate?: number;
+  eurUsdSpot?: number;
+  eurUsdYearlyDrift?: number;
+}
+
 export interface HistoricalReconciliation {
   totalRetainedVestedShares: number;
   pastVestsCount: number;
@@ -33,6 +40,96 @@ export function getCalendarMonthOffset(startDateStr: string, targetDate: Date): 
   return (targetYear - startYear) * 12 + (targetMonth - startMonth);
 }
 
+export function getProjectedMarketRatesAtDate(
+  dateStr: string,
+  startDateStr: string,
+  currentSharePriceUsd: number,
+  stockYearlyGrowthRate: number = 0,
+  eurUsdSpot: number = 0.91,
+  eurUsdYearlyDrift: number = 0
+): { projectedStockPriceUsd: number; projectedFxRate: number; monthOffset: number } {
+  const parts = dateStr.split('-');
+  const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2] || '1', 10)));
+  const monthOffset = getCalendarMonthOffset(startDateStr, d);
+
+  if (monthOffset <= 0) {
+    return {
+      projectedStockPriceUsd: currentSharePriceUsd,
+      projectedFxRate: eurUsdSpot,
+      monthOffset,
+    };
+  }
+
+  const projectedStockPriceUsd = currentSharePriceUsd * Math.pow(1 + stockYearlyGrowthRate, monthOffset / 12);
+  const projectedFxRate = eurUsdSpot * Math.pow(1 + eurUsdYearlyDrift, monthOffset / 12);
+
+  return {
+    projectedStockPriceUsd,
+    projectedFxRate,
+    monthOffset,
+  };
+}
+
+export function resolveEffectiveGrantShares(
+  grant: Grant,
+  startDateStr: string,
+  marketContext?: MarketRateContext
+): number {
+  if (grant.nomination_mode === 'eur' && grant.target_value_eur && grant.target_value_eur > 0) {
+    const currentPrice = marketContext?.currentSharePriceUsd ?? 150;
+    const stockGrowth = marketContext?.stockYearlyGrowthRate ?? 0;
+    const spotFx = marketContext?.eurUsdSpot ?? 0.91;
+    const fxDrift = marketContext?.eurUsdYearlyDrift ?? 0;
+
+    const projected = getProjectedMarketRatesAtDate(
+      grant.grant_date,
+      startDateStr,
+      currentPrice,
+      stockGrowth,
+      spotFx,
+      fxDrift
+    );
+
+    const priceUsd = grant.grant_price_usd && grant.grant_price_usd > 0
+      ? grant.grant_price_usd
+      : projected.projectedStockPriceUsd;
+
+    const fxRate = grant.grant_fx_rate && grant.grant_fx_rate > 0
+      ? grant.grant_fx_rate
+      : projected.projectedFxRate;
+
+    if (priceUsd <= 0 || fxRate <= 0) return grant.total_shares || 0;
+
+    const priceEur = priceUsd * fxRate;
+    return Math.floor(grant.target_value_eur / priceEur);
+  }
+
+  if (grant.nomination_mode === 'usd' && grant.target_value_usd && grant.target_value_usd > 0) {
+    const currentPrice = marketContext?.currentSharePriceUsd ?? 150;
+    const stockGrowth = marketContext?.stockYearlyGrowthRate ?? 0;
+    const spotFx = marketContext?.eurUsdSpot ?? 0.91;
+    const fxDrift = marketContext?.eurUsdYearlyDrift ?? 0;
+
+    const projected = getProjectedMarketRatesAtDate(
+      grant.grant_date,
+      startDateStr,
+      currentPrice,
+      stockGrowth,
+      spotFx,
+      fxDrift
+    );
+
+    const priceUsd = grant.grant_price_usd && grant.grant_price_usd > 0
+      ? grant.grant_price_usd
+      : projected.projectedStockPriceUsd;
+
+    if (priceUsd <= 0) return grant.total_shares || 0;
+    return Math.floor(grant.target_value_usd / priceUsd);
+  }
+
+  return grant.total_shares || 0;
+}
+
 export function getGrantMilestones(grant: Grant): ExpandedVestMilestone[] {
   // If schedule_percents has 4 elements (standard 4-year grant) and vest_frequency_months is 1 (monthly)
   if (grant.vest_frequency_months === 1 && grant.schedule_percents.length === 4) {
@@ -60,18 +157,20 @@ export function getGrantMilestones(grant: Grant): ExpandedVestMilestone[] {
 export function reconcileHistoricalGrants(
   grants: Grant[],
   startDateStr: string,
-  taxRate: number
+  taxRate: number,
+  marketContext?: MarketRateContext
 ): HistoricalReconciliation {
   let totalRetainedVestedShares = 0;
   let pastVestsCount = 0;
 
   for (const grant of grants) {
+    const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
     const milestones = getGrantMilestones(grant);
     for (const milestone of milestones) {
       const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
       const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
       if (offset <= 0) {
-        const grossShares = grant.total_shares * milestone.percent;
+        const grossShares = totalShares * milestone.percent;
         const netShares = grossShares * (1 - taxRate);
         totalRetainedVestedShares += netShares;
         pastVestsCount++;
@@ -92,19 +191,26 @@ export function getVestingMilestonesForMonth(
   grants: Grant[],
   sharePriceUsd: number,
   fxRate: number,
-  taxRate: number
+  taxRate: number,
+  marketContext?: MarketRateContext
 ): MonthlyVestEvent[] {
   if (simulationMonth <= 0) return [];
   const events: MonthlyVestEvent[] = [];
 
+  const ctx: MarketRateContext = marketContext ?? {
+    currentSharePriceUsd: sharePriceUsd,
+    eurUsdSpot: fxRate,
+  };
+
   for (const grant of grants) {
+    const totalShares = resolveEffectiveGrantShares(grant, startDateStr, ctx);
     const milestones = getGrantMilestones(grant);
     for (const milestone of milestones) {
       const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
       const diffMonths = getCalendarMonthOffset(startDateStr, milestoneDate);
 
       if (diffMonths === simulationMonth) {
-        const grossShares = grant.total_shares * milestone.percent;
+        const grossShares = totalShares * milestone.percent;
         const netShares = grossShares * (1 - taxRate);
         const netAmountEur = netShares * sharePriceUsd * fxRate;
 
@@ -133,7 +239,8 @@ export interface GrantVestingSummary {
 export function calculateGrantVestingSummary(
   grants: Grant[],
   startDateStr: string,
-  horizonMonths: number = 60
+  horizonMonths: number = 60,
+  marketContext?: MarketRateContext
 ): GrantVestingSummary {
   let totalGrantedShares = 0;
   let pastVestedGrossShares = 0;
@@ -141,12 +248,13 @@ export function calculateGrantVestingSummary(
   let unvestedWithinHorizonGrossShares = 0;
 
   for (const grant of grants) {
-    totalGrantedShares += grant.total_shares;
+    const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
+    totalGrantedShares += totalShares;
     const milestones = getGrantMilestones(grant);
     for (const milestone of milestones) {
       const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
       const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
-      const grossShares = grant.total_shares * milestone.percent;
+      const grossShares = totalShares * milestone.percent;
       if (offset <= 0) {
         pastVestedGrossShares += grossShares;
       } else {
@@ -168,15 +276,17 @@ export function calculateGrantVestingSummary(
 
 export function calculateSingleGrantVesting(
   grant: Grant,
-  startDateStr: string
+  startDateStr: string,
+  marketContext?: MarketRateContext
 ): { pastGross: number; unvestedGross: number } {
+  const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
   const milestones = getGrantMilestones(grant);
   let pastGross = 0;
   let unvestedGross = 0;
   for (const milestone of milestones) {
     const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
     const offset = getCalendarMonthOffset(startDateStr, milestoneDate);
-    const grossShares = grant.total_shares * milestone.percent;
+    const grossShares = totalShares * milestone.percent;
     if (offset <= 0) {
       pastGross += grossShares;
     } else {
@@ -203,11 +313,13 @@ export interface GrantLifecycleEvent {
 export function getGrantLifecycleEvents(
   grants: Grant[],
   startDateStr: string,
-  forecastMonths: number = 60
+  forecastMonths: number = 60,
+  marketContext?: MarketRateContext
 ): GrantLifecycleEvent[] {
   const events: GrantLifecycleEvent[] = [];
 
   for (const grant of grants) {
+    const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
     const grantName = grant.name || (grant.type === 'initial' ? 'Initial Hire Grant' : 'Refresher Grant');
     
     // 1. Grant Award Event (if within simulation horizon, m >= 0 and m <= forecastMonths)
@@ -221,8 +333,8 @@ export function getGrantLifecycleEvents(
         grantId: grant.id,
         grantName,
         grantType: grant.type,
-        totalShares: grant.total_shares,
-        description: `New Grant Awarded: ${grantName} (${grant.total_shares} shs)`,
+        totalShares,
+        description: `New Grant Awarded: ${grantName} (${totalShares} shs)`,
       });
     }
 
@@ -242,8 +354,8 @@ export function getGrantLifecycleEvents(
           grantId: grant.id,
           grantName,
           grantType: grant.type,
-          totalShares: grant.total_shares,
-          description: `Grant Completed (Final Vest): ${grantName} (${grant.total_shares} total shs)`,
+          totalShares,
+          description: `Grant Completed (Final Vest): ${grantName} (${totalShares} total shs)`,
         });
       }
     }

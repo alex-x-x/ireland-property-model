@@ -51,7 +51,17 @@ export interface Grant {
   name?: string;
   type: 'initial' | 'refresher' | 'custom';
   grant_date: string; // YYYY-MM-DD
-  total_shares: number;
+  
+  // Nomination Mode ('shares' | 'eur' | 'usd')
+  nomination_mode?: 'shares' | 'eur' | 'usd';
+  target_value_eur?: number; // Target monetary grant in EUR (e.g. €80,000)
+  target_value_usd?: number; // Target monetary grant in USD (e.g. $100,000)
+  
+  // Conversion parameters
+  grant_price_usd?: number; // Reference stock price at grant (e.g. $185.00 avg month prior). If omitted/0 for future, auto-computed from projected stock price.
+  grant_fx_rate?: number; // Reference EUR/USD FX rate at grant. If omitted/0, uses model spot or projected FX.
+
+  total_shares: number; // Stored effective gross shares (either manually entered or auto-derived)
   schedule_percents: number[];
   vest_frequency_months: number;
 }
