@@ -9,20 +9,20 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     config: {
       property: {
         yearly_growth_rate: 0.05,
-      } as any,
+      },
       equity_engine: {
         stock_yearly_growth_rate: 0.10,
-      } as any,
+      },
       liquid_assets: {
         investments_yearly_growth_rate: 0.08,
-      } as any,
+      },
       macro: {
         rent_yearly_growth_rate: 0.02,
         eur_usd_yearly_drift: 0.0,
-      } as any,
+      },
       mortgage: {
         mortgage_interest_rate: 0.035,
-      } as any,
+      },
     },
   },
   {
@@ -33,20 +33,20 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     config: {
       property: {
         yearly_growth_rate: 0.04,
-      } as any,
+      },
       equity_engine: {
         stock_yearly_growth_rate: 0.18,
-      } as any,
+      },
       liquid_assets: {
         investments_yearly_growth_rate: 0.12,
-      } as any,
+      },
       macro: {
         rent_yearly_growth_rate: 0.02,
         eur_usd_yearly_drift: 0.0,
-      } as any,
+      },
       mortgage: {
         mortgage_interest_rate: 0.035,
-      } as any,
+      },
     },
   },
   {
@@ -57,20 +57,20 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     config: {
       property: {
         yearly_growth_rate: 0.085,
-      } as any,
+      },
       equity_engine: {
         stock_yearly_growth_rate: 0.07,
-      } as any,
+      },
       liquid_assets: {
         investments_yearly_growth_rate: 0.06,
-      } as any,
+      },
       macro: {
         rent_yearly_growth_rate: 0.04,
         eur_usd_yearly_drift: 0.0,
-      } as any,
+      },
       mortgage: {
         mortgage_interest_rate: 0.04,
-      } as any,
+      },
     },
   },
   {
@@ -81,20 +81,20 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     config: {
       property: {
         yearly_growth_rate: 0.025,
-      } as any,
+      },
       equity_engine: {
         stock_yearly_growth_rate: 0.08,
-      } as any,
+      },
       liquid_assets: {
         investments_yearly_growth_rate: 0.06,
-      } as any,
+      },
       macro: {
         rent_yearly_growth_rate: 0.015,
         eur_usd_yearly_drift: 0.0,
-      } as any,
+      },
       mortgage: {
         mortgage_interest_rate: 0.055,
-      } as any,
+      },
     },
   },
   {
@@ -105,20 +105,20 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     config: {
       property: {
         yearly_growth_rate: 0.045,
-      } as any,
+      },
       equity_engine: {
         stock_yearly_growth_rate: 0.02,
-      } as any,
+      },
       liquid_assets: {
         investments_yearly_growth_rate: 0.03,
-      } as any,
+      },
       macro: {
         rent_yearly_growth_rate: 0.01,
         eur_usd_yearly_drift: 0.0,
-      } as any,
+      },
       mortgage: {
         mortgage_interest_rate: 0.032,
-      } as any,
+      },
     },
   },
 ];

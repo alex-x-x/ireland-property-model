@@ -177,10 +177,14 @@ export interface DecisionComparison {
   };
 }
 
+export type NestedPartial<T> = {
+  [P in keyof T]?: Partial<T[P]>;
+};
+
 export interface PresetScenario {
   id: string;
   name: string;
   tagline: string;
   description: string;
-  config: Partial<SimulationConfig>;
+  config: NestedPartial<SimulationConfig>;
 }
