@@ -531,5 +531,121 @@ describe('Mortgage Engine', () => {
         expect(overpay.schedule[overpay.schedule.length - 1].balance).toBe(0);
       }
     });
+
+    it('dynamically applies Variable Rate after fixed-rate lockout, altering standard payment and total lifetime interest', () => {
+      const principal = 500000;
+      const fixedRate = 0.035; // 3.5%
+      const variableRate = 0.050; // 5.0% (+1.5% hike)
+      const termYears = 25;
+      const fixedRateYears = 2; // 24 months
+
+      const flatResult = calculateMortgageWithOverpayments({
+        principal,
+        annualRate: fixedRate,
+        termYears,
+        fixedRateYears,
+        variableRate: fixedRate, // 3.5% flat
+        monthlyOverpayment: 0,
+      });
+
+      const variableResult = calculateMortgageWithOverpayments({
+        principal,
+        annualRate: fixedRate,
+        termYears,
+        fixedRateYears,
+        variableRate: variableRate, // 5.0% variable after year 2
+        monthlyOverpayment: 0,
+      });
+
+      // 1. Fixed payment during months 1-24 should be identical
+      expect(variableResult.standardMonthlyPayment).toBeCloseTo(flatResult.standardMonthlyPayment, 2);
+      expect(variableResult.standardMonthlyPayment).toBeCloseTo(2503.12, 1);
+
+      // 2. Variable payment starting Month 25 should be higher due to 5.0% rate on remaining balance (~€473k over 23 yrs)
+      expect(variableResult.variableMonthlyPayment).toBeDefined();
+      expect(variableResult.variableMonthlyPayment).toBeGreaterThan(variableResult.standardMonthlyPayment);
+      expect(variableResult.variableMonthlyPayment).toBeCloseTo(2893.73, 1);
+
+      // 3. Total lifetime interest MUST be significantly higher with 5.0% variable rate
+      expect(variableResult.totalInterestStandard).toBeGreaterThan(flatResult.totalInterestStandard);
+      expect(variableResult.totalInterestStandard - flatResult.totalInterestStandard).toBeGreaterThan(90000); // >€90k extra interest
+
+      // 4. Verify schedule metadata tags for fixed vs variable periods
+      // Month 1 (Fixed)
+      expect(variableResult.schedule[0].isFixedPeriod).toBe(true);
+      expect(variableResult.schedule[0].isVariableRate).toBe(false);
+      expect(variableResult.schedule[0].interestRate).toBe(0.035);
+
+      // Month 24 (Last Fixed Month)
+      expect(variableResult.schedule[23].isFixedPeriod).toBe(true);
+      expect(variableResult.schedule[23].isVariableRate).toBe(false);
+      expect(variableResult.schedule[23].interestRate).toBe(0.035);
+
+      // Month 25 (First Variable Month)
+      expect(variableResult.schedule[24].isFixedPeriod).toBe(false);
+      expect(variableResult.schedule[24].isVariableRate).toBe(true);
+      expect(variableResult.schedule[24].interestRate).toBe(0.050);
+
+      // 5. Loan amortizes to 0 at month 300
+      expect(variableResult.schedule[299].balance).toBe(0);
+      expect(variableResult.actualPayoffMonths).toBe(300);
+    });
+
+    it('correctly calculates pure variable mortgage (0-year fixed lock) with variable rate from Month 1', () => {
+      const principal = 400000;
+      const fixedRate = 0.035;
+      const variableRate = 0.045; // 4.5%
+      const termYears = 20;
+
+      const result = calculateMortgageWithOverpayments({
+        principal,
+        annualRate: fixedRate,
+        termYears,
+        fixedRateYears: 0,
+        variableRate,
+        monthlyOverpayment: 0,
+      });
+
+      // Standard payment should immediately reflect 4.5% rate
+      const expectedPayment = calculateMonthlyMortgagePayment(principal, variableRate, termYears);
+      expect(result.standardMonthlyPayment).toBeCloseTo(expectedPayment, 2);
+      expect(result.variableMonthlyPayment).toBeCloseTo(expectedPayment, 2);
+
+      // All months should be tagged as variable rate
+      expect(result.schedule[0].isFixedPeriod).toBe(false);
+      expect(result.schedule[0].isVariableRate).toBe(true);
+      expect(result.schedule[0].interestRate).toBe(0.045);
+    });
+
+    it('maintains cashflow conservation with variable rate and active overpayments', () => {
+      const principal = 600000;
+      const result = calculateMortgageWithOverpayments(
+        {
+          principal,
+          annualRate: 0.035, // 3.5%
+          termYears: 25,
+          fixedRateYears: 2,
+          variableRate: 0.0475, // 4.75%
+          monthlyOverpayment: 400,
+          annualLumpSumOverpayment: 10000,
+          lumpSumMonth: 3,
+        },
+        '2026-08-01'
+      );
+
+      let totalPrincipalPaid = 0;
+      let totalInterestPaid = 0;
+
+      for (const pt of result.schedule) {
+        totalPrincipalPaid += pt.principalPaid + pt.overpaymentPaid;
+        totalInterestPaid += pt.interestPaid;
+        expect(pt.totalPayment).toBeCloseTo(pt.principalPaid + pt.overpaymentPaid + pt.interestPaid, 2);
+      }
+
+      expect(totalPrincipalPaid).toBeCloseTo(principal, 1);
+      expect(totalInterestPaid).toBeCloseTo(result.totalInterestWithOverpayment, 1);
+      expect(result.totalInterestSaved).toBe(result.totalInterestStandard - result.totalInterestWithOverpayment);
+      expect(result.totalInterestSaved).toBeGreaterThan(0);
+    });
   });
 });

@@ -22,7 +22,6 @@ import {
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import {
   calculateMortgageWithOverpayments,
-  calculateMonthlyMortgagePayment,
   getSalaryAtDate,
   AmortizationSchedulePoint,
 } from '../engine/mortgage';
@@ -115,6 +114,8 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     setRateShockPct(1.5);
   };
 
+  const effectiveVariableRatePct = interestRatePct + rateShockPct;
+
   // Run overpayment simulation engine
   const overpaymentResult = useMemo(() => {
     return calculateMortgageWithOverpayments(
@@ -123,6 +124,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
         annualRate: interestRatePct / 100,
         termYears,
         fixedRateYears,
+        variableRate: effectiveVariableRatePct / 100,
         monthlyOverpayment,
         annualLumpSumOverpayment: annualLumpSum,
       },
@@ -131,6 +133,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   }, [
     activeLoanAmount,
     interestRatePct,
+    effectiveVariableRatePct,
     termYears,
     fixedRateYears,
     monthlyOverpayment,
@@ -157,12 +160,6 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
 
   // Interest rate shock options (Irish/ECB benchmarks: 0% Flat, +0.5% Variable Bump, +1.0% Hike, +1.5%/+2.0% Central Bank Stress, +3.0% Severe)
   const RATE_SHOCK_OPTIONS = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0];
-  const shockedPayment = calculateMonthlyMortgagePayment(
-    activeLoanAmount,
-    (interestRatePct + rateShockPct) / 100,
-    termYears
-  );
-  const shockPaymentDelta = shockedPayment - overpaymentResult.standardMonthlyPayment;
 
 
   // Chart data: Sample down schedule for clear visualization (every 12 months)
@@ -177,8 +174,11 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
       standardInterest: number;
     }[] = [];
     const standardTotalMonths = termYears * 12;
-    const monthlyRate = (interestRatePct / 100) / 12;
-    const standardPayment = overpaymentResult.standardMonthlyPayment;
+    const fixedMonths = Math.min(standardTotalMonths, Math.max(0, fixedRateYears * 12));
+    const fixedMonthlyRate = (interestRatePct / 100) / 12;
+    const varMonthlyRate = (effectiveVariableRatePct / 100) / 12;
+    const stdInitialPayment = overpaymentResult.standardMonthlyPayment;
+    const stdVarPayment = overpaymentResult.variableMonthlyPayment ?? stdInitialPayment;
 
     let stdBal = activeLoanAmount;
     let stdCumInterest = 0;
@@ -188,8 +188,11 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     const stdMap = new Map<number, { balance: number; cumPrincipal: number; cumInterest: number }>();
     stdMap.set(0, { balance: activeLoanAmount, cumPrincipal: 0, cumInterest: 0 });
     for (let m = 1; m <= standardTotalMonths; m++) {
-      const interest = stdBal * monthlyRate;
-      const principalPaid = Math.min(stdBal, standardPayment - interest);
+      const inFixed = fixedMonths > 0 && m <= fixedMonths;
+      const rateThisMonth = inFixed ? fixedMonthlyRate : varMonthlyRate;
+      const scheduledPmt = inFixed ? stdInitialPayment : stdVarPayment;
+      const interest = stdBal * rateThisMonth;
+      const principalPaid = Math.min(stdBal, Math.max(0, scheduledPmt - interest));
       stdBal -= principalPaid;
       stdCumInterest += interest;
       stdCumPrincipal += principalPaid;
@@ -229,7 +232,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     }
 
     return data;
-  }, [activeLoanAmount, interestRatePct, termYears, overpaymentResult]);
+  }, [activeLoanAmount, interestRatePct, effectiveVariableRatePct, termYears, fixedRateYears, overpaymentResult]);
 
   const formatCurrency = (val: number) => {
     if (val >= 1000000) return `€${(val / 1000000).toFixed(2)}M`;
@@ -460,20 +463,27 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
           <div className="flex items-center justify-between">
             <span className="text-slate-400 text-xs block">Monthly Mortgage Payment</span>
             <InfoTooltip
-              title="Variable Rate Shock"
-              content="Set a rate shock scenario in the Overpayment Simulator below to see stressed payment here."
+              title="Variable Rate Transition"
+              content={
+                fixedRateYears > 0 && rateShockPct !== 0
+                  ? `Fixed lock for Years 1–${fixedRateYears} at ${interestRatePct.toFixed(2)}% (€${Math.round(overpaymentResult.standardMonthlyPayment).toLocaleString()}/mo), then transitions to variable rate ${effectiveVariableRatePct.toFixed(2)}% (€${Math.round(overpaymentResult.variableMonthlyPayment ?? overpaymentResult.standardMonthlyPayment).toLocaleString()}/mo).`
+                  : `Monthly mortgage installment at ${effectiveVariableRatePct.toFixed(2)}% annual rate.`
+              }
             />
           </div>
           <div className="text-xl font-bold font-mono text-indigo-300">
             €{Math.round(overpaymentResult.standardMonthlyPayment).toLocaleString()}<span className="text-xs font-sans text-slate-400">/mo</span>
+            {fixedRateYears > 0 && rateShockPct !== 0 && (
+              <span className="text-xs font-sans text-slate-400 ml-1">(Fixed Y1–{fixedRateYears})</span>
+            )}
           </div>
           <div className="text-[10px] text-slate-400 font-sans">
             Maint: +€{Math.round(monthlyMaintenance).toLocaleString()}/mo • Total: <strong className="text-slate-200">€{Math.round(monthlyHousingCost).toLocaleString()}</strong>
           </div>
-          {rateShockPct > 0 && (
+          {fixedRateYears > 0 && rateShockPct !== 0 && overpaymentResult.variableMonthlyPayment && (
             <div className={`text-[10px] font-mono mt-0.5 ${rateShockPct <= 1.0 ? 'text-sky-300' : 'text-amber-400'}`}>
-              ⚡ +{rateShockPct}% shock: €{Math.round(shockedPayment).toLocaleString()}/mo
-              <span className="text-slate-400"> (+€{Math.round(shockPaymentDelta).toLocaleString()}/mo)</span>
+              ⚡ Variable (Y{fixedRateYears + 1}+ at {effectiveVariableRatePct.toFixed(2)}%): €{Math.round(overpaymentResult.variableMonthlyPayment).toLocaleString()}/mo
+              <span className="text-slate-400"> ({overpaymentResult.variableMonthlyPayment >= overpaymentResult.standardMonthlyPayment ? '+' : ''}€{Math.round(overpaymentResult.variableMonthlyPayment - overpaymentResult.standardMonthlyPayment)}/mo)</span>
             </div>
           )}
         </div>
@@ -578,15 +588,15 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                 <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
                 Variable Rate Shock
               </label>
-              <span className={`text-[10px] font-bold font-mono ${rateShockPct === 0 ? 'text-slate-500' : rateShockPct <= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
-                {rateShockPct === 0 ? 'Flat' : `+${rateShockPct}%`}
+              <span className={`text-[10px] font-bold font-mono ${rateShockPct === 0 ? 'text-slate-400' : rateShockPct <= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
+                {effectiveVariableRatePct.toFixed(2)}% {rateShockPct !== 0 && `(${rateShockPct > 0 ? '+' : ''}${rateShockPct}%)`}
               </span>
             </div>
             <div className={`flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border ${rateShockPct === 0 ? 'border-slate-700' : rateShockPct <= 1.0 ? 'border-sky-500/40' : 'border-amber-500/40'}`}>
               <input
                 type="number"
                 step="0.25"
-                min="0"
+                min="-2"
                 max="5"
                 value={rateShockPct}
                 onChange={(e) => setRateShockPct(parseFloat(e.target.value) || 0)}
@@ -610,16 +620,16 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                       : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-750'
                   }`}
                 >
-                  {opt === 0 ? '0%' : `+${opt}%`}
+                  {opt === 0 ? '0% (Flat)' : `+${opt}%`}
                 </button>
               ))}
             </div>
-            {rateShockPct > 0 ? (
+            {rateShockPct !== 0 && overpaymentResult.variableMonthlyPayment ? (
               <span className={`text-[10px] font-mono ${rateShockPct <= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
-                Stressed: €{Math.round(shockedPayment).toLocaleString()}/mo (+€{Math.round(shockPaymentDelta).toLocaleString()})
+                Var Rate: {effectiveVariableRatePct.toFixed(2)}% → €{Math.round(overpaymentResult.variableMonthlyPayment).toLocaleString()}/mo ({overpaymentResult.variableMonthlyPayment >= overpaymentResult.standardMonthlyPayment ? '+' : ''}€{Math.round(overpaymentResult.variableMonthlyPayment - overpaymentResult.standardMonthlyPayment)})
               </span>
             ) : (
-              <span className="text-[10px] text-slate-500">ECB/stress test scenarios</span>
+              <span className="text-[10px] text-slate-500">Applies after {fixedRateYears > 0 ? `${fixedRateYears}y lock` : 'Month 1'}</span>
             )}
           </div>
 
@@ -898,6 +908,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
         result={overpaymentResult}
         principal={activeLoanAmount}
         annualRatePct={interestRatePct}
+        variableRatePct={effectiveVariableRatePct}
         termYears={termYears}
         fixedRateYears={fixedRateYears}
         monthlyOverpayment={monthlyOverpayment}

@@ -162,6 +162,7 @@ export interface MortgageOverpaymentOptions {
   annualRate: number;
   termYears: number;
   fixedRateYears?: number; // Initial fixed lock period where overpayments are 0 (e.g. 2 years)
+  variableRate?: number; // Annual rate after fixed period (e.g. 0.05 for 5.0%). If omitted, defaults to annualRate.
   monthlyOverpayment?: number; // Regular monthly overpayment amount after fixed period
   annualLumpSumOverpayment?: number; // Optional annual lump sum after fixed period
   lumpSumMonth?: number; // Calendar month (1-12) when annual bonus lump sum is paid (default: 3 for March)
@@ -178,11 +179,14 @@ export interface AmortizationSchedulePoint {
   cumulativeInterestPaid: number;
   cumulativePrincipalPaid: number;
   isFixedPeriod: boolean;
+  isVariableRate?: boolean;
+  interestRate?: number;
   isLumpSumApplied?: boolean;
 }
 
 export interface MortgageOverpaymentResult {
   standardMonthlyPayment: number;
+  variableMonthlyPayment?: number;
   effectiveMonthlyPayment: number;
   scheduledPayoffMonths: number;
   actualPayoffMonths: number;
@@ -205,14 +209,21 @@ export function calculateMortgageWithOverpayments(
     annualRate,
     termYears,
     fixedRateYears = 2,
+    variableRate: explicitVariableRate,
     monthlyOverpayment = 0,
     annualLumpSumOverpayment = 0,
     lumpSumMonth = 3, // Default March for Google/Irish tech annual bonuses
   } = options;
 
+  const effectiveVariableRate =
+    explicitVariableRate !== undefined && explicitVariableRate !== null
+      ? explicitVariableRate
+      : annualRate;
+
   if (principal <= 0 || termYears <= 0) {
     return {
       standardMonthlyPayment: 0,
+      variableMonthlyPayment: 0,
       effectiveMonthlyPayment: 0,
       scheduledPayoffMonths: 0,
       actualPayoffMonths: 0,
@@ -227,20 +238,51 @@ export function calculateMortgageWithOverpayments(
     };
   }
 
-  const standardMonthlyPayment = calculateMonthlyMortgagePayment(principal, annualRate, termYears);
   const totalStandardMonths = termYears * 12;
-  const standardAmort = calculateMortgageAmortization(principal, annualRate, termYears, totalStandardMonths);
-  const totalInterestStandard = standardAmort.cumulativeInterestPaid;
+  const fixedMonths = Math.min(totalStandardMonths, Math.max(0, fixedRateYears * 12));
 
-  const monthlyRate = annualRate / 12;
-  const fixedMonths = Math.max(0, fixedRateYears * 12);
+  // 1. Calculate Standard Schedule (No Overpayments) with Variable Rate transition
+  const fixedMonthlyRate = annualRate / 12;
+  const variableMonthlyRate = effectiveVariableRate / 12;
+
+  // Initial standard monthly payment during fixed period (or pure variable if fixedMonths === 0)
+  const initialFixedPayment = fixedMonths > 0
+    ? calculateMonthlyMortgagePayment(principal, annualRate, termYears)
+    : calculateMonthlyMortgagePayment(principal, effectiveVariableRate, termYears);
+
+  let stdBalance = principal;
+  let totalInterestStandard = 0;
+  let stdVariablePayment = initialFixedPayment;
+
+  for (let m = 1; m <= totalStandardMonths; m++) {
+    const inFixed = fixedMonths > 0 && m <= fixedMonths;
+    const rateThisMonth = inFixed ? fixedMonthlyRate : variableMonthlyRate;
+
+    // When transitioning to variable rate at month fixedMonths + 1
+    if (!inFixed && m === fixedMonths + 1 && fixedMonths > 0) {
+      const remainingYears = (totalStandardMonths - fixedMonths) / 12;
+      stdVariablePayment = calculateMonthlyMortgagePayment(stdBalance, effectiveVariableRate, remainingYears);
+    }
+
+    const currentScheduledPayment = inFixed ? initialFixedPayment : stdVariablePayment;
+    const interest = stdBalance * rateThisMonth;
+    const principalPaid = Math.min(stdBalance, Math.max(0, currentScheduledPayment - interest));
+    stdBalance -= principalPaid;
+    totalInterestStandard += interest;
+    if (stdBalance <= 0.001) stdBalance = 0;
+  }
+
+  // 2. Calculate Overpayment Schedule
+  const standardMonthlyPayment = initialFixedPayment;
+  const variableMonthlyPayment = fixedMonths > 0 ? stdVariablePayment : initialFixedPayment;
+
   const schedule: AmortizationSchedulePoint[] = [];
-
   let balance = principal;
   let cumulativeInterestWithOverpayment = 0;
   let cumulativePrincipal = 0;
   let cumulativeOverpayments = 0;
   let actualPayoffMonths = totalStandardMonths;
+  let activeVariablePayment = variableMonthlyPayment;
 
   const [startYear, startMonth] = startDateStr.split('-').map((v) => parseInt(v, 10));
 
@@ -250,14 +292,24 @@ export function calculateMortgageWithOverpayments(
     const curMonthNum = ((startMonth - 1 + m) % 12) + 1;
     const dateStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
 
-    const isFixedPeriod = m <= fixedMonths;
+    const isFixedPeriod = fixedMonths > 0 && m <= fixedMonths;
+    const activeRate = isFixedPeriod ? annualRate : effectiveVariableRate;
+    const monthlyRate = activeRate / 12;
+
+    // When transitioning to variable rate at month fixedMonths + 1
+    if (!isFixedPeriod && m === fixedMonths + 1 && fixedMonths > 0) {
+      activeVariablePayment = stdVariablePayment;
+    }
+
+    const scheduledBasePayment = isFixedPeriod ? initialFixedPayment : activeVariablePayment;
+
     const regularOverpayment = isFixedPeriod ? 0 : Math.max(0, monthlyOverpayment);
     const isLumpSumMonth = !isFixedPeriod && curMonthNum === lumpSumMonth;
     const lumpSumOverpayment = isLumpSumMonth ? Math.max(0, annualLumpSumOverpayment) : 0;
     const targetOverpayment = regularOverpayment + lumpSumOverpayment;
 
     const interest = balance * monthlyRate;
-    const scheduledPrincipal = Math.min(balance, Math.max(0, standardMonthlyPayment - interest));
+    const scheduledPrincipal = Math.min(balance, Math.max(0, scheduledBasePayment - interest));
     const extraPrincipal = Math.min(Math.max(0, balance - scheduledPrincipal), targetOverpayment);
     const principalPaidThisMonth = scheduledPrincipal + extraPrincipal;
 
@@ -277,6 +329,8 @@ export function calculateMortgageWithOverpayments(
       cumulativeInterestPaid: cumulativeInterestWithOverpayment,
       cumulativePrincipalPaid: cumulativePrincipal,
       isFixedPeriod,
+      isVariableRate: !isFixedPeriod,
+      interestRate: activeRate,
       isLumpSumApplied: isLumpSumMonth && extraPrincipal > regularOverpayment,
     });
 
@@ -293,7 +347,8 @@ export function calculateMortgageWithOverpayments(
 
   return {
     standardMonthlyPayment,
-    effectiveMonthlyPayment: standardMonthlyPayment + Math.max(0, monthlyOverpayment),
+    variableMonthlyPayment,
+    effectiveMonthlyPayment: standardMonthlyPayment + (fixedMonths === 0 ? Math.max(0, monthlyOverpayment) : 0),
     scheduledPayoffMonths: totalStandardMonths,
     actualPayoffMonths,
     yearsSaved,

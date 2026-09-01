@@ -8,6 +8,7 @@ import {
   Lock,
   Zap,
   Gift,
+  TrendingUp,
 } from 'lucide-react';
 import { MortgageOverpaymentResult, AmortizationSchedulePoint } from '../engine/mortgage';
 
@@ -17,6 +18,7 @@ interface AmortizationScheduleModalProps {
   result: MortgageOverpaymentResult;
   principal: number;
   annualRatePct: number;
+  variableRatePct?: number;
   termYears: number;
   fixedRateYears: number;
   monthlyOverpayment: number;
@@ -29,15 +31,17 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
   result,
   principal,
   annualRatePct,
+  variableRatePct,
   termYears,
   fixedRateYears,
   monthlyOverpayment,
   annualLumpSum,
 }) => {
   const [selectedYear, setSelectedYear] = useState<string>('all');
-  const [phaseFilter, setPhaseFilter] = useState<'all' | 'fixed' | 'overpayment' | 'lumpsum'>('all');
+  const [phaseFilter, setPhaseFilter] = useState<'all' | 'fixed' | 'variable' | 'overpayment' | 'lumpsum'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  const effectiveVarRatePct = variableRatePct ?? annualRatePct;
   const totalYears = Math.ceil(result.actualPayoffMonths / 12);
   const yearsList = useMemo(() => {
     const list: number[] = [];
@@ -58,6 +62,7 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
 
       // Phase filter
       if (phaseFilter === 'fixed' && !point.isFixedPeriod) return false;
+      if (phaseFilter === 'variable' && (point.isFixedPeriod || !point.isVariableRate)) return false;
       if (phaseFilter === 'overpayment' && point.overpaymentPaid <= 0) return false;
       if (phaseFilter === 'lumpsum' && !point.isLumpSumApplied) return false;
 
@@ -78,6 +83,7 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
       'Month',
       'Date',
       'Phase',
+      'Interest Rate (%)',
       'Total Payment (EUR)',
       'Scheduled Principal (EUR)',
       'Interest Paid (EUR)',
@@ -87,18 +93,30 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
       'Cumulative Interest Paid (EUR)',
     ];
 
-    const rows = result.schedule.map((pt) => [
-      pt.month,
-      pt.dateStr || '',
-      pt.isFixedPeriod ? 'Fixed Lock' : pt.isLumpSumApplied ? 'March Bonus Lump Sum' : pt.overpaymentPaid > 0 ? 'Overpayment' : 'Standard',
-      pt.totalPayment.toFixed(2),
-      pt.principalPaid.toFixed(2),
-      pt.interestPaid.toFixed(2),
-      pt.overpaymentPaid.toFixed(2),
-      pt.balance.toFixed(2),
-      pt.cumulativePrincipalPaid.toFixed(2),
-      pt.cumulativeInterestPaid.toFixed(2),
-    ]);
+    const rows = result.schedule.map((pt) => {
+      const ratePct = pt.interestRate !== undefined ? (pt.interestRate * 100).toFixed(2) : annualRatePct.toFixed(2);
+      const phaseLabel = pt.isFixedPeriod
+        ? `Fixed Lock (${ratePct}%)`
+        : pt.isLumpSumApplied
+        ? `March Bonus Lump Sum (Var ${ratePct}%)`
+        : pt.overpaymentPaid > 0
+        ? `Overpayment (Var ${ratePct}%)`
+        : `Variable Rate (${ratePct}%)`;
+
+      return [
+        pt.month,
+        pt.dateStr || '',
+        phaseLabel,
+        ratePct,
+        pt.totalPayment.toFixed(2),
+        pt.principalPaid.toFixed(2),
+        pt.interestPaid.toFixed(2),
+        pt.overpaymentPaid.toFixed(2),
+        pt.balance.toFixed(2),
+        pt.cumulativePrincipalPaid.toFixed(2),
+        pt.cumulativeInterestPaid.toFixed(2),
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -129,7 +147,7 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Comprehensive breakdown of every principal payment, interest charge, Irish fixed period, and March bonus overpayment.
+              Comprehensive breakdown of every principal payment, interest charge, Irish fixed period, variable rate phase, and bonus overpayments.
             </p>
           </div>
 
@@ -161,12 +179,22 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
 
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
             <span className="text-slate-400 block text-[10px]">Rate & Term</span>
-            <span className="font-mono font-bold text-white">{annualRatePct.toFixed(2)}% • {termYears}y</span>
+            <span className="font-mono font-bold text-white">
+              {fixedRateYears > 0 && effectiveVarRatePct !== annualRatePct ? (
+                <>Fixed {annualRatePct.toFixed(2)}% → Var {effectiveVarRatePct.toFixed(2)}% • {termYears}y</>
+              ) : fixedRateYears === 0 ? (
+                <>Var {effectiveVarRatePct.toFixed(2)}% • {termYears}y</>
+              ) : (
+                <>{annualRatePct.toFixed(2)}% • {termYears}y</>
+              )}
+            </span>
           </div>
 
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
             <span className="text-slate-400 block text-[10px]">Fixed Lockout</span>
-            <span className="font-mono font-bold text-sky-300">{fixedRateYears} Years Lock</span>
+            <span className="font-mono font-bold text-sky-300">
+              {fixedRateYears > 0 ? `${fixedRateYears} Years Lock` : 'No Lock (Variable)'}
+            </span>
           </div>
 
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
@@ -225,13 +253,22 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
                 <span>Fixed Lock</span>
               </button>
               <button
+                onClick={() => setPhaseFilter('variable')}
+                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
+                  phaseFilter === 'variable' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <TrendingUp className="w-3 h-3" />
+                <span>Variable Rate</span>
+              </button>
+              <button
                 onClick={() => setPhaseFilter('overpayment')}
                 className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
                   phaseFilter === 'overpayment' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Zap className="w-3 h-3" />
-                <span>Overpayments</span>
+                <span>Overpayments {monthlyOverpayment > 0 ? `(+€${monthlyOverpayment}/mo)` : ''}</span>
               </button>
               <button
                 onClick={() => setPhaseFilter('lumpsum')}
@@ -270,7 +307,7 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
               <tr>
                 <th className="py-2.5 px-3 font-semibold text-center w-14">Month</th>
                 <th className="py-2.5 px-3 font-semibold w-24">Date</th>
-                <th className="py-2.5 px-3 font-semibold w-40">Phase / Event</th>
+                <th className="py-2.5 px-3 font-semibold w-48">Phase / Event</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Total Payment</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Loan Body (Principal)</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Interest Paid</th>
@@ -283,6 +320,12 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
             <tbody className="divide-y divide-slate-800/60 font-mono text-slate-300">
               {filteredSchedule.map((pt) => {
                 const isPayoffMonth = pt.month === result.actualPayoffMonths;
+                const activeRateStr = pt.interestRate !== undefined
+                  ? (pt.interestRate * 100).toFixed(2)
+                  : pt.isFixedPeriod
+                  ? annualRatePct.toFixed(2)
+                  : effectiveVarRatePct.toFixed(2);
+
                 return (
                   <tr
                     key={pt.month}
@@ -293,6 +336,8 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
                         ? 'bg-purple-950/30 border-l-2 border-purple-400'
                         : pt.overpaymentPaid > 0
                         ? 'bg-emerald-950/15'
+                        : pt.isVariableRate
+                        ? 'bg-amber-950/10'
                         : ''
                     }`}
                   >
@@ -313,20 +358,23 @@ export const AmortizationScheduleModal: React.FC<AmortizationScheduleModalProps>
                       ) : pt.isLumpSumApplied ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
                           <Gift className="w-3 h-3" />
-                          <span>🎁 March Bonus (+€{Math.round(annualLumpSum / 1000)}k)</span>
+                          <span>🎁 March Bonus (+€{Math.round(annualLumpSum / 1000)}k) • Var {activeRateStr}%</span>
                         </span>
                       ) : pt.isFixedPeriod ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-300 border border-sky-500/30">
                           <Lock className="w-3 h-3" />
-                          <span>🔒 Fixed Rate Period</span>
+                          <span>🔒 Fixed Lock ({activeRateStr}%)</span>
                         </span>
                       ) : pt.overpaymentPaid > 0 ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           <Zap className="w-3 h-3" />
-                          <span>⚡ Overpayment (+€{Math.round(monthlyOverpayment)})</span>
+                          <span>⚡ Overpayment (+€{Math.round(pt.overpaymentPaid)}) • Var {activeRateStr}%</span>
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-[10px]">Standard Amort</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          <TrendingUp className="w-3 h-3" />
+                          <span>📈 Variable Rate ({activeRateStr}%)</span>
+                        </span>
                       )}
                     </td>
 
