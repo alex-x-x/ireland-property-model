@@ -7,16 +7,16 @@ effort, value, security implications, and recommended sequencing. **For referenc
 
 ## Executive Summary & ROI Matrix
 
-| Phase | Target Packages | Dev Effort | Build/CI Speedup | Risk | Value / ROI | Recommendation |
+| Phase | Target Packages | Dev Effort | Build/CI Speedup | Risk | Value / ROI | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Phase 0** | `lucide-react` (1.37 → 1.38) | ⬜ 5 min | Neutral | None | ⬜ Low | ✅ Do anytime |
-| **Phase 1** | `vite` 8 + `@vitejs/plugin-react` 6 + `vitest` 4 | 🟡 1-2h | ⚡ **3–5x faster build** (Rolldown/Oxc) | Low | 🟢🟢 **Very High** | ✅ **Prioritize (Step 1)** |
-| **Phase 2** | `typescript` 7 + `@types/node` 24 | 🟡 1-2h | ⚡ **8–12x faster `tsc -b`** (Go engine) | Low-Med | 🟢🟢 **Very High** | ✅ **Prioritize (Step 2)** |
-| **Phase 3** | `react` 19 + `@types/react(dom)` 19 | 🟡 2-3h | Improved runtime reconciliation | Medium | 🟢 High | ✅ Follow Phase 1 & 2 |
-| **Phase 4** | `tailwindcss` 4 + `@tailwindcss/vite` | 🟠 2-4h | Lightning CSS in Rust, drops 2 configs | Medium | 🟢 High | 🟡 Do after build tools |
-| **Phase 5** | `recharts` (2.15 → 3.10) | 🔴 4-6h | Tree-shaking & native React 19 hooks | High | 🟡 Medium | ⏸️ Optional / evaluate with Phase 3 |
+| **Phase 0** | `lucide-react` (1.37 → 1.38) | ⬜ 5 min | Neutral | None | ⬜ Low | ✅ **Completed** |
+| **Phase 1** | `vite` 8 + `@vitejs/plugin-react` 6 + `vitest` 4 | 🟡 1-2h | ⚡ **3–5x faster build** (Rolldown/Oxc) | Low | 🟢🟢 **Very High** | ✅ **Completed** |
+| **Phase 2** | `typescript` 7 + `@types/node` 24 | 🟡 1-2h | ⚡ **8–12x faster `tsc -b`** (Go engine) | Low-Med | 🟢🟢 **Very High** | ✅ **Completed** |
+| **Phase 3** | `react` 19 + `@types/react(dom)` 19 | 🟡 2-3h | Improved runtime reconciliation | Medium | 🟢 High | ✅ **Completed** |
+| **Phase 4** | `tailwindcss` 4 + `@tailwindcss/vite` | 🟠 2-4h | Lightning CSS in Rust, drops 2 configs | Medium | 🟢 High | ✅ **Completed** |
+| **Phase 5** | `recharts` (2.15 → 3.10) | 🔴 4-6h | Tree-shaking & native React 19 hooks | High | 🟡 Medium | ✅ **Completed** |
 
-**Total estimated effort:** ~6–11 hours for complete modern stack (Phases 0–4).
+**Total estimated effort:** Complete modern stack (Phases 0–5) fully executed, verified, and committed.
 
 ---
 
@@ -413,11 +413,10 @@ The AI made **deliberate, robust choices** prioritizing stability, maximum ecosy
 ---
 
 ## Post-Migration Definition of Done Checklist
-
-When executing any phase, ensure:
-- [ ] `npm audit` reveals 0 high/critical vulnerabilities.
-- [ ] `npx tsc -b` completes with 0 type errors.
-- [ ] `npm test` runs all unit tests in `tests/` with 100% pass rate.
-- [ ] `npm run build` generates production bundle in `dist/` without warnings.
-- [ ] `npm run preview` confirms routing, asset paths, and dark styling work on `/ireland-property-model/`.
-- [ ] `package-lock.json` is updated and committed alongside `package.json`.
+ 
+- [x] `npm audit` reveals 0 high/critical vulnerabilities.
+- [x] `npx tsc -b` completes with 0 type errors.
+- [x] `npm test` runs all unit tests in `tests/` with 100% pass rate.
+- [x] `npm run build` generates production bundle in `dist/` without warnings.
+- [x] `npm run preview` confirms routing, asset paths, and dark styling work on `/ireland-property-model/`.
+- [x] `package-lock.json` is updated and committed alongside `package.json`.
