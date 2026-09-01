@@ -2,10 +2,11 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-alex--x--x.github.io%2Fireland--property--model-emerald?style=for-the-badge&logo=githubpages&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
 [![Tests](https://img.shields.io/badge/tests-95%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
-[![React](https://img.shields.io/badge/React-18.3-blue)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8)](https://tailwindcss.com/)
-[![Vitest](https://img.shields.io/badge/Vitest-3.2-yellow)](https://vitest.dev/)
+[![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-38bdf8)](https://tailwindcss.com/)
+[![Vitest](https://img.shields.io/badge/Vitest-4.1-yellow)](https://vitest.dev/)
+[![Recharts](https://img.shields.io/badge/Recharts-3.10-22c55e)](https://recharts.org/)
 
 > 🌐 **Live Web Application:** [https://alex-x-x.github.io/ireland-property-model/](https://alex-x-x.github.io/ireland-property-model/)
 
@@ -79,7 +80,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Command | Description |
 |---|---|
 | `npm run dev` | Runs the Vite development server with hot module reloading and CORS proxy |
-| `npm test` | Runs the complete Vitest test suite (54 mathematical & integration unit tests) |
+| `npm test` | Runs the complete Vitest test suite (95 mathematical & integration unit tests) |
 | `npm test:watch` | Runs Vitest in interactive watch mode |
 | `npm run build` | Typechecks with `tsc -b` and produces a production bundle in `dist/` |
 | `npm run preview` | Serves the production build locally |
