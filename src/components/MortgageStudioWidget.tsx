@@ -809,8 +809,9 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.5rem', fontSize: '11px' }}
-                formatter={(value: any, name: string) => {
+                formatter={(value: any, name?: any) => {
                   const valNum = Number(value);
+                  const key = String(name ?? '');
                   const labelMap: Record<string, string> = {
                     overpaymentBalance: 'Remaining Loan Balance',
                     standardBalance: 'Standard Remaining Balance',
@@ -819,20 +820,21 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
                     standardPrincipal: 'Standard Principal Paid',
                     standardInterest: 'Standard Interest Paid',
                   };
-                  return [`€${valNum.toLocaleString()}`, labelMap[name] || name];
+                  return [`€${valNum.toLocaleString()}`, labelMap[key] || key];
                 }}
                 labelFormatter={(label) => `Year ${label}`}
               />
               <Legend
                 wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
-                formatter={(value: string) => {
+                formatter={(value?: any) => {
+                  const strVal = String(value ?? '');
                   const legendLabels: Record<string, string> = {
                     overpaymentBalance: 'Remaining Debt Balance',
                     standardBalance: 'Standard Balance (No Overpayment)',
                     cumulativePrincipal: 'Loan Body (Principal) Paid',
                     cumulativeInterest: 'Cumulative Interest Paid',
                   };
-                  return legendLabels[value] || value;
+                  return legendLabels[strVal] || strVal;
                 }}
               />
 
