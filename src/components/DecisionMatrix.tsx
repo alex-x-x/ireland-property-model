@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
   TrendingUp,
   Home,
@@ -12,7 +12,7 @@ interface DecisionMatrixProps {
   config: SimulationConfig;
 }
 
-export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config }) => {
+export const DecisionMatrix: React.FC<DecisionMatrixProps> = memo(({ decision, config }) => {
   const { recommendedAction, recommendationReason, scenarios, earliestBuyMonth } = decision;
 
   return (
@@ -402,4 +402,4 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
       </div>
     </div>
   );
-};
+});

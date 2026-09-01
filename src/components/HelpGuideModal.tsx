@@ -731,7 +731,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
         <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>100% Client-Side Simulation • 47 Verified Unit Tests</span>
+            <span>100% Client-Side Simulation • Zero Data Sent to Servers</span>
           </div>
           <button
             onClick={onClose}

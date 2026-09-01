@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fetchMarketData, getFallbackMarketData } from '../src/services/marketData';
+import { fetchMarketData, getFallbackMarketData, isMarketDataStale, MARKET_DATA_TTL_MS } from '../src/services/marketData';
 import { DEFAULT_CONFIG } from '../src/engine/constants';
 import { runSimulation } from '../src/engine/simulation';
 
@@ -21,6 +21,30 @@ describe('Market Data Service', () => {
     expect(['live', 'cached', 'benchmark']).toContain(result.fxStatus);
     expect(result.stockPriceUsd).toBeGreaterThan(0);
     expect(result.eurUsdRate).toBeGreaterThan(0);
+  });
+
+  it('correctly detects stale vs fresh market data based on 24-hour TTL', () => {
+    // Null or empty data is always stale
+    expect(isMarketDataStale(null)).toBe(true);
+
+    const now = Date.now();
+    const freshData = {
+      ...getFallbackMarketData('GOOGL'),
+      timestamp: new Date(now - 1000 * 60 * 60).toISOString(), // 1 hour ago
+    };
+    expect(isMarketDataStale(freshData)).toBe(false);
+
+    const staleData = {
+      ...getFallbackMarketData('GOOGL'),
+      timestamp: new Date(now - (MARKET_DATA_TTL_MS + 10000)).toISOString(), // >24 hours ago
+    };
+    expect(isMarketDataStale(staleData)).toBe(true);
+
+    const invalidTimestampData = {
+      ...getFallbackMarketData('GOOGL'),
+      timestamp: 'invalid-date',
+    };
+    expect(isMarketDataStale(invalidTimestampData)).toBe(true);
   });
 
   it('verifies that manual override is disabled by default in baseline config', () => {

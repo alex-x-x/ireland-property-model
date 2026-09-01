@@ -5,7 +5,7 @@ import {
   SimulationConfig,
 } from './types';
 import { calculateMortgageAmortization, getSalaryAtDate } from './mortgage';
-import { getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
+import { addMonthsToDate } from './vesting';
 import { calculateIrishTaxBreakdown } from './tax';
 
 interface PostPurchaseSimulation {
@@ -134,18 +134,8 @@ function simulateTrajectoryForPurchaseMonth(
     currentPropValue *= propMonthlyMult;
     currentInv *= invMonthlyMult;
 
-    const stockPriceAtM = equity_engine.current_share_price_usd * Math.pow(1 + equity_engine.stock_yearly_growth_rate, m / 12);
-    const fxAtM = macro.eur_usd_spot * Math.pow(1 + (macro.eur_usd_yearly_drift || 0), m / 12);
-
-    const vestEvents = getVestingMilestonesForMonth(
-      m,
-      meta.start_date,
-      equity_engine.grants,
-      stockPriceAtM,
-      fxAtM,
-      equity_engine.marginal_tax_rate_ireland
-    );
-    const netVestEur = vestEvents.reduce((sum, e) => sum + e.netAmountEur, 0);
+    const pt = baseMonthlyPoints[m];
+    const netVestEur = pt?.vestEvents ? pt.vestEvents.reduce((sum, e) => sum + e.netAmountEur, 0) : 0;
     currentGsu = currentGsu * stockMonthlyMult + netVestEur;
 
     // Monthly maintenance
@@ -153,8 +143,7 @@ function simulateTrajectoryForPurchaseMonth(
     cumulativeMaintenancePaid += monthlyMaintenance;
 
     // Post-purchase cashflow adjustment:
-    const currentDate = addMonthsToDate(meta.start_date, m);
-    const dateStr = currentDate.toISOString().slice(0, 7);
+    const dateStr = pt ? pt.date : baseMonthToDate(meta.start_date, m);
     const activeSalary = getSalaryAtDate(dateStr, mortgage);
 
     let monthlySavings = liquid_assets.monthly_salary_savings_eur;
@@ -169,6 +158,11 @@ function simulateTrajectoryForPurchaseMonth(
       monthlySavings = Math.max(0, liquid_assets.monthly_salary_savings_eur + savingsDelta);
     }
     currentCash += monthlySavings;
+
+    // Annual bonus payout in March (or configured payout month)
+    if (pt?.netBonusReceivedEur && pt.netBonusReceivedEur > 0) {
+      currentCash += pt.netBonusReceivedEur;
+    }
 
     currentRent *= rentMonthlyMult;
   }

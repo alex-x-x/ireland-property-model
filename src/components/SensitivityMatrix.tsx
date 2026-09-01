@@ -1,71 +1,21 @@
-import React, { useState, useMemo, useDeferredValue } from 'react';
+import React, { useState, memo } from 'react';
 import { Grid, Loader2 } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
-import { runSimulation } from '../engine/simulation';
-import { runDecisionAnalysis } from '../engine/decision';
+import { SENSITIVITY_PROP_RATES } from '../engine/sensitivity';
+import { useSensitivityCalculator } from '../hooks/useSensitivityCalculator';
 import { InfoTooltip } from './InfoTooltip';
 
 interface SensitivityMatrixProps {
   config: SimulationConfig;
 }
 
-export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) => {
+export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ config }) => {
   const [horizonMonths, setHorizonMonths] = useState<number>(60);
   const horizonYears = (horizonMonths / 12).toFixed(1).replace(/\.0$/, '');
 
-  // Defer heavy 55-permutation matrix computation to prevent slider lag
-  const deferredConfig = useDeferredValue(config);
-  const deferredHorizon = useDeferredValue(horizonMonths);
-  const isCalculating = deferredConfig !== config || deferredHorizon !== horizonMonths;
-
-  // Stock Growth Rates in 5% brackets from -20% to +30%
-  const stockRates = [-0.20, -0.15, -0.10, -0.05, 0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
-  // Property Growth Rates: -3%, 0%, 3%, 5%, 8%
-  const propRates = [-0.03, 0.00, 0.03, 0.05, 0.08];
-
-  const gridData = useMemo(() => {
-    return stockRates.map((stockRate) => {
-      const row = propRates.map((propRate) => {
-        const testConfig: SimulationConfig = {
-          ...deferredConfig,
-          meta: {
-            ...deferredConfig.meta,
-            forecast_months: deferredHorizon,
-          },
-          property: {
-            ...deferredConfig.property,
-            yearly_growth_rate: propRate,
-          },
-          equity_engine: {
-            ...deferredConfig.equity_engine,
-            stock_yearly_growth_rate: stockRate,
-          },
-        };
-
-        const monthly = runSimulation(testConfig);
-        const decision = runDecisionAnalysis(testConfig, monthly);
-        const waitScenarios = decision.scenarios.filter((s) => s.id !== 'buy_asap');
-        let delta = 0;
-        if (waitScenarios.length > 0) {
-          const maxWaitScenario = waitScenarios.reduce((best, s) =>
-            (s.netWealthDeltaVsBuyAsap ?? -Infinity) > (best.netWealthDeltaVsBuyAsap ?? -Infinity) ? s : best
-          );
-          delta = maxWaitScenario.netWealthDeltaVsBuyAsap ?? 0;
-        }
-        const winner = decision.recommendedAction;
-
-        return {
-          stockRate,
-          propRate,
-          delta,
-          winner,
-          isAffordable: decision.earliestBuyMonth !== null,
-        };
-      });
-
-      return { stockRate, cells: row };
-    });
-  }, [deferredConfig, deferredHorizon]);
+  // Compute 55-permutation matrix in background Web Worker without freezing the main thread
+  const { gridData, isCalculating } = useSensitivityCalculator(config, horizonMonths);
+  const propRates = SENSITIVITY_PROP_RATES;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
@@ -185,7 +135,8 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
                 </td>
                 {row.cells.map((cell, cIdx) => {
                   const isWait = cell.winner === 'wait_and_compound';
-                  const displayDelta = isWait ? cell.delta : Math.abs(cell.delta);
+                  const rawAdvantage = isWait ? cell.delta : -cell.delta;
+                  const displayDelta = Math.max(0, rawAdvantage);
 
                   return (
                     <td
@@ -219,4 +170,4 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({ config }) 
       </div>
     </div>
   );
-};
+});

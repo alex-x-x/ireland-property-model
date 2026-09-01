@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import {
   Lock,
   Unlock,
@@ -16,6 +16,7 @@ import {
   Info,
   Edit3,
   TrendingUp,
+  ShieldCheck,
 } from 'lucide-react';
 import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
 import {
@@ -38,7 +39,7 @@ interface PersonalProfileHeaderProps {
   onUpdateGrants: (grants: Grant[]) => void;
 }
 
-export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
+export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(({
   config,
   onChange,
   isProfileLocked,
@@ -211,7 +212,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
             {isProfileLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-sm font-bold text-white tracking-tight">Personal Financial Profile & Baseline</h2>
               <span
                 className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
@@ -221,6 +222,13 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
                 }`}
               >
                 {isProfileLocked ? 'Profile Locked (Safe Modeling)' : 'Unlocked (Editing Mode)'}
+              </span>
+              <span
+                className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700"
+                title="All calculations run locally in your browser. Zero financial numbers are sent to any external server."
+              >
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                100% Private & In-Browser
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -1563,4 +1571,4 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = ({
     )}
   </div>
 );
-};
+});

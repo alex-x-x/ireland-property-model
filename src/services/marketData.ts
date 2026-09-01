@@ -35,8 +35,19 @@ export function getFallbackMarketData(symbol: string = 'GOOGL', _startDate?: str
   };
 }
 
-const STORAGE_CACHE_KEY = 'dublin_property_model_market_cache';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours persistent session cache
+export const STORAGE_CACHE_KEY = 'dublin_property_model_market_cache';
+export const MARKET_DATA_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours persistent session cache
+const CACHE_TTL_MS = MARKET_DATA_TTL_MS;
+
+export function isMarketDataStale(
+  data: MarketDataResult | null | undefined,
+  maxAgeMs: number = MARKET_DATA_TTL_MS
+): boolean {
+  if (!data || !data.timestamp) return true;
+  const time = new Date(data.timestamp).getTime();
+  if (isNaN(time)) return true;
+  return Date.now() - time > maxAgeMs;
+}
 
 function loadCachedData(symbol: string): MarketDataResult | null {
   try {

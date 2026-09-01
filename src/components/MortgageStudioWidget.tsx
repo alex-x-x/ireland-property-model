@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
   Calculator,
   TrendingDown,
@@ -35,7 +35,7 @@ interface MortgageStudioWidgetProps {
   monthlyPoints: MonthlyDataPoint[];
 }
 
-export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
+export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   config,
   monthlyPoints,
 }) => {
@@ -905,4 +905,4 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = ({
       />
     </div>
   );
-};
+});
