@@ -15,7 +15,7 @@
     "lucide-react": "^1.38.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^2.15.0",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
@@ -28,8 +28,5 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
-  },
-  "overrides": {
-    "react-is": "^19.0.0"
   }
 }

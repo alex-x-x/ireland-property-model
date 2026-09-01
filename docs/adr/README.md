@@ -16,3 +16,4 @@ Conventions (lightweight [MADR](https://adr.github.io/madr/) style):
 |---|-------|--------|
 | [0001](0001-client-side-react-vite-simulation-engine.md) | Client-side React/TypeScript simulation engine and architecture | Accepted |
 | [0002](0002-tailwind-4-css-theme-architecture.md) | Tailwind CSS 4 CSS-First Theme Architecture | Accepted |
+| [0003](0003-recharts-3-visualization-modernization.md) | Recharts 3 Visualization Modernization & Native React 19 Integration | Accepted |
