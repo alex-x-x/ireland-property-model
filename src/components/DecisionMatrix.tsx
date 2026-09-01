@@ -21,10 +21,10 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ decision, config
       <div
         className={`p-5 rounded-2xl border transition-all shadow-xl ${
           recommendedAction === 'wait_and_compound'
-            ? 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-500/40'
+            ? 'bg-linear-to-r from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-500/40'
             : recommendedAction === 'buy_asap'
-            ? 'bg-gradient-to-r from-brand-950/40 via-slate-900 to-slate-900 border-brand-500/40'
-            : 'bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/40'
+            ? 'bg-linear-to-r from-brand-950/40 via-slate-900 to-slate-900 border-brand-500/40'
+            : 'bg-linear-to-r from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/40'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

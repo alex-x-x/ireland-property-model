@@ -35,7 +35,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -129,7 +129,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-fadeIn">
               {/* Executive Summary Card */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-950/40 via-slate-850 to-purple-950/30 border border-brand-500/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-linear-to-br from-brand-950/40 via-slate-850 to-purple-950/30 border border-brand-500/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-brand-400" />
                   <h3 className="text-sm sm:text-base font-bold text-white">The Core Ireland Tech Dilemma</h3>
@@ -205,7 +205,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
           {activeTab === 'playbook' && (
             <div className="space-y-6 animate-fadeIn">
               {/* Introduction Banner */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-slate-850 to-brand-950/30 border border-emerald-500/30 space-y-2">
+              <div className="p-5 rounded-2xl bg-linear-to-br from-emerald-950/40 via-slate-850 to-brand-950/30 border border-emerald-500/30 space-y-2">
                 <div className="flex items-center gap-2">
                   <Compass className="w-5 h-5 text-emerald-400" />
                   <h3 className="text-sm sm:text-base font-bold text-white">How to Use This Model to Make Your Decision</h3>
@@ -507,7 +507,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
           {activeTab === 'interpretation' && (
             <div className="space-y-6 animate-fadeIn">
               {/* Deep Dive on Heatmap & Timeline */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-slate-850 to-purple-950/30 border border-indigo-500/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-linear-to-br from-indigo-950/40 via-slate-850 to-purple-950/30 border border-indigo-500/30 space-y-3">
                 <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
                   <Compass className="w-5 h-5 text-indigo-400" />
                   <span>How to Interpret the Heatmap & Timeline Horizons</span>

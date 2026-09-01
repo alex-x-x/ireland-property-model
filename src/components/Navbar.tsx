@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-[1720px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Title & Branding */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-brand-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <div>
