@@ -1,6 +1,7 @@
 # Ireland Property Acquisition & Equity Decision Engine
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-alex--x--x.github.io%2Fireland--property--model-emerald?style=for-the-badge&logo=githubpages&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
+[![Privacy: 100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20Client--Side-emerald?style=for-the-badge&logo=shield&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
 [![Tests](https://img.shields.io/badge/tests-95%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
@@ -9,7 +10,9 @@
 [![Recharts](https://img.shields.io/badge/Recharts-3.10-22c55e)](https://recharts.org/)
 
 > 🌐 **Live Web Application:** [https://alex-x-x.github.io/ireland-property-model/](https://alex-x-x.github.io/ireland-property-model/)
-
+> 
+> 🔒 **100% Client-Side & Private:** All financial simulations, Irish marginal tax (52%) calculations, GSU schedules, and mortgage amortization algorithms execute **entirely within your browser's local JavaScript runtime**. Zero salary, net worth, equity grants, or personal financial inputs are ever transmitted to any remote server or backend.
+> 
 > **An interactive, real-time financial simulation engine to answer the core tech compensation dilemma:**  
 > *"Should I buy Irish real estate as soon as I hit the minimum deposit threshold, or keep renting to let unvested Google Stock Units (GSUs) and equity investments compound?"*
 

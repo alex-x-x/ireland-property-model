@@ -57,12 +57,16 @@ describe('Decision Engine', () => {
       ...DEFAULT_CONFIG,
       equity_engine: {
         ...DEFAULT_CONFIG.equity_engine,
-        stock_yearly_growth_rate: 0.25, // 25% annual GSU stock growth
-        initial_vested_shares_held: 800,
+        stock_yearly_growth_rate: 0.30, // 30% annual GSU stock growth
+        initial_vested_shares_held: 3000,
+      },
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        monthly_rent_eur: 2000,
       },
       property: {
         ...DEFAULT_CONFIG.property,
-        yearly_growth_rate: 0.02, // low 2% property inflation
+        yearly_growth_rate: 0.01, // low 1% property inflation
       },
     };
 

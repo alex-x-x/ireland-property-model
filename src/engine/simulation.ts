@@ -1,5 +1,5 @@
 import { MonthlyDataPoint, SimulationConfig, StampDutyTier } from './types';
-import { reconcileHistoricalGrants, getVestingMilestonesForMonth, addMonthsToDate } from './vesting';
+import { reconcileHistoricalGrants, buildVestingScheduleMap, addMonthsToDate } from './vesting';
 import { getEffectiveMaxMortgage, getSalaryAtDate } from './mortgage';
 import { calculateIrishTaxBreakdown } from './tax';
 
@@ -59,6 +59,13 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
     marketContext
   );
 
+  const vestSchedule = buildVestingScheduleMap(
+    equity_engine.grants,
+    meta.start_date,
+    equity_engine.marginal_tax_rate_ireland,
+    marketContext
+  );
+
   let currentPropPrice = property.target_price_eur;
   let currentStockPrice = equity_engine.current_share_price_usd;
   let currentFx = macro.eur_usd_spot;
@@ -84,9 +91,17 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
   const initialSalary = getSalaryAtDate(meta.start_date.slice(0, 7), mortgage);
   let accumulatedBonusEur = (priorAccruedMonths / 12) * initialSalary.bonusEur;
 
+  // Pre-calculate date references for forecast timeline
+  const timelineDates = Array.from({ length: meta.forecast_months + 1 }, (_, m) => {
+    const d = addMonthsToDate(meta.start_date, m);
+    return {
+      dateStr: d.toISOString().slice(0, 7),
+      monthOfYear: d.getUTCMonth() + 1,
+    };
+  });
+
   for (let m = 0; m <= meta.forecast_months; m++) {
-    const currentDate = addMonthsToDate(meta.start_date, m);
-    const dateStr = currentDate.toISOString().slice(0, 7); // YYYY-MM
+    const { dateStr, monthOfYear } = timelineDates[m];
     let netBonusReceivedEur = 0;
 
     if (m > 0) {
@@ -114,7 +129,6 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       accumulatedBonusEur += activeSalary.bonusEur / 12;
 
       // Annual bonus payout in March (or configured payout month)
-      const monthOfYear = currentDate.getUTCMonth() + 1; // 1 = Jan, 2 = Feb, 3 = Mar, ...
       if (monthOfYear === bonusPayoutMonth) {
         const grossBonus = accumulatedBonusEur;
         netBonusReceivedEur = grossBonus * (1 - equity_engine.marginal_tax_rate_ireland);
@@ -123,17 +137,17 @@ export function runSimulation(config: SimulationConfig): MonthlyDataPoint[] {
       }
     }
 
-    const vestEvents = getVestingMilestonesForMonth(
-      m,
-      meta.start_date,
-      equity_engine.grants,
-      currentStockPrice,
-      currentFx,
-      equity_engine.marginal_tax_rate_ireland,
-      marketContext
-    );
+    const scheduledVests = vestSchedule.get(m) || [];
+    const vestEvents = scheduledVests.map((v) => ({
+      grantId: v.grantId,
+      grantType: v.grantType,
+      grossShares: v.grossShares,
+      netShares: v.netShares,
+      sharePriceUsd: currentStockPrice,
+      netAmountEur: v.netShares * currentStockPrice * currentFx,
+    }));
 
-    const newNetShares = vestEvents.reduce((sum, e) => sum + e.netShares, 0);
+    const newNetShares = scheduledVests.reduce((sum, e) => sum + e.netShares, 0);
     if (m > 0) {
       currentRetainedShares += newNetShares;
     }

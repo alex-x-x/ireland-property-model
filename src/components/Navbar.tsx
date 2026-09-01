@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, memo } from 'react';
 import {
   Building2,
   Download,
@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   Check,
   BookOpen,
+  ShieldCheck,
 } from 'lucide-react';
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import { PRESET_SCENARIOS } from '../engine/presets';
@@ -28,7 +29,7 @@ interface NavbarProps {
   onSyncMarketData?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
+export const Navbar: React.FC<NavbarProps> = memo(({
   config,
   onUpdateConfig,
   onResetDefault,
@@ -118,10 +119,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-bold text-lg text-white tracking-tight">Ireland Property & GSU Decision Engine</h1>
               <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
                 5-Yr Model
+              </span>
+              <span
+                className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                title="All calculations execute 100% locally in your browser runtime. Zero personal or financial data is sent to any server."
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                100% Client-Side
               </span>
             </div>
             <p className="text-xs text-slate-400">
@@ -282,4 +290,4 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
     </header>
   );
-};
+});

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
   Table,
   Download,
@@ -20,7 +20,7 @@ interface MonthlyCashflowWidgetProps {
   config?: SimulationConfig;
 }
 
-export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ data, config }) => {
+export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = memo(({ data, config }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'y1' | 'y2' | 'y3' | 'y4' | 'y5' | 'milestones'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -544,4 +544,4 @@ export const MonthlyCashflowWidget: React.FC<MonthlyCashflowWidgetProps> = ({ da
       )}
     </div>
   );
-};
+});

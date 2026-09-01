@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -19,7 +19,7 @@ interface ProjectionChartProps {
   decision: DecisionComparison;
 }
 
-export const ProjectionChart: React.FC<ProjectionChartProps> = ({ data, decision }) => {
+export const ProjectionChart: React.FC<ProjectionChartProps> = memo(({ data, decision }) => {
   const [showBuckets, setShowBuckets] = useState(false);
   const [showRentDrag, setShowRentDrag] = useState(false);
 
@@ -276,4 +276,4 @@ export const ProjectionChart: React.FC<ProjectionChartProps> = ({ data, decision
       </div>
     </div>
   );
-};
+});

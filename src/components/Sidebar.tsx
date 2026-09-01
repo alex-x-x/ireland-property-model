@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, memo, useCallback } from 'react';
 import { Sliders } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import { InfoTooltip } from './InfoTooltip';
@@ -23,7 +23,7 @@ interface SliderControlProps {
   onChange: (val: number) => void;
 }
 
-const SliderControl: React.FC<SliderControlProps> = ({
+const SliderControl: React.FC<SliderControlProps> = memo(({
   label,
   tooltipTitle,
   tooltipContent,
@@ -159,9 +159,9 @@ const SliderControl: React.FC<SliderControlProps> = ({
       )}
     </div>
   );
-};
+});
 
-export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
+export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
   const [, startTransition] = useTransition();
 
   // Local state for immediate slider feedback
@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
     setDriftRate(config.macro.eur_usd_yearly_drift || 0);
   }, [config.macro.eur_usd_yearly_drift]);
 
-  const handleStockChange = (val: number) => {
+  const handleStockChange = useCallback((val: number) => {
     setStockRate(val);
     startTransition(() => {
       onChange({
@@ -205,9 +205,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         equity_engine: { ...config.equity_engine, stock_yearly_growth_rate: val },
       });
     });
-  };
+  }, [config, onChange]);
 
-  const handlePropChange = (val: number) => {
+  const handlePropChange = useCallback((val: number) => {
     setPropRate(val);
     startTransition(() => {
       onChange({
@@ -215,9 +215,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         property: { ...config.property, yearly_growth_rate: val },
       });
     });
-  };
+  }, [config, onChange]);
 
-  const handleInvChange = (val: number) => {
+  const handleInvChange = useCallback((val: number) => {
     setInvRate(val);
     startTransition(() => {
       onChange({
@@ -225,9 +225,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         liquid_assets: { ...config.liquid_assets, investments_yearly_growth_rate: val },
       });
     });
-  };
+  }, [config, onChange]);
 
-  const handleMortgageChange = (val: number) => {
+  const handleMortgageChange = useCallback((val: number) => {
     setMortgageRate(val);
     startTransition(() => {
       onChange({
@@ -235,9 +235,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         mortgage: { ...config.mortgage, mortgage_interest_rate: val },
       });
     });
-  };
+  }, [config, onChange]);
 
-  const handleRentChange = (val: number) => {
+  const handleRentChange = useCallback((val: number) => {
     setRentRate(val);
     startTransition(() => {
       onChange({
@@ -245,9 +245,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         macro: { ...config.macro, rent_yearly_growth_rate: val },
       });
     });
-  };
+  }, [config, onChange]);
 
-  const handleDriftChange = (val: number) => {
+  const handleDriftChange = useCallback((val: number) => {
     setDriftRate(val);
     startTransition(() => {
       onChange({
@@ -255,7 +255,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
         macro: { ...config.macro, eur_usd_yearly_drift: val },
       });
     });
-  };
+  }, [config, onChange]);
 
   return (
     <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20 space-y-4">
@@ -402,4 +402,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
       </div>
     </aside>
   );
-};
+});

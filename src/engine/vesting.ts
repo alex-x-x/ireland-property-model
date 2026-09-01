@@ -267,6 +267,43 @@ export function reconcileHistoricalGrants(
   };
 }
 
+export interface PrecomputedVestMilestone {
+  grantId: string;
+  grantType: 'initial' | 'refresher' | 'custom';
+  grossShares: number;
+  netShares: number;
+}
+
+export function buildVestingScheduleMap(
+  grants: Grant[],
+  startDateStr: string,
+  taxRate: number,
+  marketContext?: MarketRateContext
+): Map<number, PrecomputedVestMilestone[]> {
+  const map = new Map<number, PrecomputedVestMilestone[]>();
+  for (const grant of grants) {
+    const totalShares = resolveEffectiveGrantShares(grant, startDateStr, marketContext);
+    const milestones = getGrantMilestones(grant);
+    for (const milestone of milestones) {
+      const milestoneDate = addMonthsToDate(grant.grant_date, milestone.milestoneMonthOffset);
+      const diffMonths = getCalendarMonthOffset(startDateStr, milestoneDate);
+      if (diffMonths > 0) {
+        const grossShares = totalShares * milestone.percent;
+        const netShares = grossShares * (1 - taxRate);
+        const list = map.get(diffMonths) || [];
+        list.push({
+          grantId: grant.id,
+          grantType: grant.type,
+          grossShares,
+          netShares,
+        });
+        map.set(diffMonths, list);
+      }
+    }
+  }
+  return map;
+}
+
 export function getVestingMilestonesForMonth(
   simulationMonth: number,
   startDateStr: string,
