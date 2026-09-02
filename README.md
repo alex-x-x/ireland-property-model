@@ -121,8 +121,8 @@ Follow this **4-step decision-making playbook** to transform complex financial t
    * Check the **Opportunity Cost Matrix**. Compare Year-5 Total Net Wealth ($M60$) for **Buy ASAP** vs. **Wait 12M**, **Wait 24M**, **Wait 36M**, and **Rent all 60M**.
    * Look at the bottom-line **Delta ($\Delta W$)**: If waiting 12–24 months produces a positive $+\Delta W$ (e.g. $+€45,000$), your investment compounding during that delay generates more wealth than buying today. If $\Delta W$ is negative, waiting costs you more in property inflation and sunk rent than your stock portfolio earns.
 4. **Step 4: Stress-Test on the 2D Heatmap (Find Your Breakeven Rate)**
-   * Scan the **2D Sensitivity Heatmap** to locate the boundary between **BUY NOW (Emerald)** and **WAIT & COMPOUND (Purple)**.
-   * Identify your **Equilibrium Stock Growth Rate** (e.g. 15%/yr): If you are confident tech equities will beat this threshold, wait; otherwise, buy now.
+   * Scan the **2D Sensitivity Heatmap** to locate the boundary between **WAIT & COMPOUND (Emerald)** and **BUY NOW (Brand Amber)**.
+   * Check your **Indifference Hurdle Rate Banner** at the top of the grid: It calculates the exact stock return (e.g. $+9.9\%/\text{yr}$) needed to justify waiting given your assumed Irish property inflation.
 
 ---
 
@@ -206,18 +206,28 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
   * **Liquid Wealth (Y5):** Remaining cash and compounding shares not spent on deposit.
   * **Sunk Rent Paid:** Total money paid to landlords over the 5 years.
 
-### 6. Sensitivity Heatmap (2D Grid: Stock Growth vs. Property Growth)
-* **Purpose:** Evaluates **55 macroeconomic permutations** ($11 \text{ stock rates} \times 5 \text{ property rates}$) simultaneously to show the exact boundary where buying immediately beats waiting.
-* **What VARIES on the Grid (The 2 Axes):**
-  * **Y-Axis (Rows):** Alphabet / Tech stock annual growth rate ($-20\%$ to $+30\%$).
-  * **X-Axis (Columns):** Ireland property price inflation ($-3\%$ to $+8\%$).
-* **What is FIXED Behind the Grid:**
-  * Your personal financial profile (Base Salary, Living Expenses, Cash, Held GSUs, Unvested Grants).
-  * Fixed macro parameters (Mortgage Interest Rate ~3.50%, RPZ Rent Cap ~2.0%, FX Drift 0%).
-  * The **Selected Horizon ($H$)** chosen at the top of the widget.
+### 6. Sensitivity Heatmap & Wait Time Strategy Controller (2D Grid)
+* **Purpose:** Evaluates **up to 72 macroeconomic permutations** (11–12 stock rates $\times$ 5–6 property rates) simultaneously to determine whether waiting to compound yields higher Year 5 ($M60$) terminal wealth than buying ASAP.
+* **Fixed 5-Year Evaluation Benchmark:** All comparisons evaluate total net wealth (Liquid Wealth + Amortized Home Equity) strictly at **Month 60**, eliminating the distortion of early truncation and front-loaded purchase friction (Stamp Duty, legal fees).
+* **Strategy Controller Presets:**
+  * **`⚡ Optimal Wait`**: Automatically identifies the highest-wealth wait delay per cell across all test scenarios.
+  * **`Wait 12M` / `Wait 24M` / `Wait 36M`**: Direct apples-to-apples comparison of waiting $W$ months before purchase vs. buying immediately.
+  * **`Rent 5Y`**: Compares buying ASAP vs. renting for the entire 5 years and compounding liquid assets.
+  * **`Custom (+1M to +48M)`**: Interactive stepper slider to time-travel across any custom wait delay.
+* **Dynamic Rate Injection (Rows & Columns):**
+  * If your sidebar **Property Inflation** (e.g. `+4.0%`) falls between presets (`+3%` and `+5%`), an exact column is dynamically injected in sorted order.
+  * If your sidebar **Stock Growth** (e.g. `+12.0%`) falls between presets, an exact row is dynamically injected.
+  * Ensures zero approximation error on your actual assumptions.
+* **Indifference Hurdle Rate Banner:**
+  * Displays the exact annual stock growth rate required for waiting to beat buying ASAP at your assumed property inflation rate:
+    > *"⚡ Indifference Hurdle: At 4.0% p.a. property growth, your stock must return at least +9.9% p.a. for waiting to beat buying ASAP."*
+* **"📍 You Are Here" Base Case Pin & Cell Anatomy Drill-Down:**
+  * The exact coordinate corresponding to your sidebar inputs is badged with a `YOU` indicator.
+  * Clicking any cell opens a live side-by-side financial breakdown (Net Wealth, Home Equity, Liquid Assets, Sunk Rent, and Purchase Price).
 * **How to Read a Cell:**
-  * **`WAIT +€Xk` (Emerald):** Waiting for that horizon and compounding your stock beats buying ASAP by $+€X,000$.
-  * **`BUY NOW +€Xk` (Brand Amber):** Buying ASAP generates $+€X,000$ *more* net wealth than waiting for that horizon (i.e. waiting costs you €X,000 in sunk rent and price escalation).
+  * **`WAIT +€Xk` (Emerald):** Waiting for that duration beats buying ASAP by $+€X,000$ at Year 5.
+  * **`BUY NOW +€Xk` (Brand Amber):** Buying ASAP beats waiting by $+€X,000$ (waiting costs €X,000 in sunk rent and property inflation).
+  * **`UNAVAILABLE` (Slate):** Target property is not affordable within 5 years in that market scenario.
 
 ### 7. Mortgage Studio & Loan-Deposit Optimizer (Repayment Planner)
 * **Purpose:** Provides deep, dynamic mortgage planning linked directly to your 60-month trajectory.
@@ -234,18 +244,19 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
 
 ## 💡 Practical Usage & Critical Interpretation Tips
 
-### 1. How to Think About the Horizon Slider (1Y vs 2Y vs 3Y vs 5Y)
-The decision to wait is never open-ended — it is always evaluated over a **specific comparison timeframe ($H$)**:
-* **1-Year Horizon ($M12$):** Measures buying at Month 0 vs waiting until Month 12. Sunk rent paid is relatively modest (~€30,000), so a moderate stock return (~10%–12%) is often enough for waiting to win.
-* **2-Year Horizon ($M24$):** Tests buying at Month 0 vs waiting until Month 24. Gives your unvested GSUs two years of compounding, but accumulates ~€60,000–€70,000 in sunk rent.
-* **3-Year Horizon ($M36$):** Tests buying at Month 0 vs waiting until Month 36. Sunk rent approaches ~€90,000–€100,000+, raising the bar: tech stocks must grow aggressively (16%–20%+) to overcome the sunk rental drag.
-* **5-Year Horizon ($M60$ - Recommended Benchmark):** Evaluates the complete 5-year balance sheet (Remaining Liquid Assets + Amortized Home Equity) across all waiting options.
+### 1. How to Think About the Wait Time Strategy Controller (Optimal vs Fixed Delays vs Renting)
+Waiting to purchase is evaluated by comparing Year 5 ($M60$) terminal wealth between buying immediately and delaying purchase:
+* **Optimal Wait:** Solves for the optimal timing across all tested scenarios, revealing whether short delays (12M), medium delays (24M), or long compounding horizons yield the highest net wealth under that economic regime.
+* **1-Year Delay ($M12$):** Sunk rent is relatively modest (~€30,000), so a moderate stock return (~10%–12%) is often enough for waiting to beat buying immediately.
+* **2-Year Delay ($M24$):** Allows unvested GSUs two years of compounding, but accumulates ~€60,000–€70,000 in sunk rent.
+* **3-Year Delay ($M36$):** Sunk rent approaches ~€90,000–€100,000+, raising the bar: tech stocks must grow aggressively (16%–20%+) to overcome cumulative rental drag.
+* **Rent All 5 Years:** Stress-tests whether homeownership makes financial sense at all compared to a pure liquid portfolio over 5 years.
 
 ### 2. How to Determine Exactly "How Much Time to Wait" (The Peak Delta Rule)
 1. **Check the Opportunity Cost Matrix:** Compare the scenario columns: **Wait 12M**, **Wait 24M**, and **Wait 36M**.
 2. **Find the Peak Net Wealth Delta ($+\Delta W$):**
    * If $\Delta W$ is $+€25\text{k}$ at 12M, reaches $+€58\text{k}$ at 24M, and drops to $+€30\text{k}$ at 36M $\implies$ **24 Months is your mathematically optimal wait period!**
-3. **Stress-Test on the Heatmap:** Switch the Heatmap Horizon slider to **2Y ($M24$)** to confirm that your 24-month strategy remains inside the green `WAIT` regime across a range of realistic stock and property rates.
+3. **Stress-Test on the Heatmap:** Switch the Heatmap Strategy selector to **Wait 24M** or use the **Custom** slider to verify that your chosen wait strategy remains robust inside the green `WAIT` regime across a realistic envelope of stock and property growth rates.
 
 ### 3. The Golden Rules of the Model
 * **When "Buy ASAP" Typically Wins:**

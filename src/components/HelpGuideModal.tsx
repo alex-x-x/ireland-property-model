@@ -283,10 +283,10 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       <h5 className="font-bold text-white text-xs sm:text-sm">Find Your Breakeven on the Heatmap</h5>
                     </div>
                     <p className="text-xs text-slate-300">
-                      Scan the <strong>2D Sensitivity Heatmap</strong> to find the boundary between <strong>WAIT & COMPOUND (Emerald)</strong> and <strong>BUY NOW (Brand Amber)</strong>.
+                      Scan the <strong>2D Sensitivity Heatmap</strong> and check the top <strong>Indifference Hurdle</strong> banner to find the exact stock return needed to beat buying ASAP at your assumed property growth rate.
                     </p>
                     <p className="text-xs text-slate-400">
-                      👉 <strong>Action:</strong> Identify the <em>Equilibrium Stock Growth Rate</em> (e.g. 15%/yr). If you expect tech to beat that rate, wait; otherwise, buy now.
+                      👉 <strong>Action:</strong> Use the <em>Wait Time Strategy Controller</em> (Optimal, 12M, 24M, 36M, Rent 5Y, or Custom) to stress-test your strategy, and find your exact base case pinned with <code className="text-amber-300">YOU</code>.
                     </p>
                   </div>
                 </div>
