@@ -151,7 +151,7 @@ export function generateCandidateStrategies(
             ltvPct,
             termYears,
             interestRatePct,
-            fixedRateYears: 2,
+            fixedRateYears: config.mortgage.fixed_rate_years ?? 2,
             monthlyOverpayment,
             overpaymentSurplusPct: surplusRatio,
             annualBonusLumpSum,
@@ -190,13 +190,16 @@ export function evaluateMortgageStrategy(
     candidate.loanAmount <= buyPoint.maxMortgageAvailable + 0.01;
   const postPurchaseLiquidLeft = Math.max(0, buyPoint.totalLiquidWealth - totalUpfrontPaid);
 
-  // Amortization simulation
+  // Amortization simulation with Irish Fixed Rate Lockout & Variable Rate Shock
+  const variableRateShock = mortgage.variable_rate_shock_pct ?? 0;
+  const effectiveVariableRatePct = candidate.interestRatePct + variableRateShock;
   const overpaymentResult = calculateMortgageWithOverpayments(
     {
       principal: candidate.loanAmount,
       annualRate: candidate.interestRatePct / 100,
       termYears: candidate.termYears,
       fixedRateYears: candidate.fixedRateYears,
+      variableRate: effectiveVariableRatePct / 100,
       monthlyOverpayment: candidate.monthlyOverpayment,
       annualLumpSumOverpayment: candidate.annualBonusLumpSum,
     },
@@ -250,13 +253,6 @@ export function evaluateMortgageStrategy(
   let currentGsu = gsuAfterBuy;
   let currentPropValue = propertyPurchasePrice;
 
-  // Track remaining mortgage balance from the overpayment schedule
-  const scheduleMap = new Map<number, number>();
-  scheduleMap.set(0, candidate.loanAmount);
-  for (const pt of overpaymentResult.schedule) {
-    scheduleMap.set(pt.month, pt.balance);
-  }
-
   const livingExpenses = tax?.monthly_living_expenses_eur ?? 2500;
   const activeSalary = getSalaryAtDate(buyPoint.date, mortgage);
   const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, tax);
@@ -280,7 +276,11 @@ export function evaluateMortgageStrategy(
 
     const monthlyMaintenance = (currentPropValue * mortgage.yearly_maintenance_rate) / 12;
     const activeOverpayment = isFixed || isPaidOff ? 0 : candidate.monthlyOverpayment;
-    const scheduledMortgagePmt = isPaidOff ? 0 : overpaymentResult.standardMonthlyPayment;
+    const scheduledMortgagePmt = isPaidOff
+      ? 0
+      : isFixed
+      ? overpaymentResult.standardMonthlyPayment
+      : (overpaymentResult.variableMonthlyPayment ?? overpaymentResult.standardMonthlyPayment);
     const totalMortgagePayment = scheduledMortgagePmt + activeOverpayment;
 
     let monthlySavings = liquid_assets.monthly_salary_savings_eur;
@@ -302,7 +302,16 @@ export function evaluateMortgageStrategy(
     }
   }
 
-  const remainingBalanceAtM60 = scheduleMap.get(monthsUnderMortgage) ?? 0;
+  const safeMonthsUnderMortgage = Math.max(0, monthsUnderMortgage);
+  const scheduleIndex = Math.min(safeMonthsUnderMortgage, overpaymentResult.schedule.length) - 1;
+  const remainingBalanceAtM60 =
+    safeMonthsUnderMortgage === 0
+      ? candidate.loanAmount
+      : safeMonthsUnderMortgage > overpaymentResult.schedule.length
+      ? 0
+      : scheduleIndex >= 0
+      ? overpaymentResult.schedule[scheduleIndex].balance
+      : candidate.loanAmount;
   const terminalHomeEquityM60 = Math.max(0, currentPropValue - remainingBalanceAtM60);
   const terminalLiquidWealthM60 = currentCash + currentInv + currentGsu;
   const terminalNetWealthM60 = terminalHomeEquityM60 + terminalLiquidWealthM60;

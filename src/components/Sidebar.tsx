@@ -431,6 +431,12 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
   const [propRate, setPropRate] = useState(config.property.yearly_growth_rate);
   const [invRate, setInvRate] = useState(config.liquid_assets.investments_yearly_growth_rate);
   const [mortgageRate, setMortgageRate] = useState(config.mortgage.mortgage_interest_rate);
+  const [fixedRateYears, setFixedRateYears] = useState(config.mortgage.fixed_rate_years ?? 2);
+  const [rateShockPct, setRateShockPct] = useState(config.mortgage.variable_rate_shock_pct ?? 1.5);
+  const [fixedYearsText, setFixedYearsText] = useState(String(config.mortgage.fixed_rate_years ?? 2));
+  const [rateShockText, setRateShockText] = useState(String(config.mortgage.variable_rate_shock_pct ?? 1.5));
+  const [isFixedYearsFocused, setIsFixedYearsFocused] = useState(false);
+  const [isRateShockFocused, setIsRateShockFocused] = useState(false);
   const [rentRate, setRentRate] = useState(config.macro.rent_yearly_growth_rate || 0);
   const [driftRate, setDriftRate] = useState(config.macro.eur_usd_yearly_drift || 0);
 
@@ -450,6 +456,20 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
   useEffect(() => {
     setMortgageRate(config.mortgage.mortgage_interest_rate);
   }, [config.mortgage.mortgage_interest_rate]);
+
+  useEffect(() => {
+    setFixedRateYears(config.mortgage.fixed_rate_years ?? 2);
+    if (!isFixedYearsFocused) {
+      setFixedYearsText(String(config.mortgage.fixed_rate_years ?? 2));
+    }
+  }, [config.mortgage.fixed_rate_years, isFixedYearsFocused]);
+
+  useEffect(() => {
+    setRateShockPct(config.mortgage.variable_rate_shock_pct ?? 1.5);
+    if (!isRateShockFocused) {
+      setRateShockText(String(config.mortgage.variable_rate_shock_pct ?? 1.5));
+    }
+  }, [config.mortgage.variable_rate_shock_pct, isRateShockFocused]);
 
   useEffect(() => {
     setRentRate(config.macro.rent_yearly_growth_rate || 0);
@@ -495,6 +515,26 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
       onChange({
         ...config,
         mortgage: { ...config.mortgage, mortgage_interest_rate: val },
+      });
+    });
+  }, [config, onChange]);
+
+  const handleFixedRateYearsChange = useCallback((val: number) => {
+    setFixedRateYears(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        mortgage: { ...config.mortgage, fixed_rate_years: val },
+      });
+    });
+  }, [config, onChange]);
+
+  const handleRateShockChange = useCallback((val: number) => {
+    setRateShockPct(val);
+    startTransition(() => {
+      onChange({
+        ...config,
+        mortgage: { ...config.mortgage, variable_rate_shock_pct: val },
       });
     });
   }, [config, onChange]);
@@ -590,21 +630,133 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
             onChange={handleInvChange}
           />
 
-          {/* 4. Mortgage Interest Rate */}
-          <SliderControl
-            label="Mortgage Rate (AIB 2026)"
-            tooltipTitle="AIB Green Benchmark"
-            tooltipContent="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Irish homes)."
-            value={mortgageRate}
-            min={0.02}
-            max={0.07}
-            step={0.001}
-            inputStep={0.05}
-            precision={2}
-            colorTheme="emerald"
-            ticks={['2.0%', '3.5%', '7.0%']}
-            onChange={handleMortgageChange}
-          />
+          {/* 4. Mortgage Interest Rate & Irish Structure */}
+          <div className="bg-slate-850/80 p-3 rounded-xl border border-emerald-500/20 space-y-2.5">
+            <div className="flex justify-between items-center text-slate-300 font-medium">
+              <span className="text-emerald-300 flex items-center gap-1">
+                <span>Mortgage Rate (AIB 2026)</span>
+                <InfoTooltip
+                  title="AIB Green Benchmark"
+                  content="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Irish homes)."
+                />
+              </span>
+              <div className="flex items-center px-2 py-0.5 rounded border transition-all bg-emerald-950/40 border-emerald-500/30 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400/40">
+                <input
+                  type="number"
+                  step={0.05}
+                  value={(mortgageRate * 100).toFixed(2)}
+                  onChange={(e) => {
+                    const parsed = parseFloat(e.target.value);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      handleMortgageChange(parsed / 100);
+                    }
+                  }}
+                  className="w-14 bg-transparent text-right font-mono font-bold text-xs text-emerald-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  title="Click to type a custom percentage value directly"
+                />
+                <span className="font-mono font-bold text-xs ml-0.5 text-emerald-400">%</span>
+              </div>
+            </div>
+
+            <input
+              type="range"
+              min={0.02}
+              max={0.07}
+              step={0.001}
+              value={mortgageRate}
+              onChange={(e) => handleMortgageChange(parseFloat(e.target.value))}
+              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>2.0%</span>
+              <span>3.5%</span>
+              <span>7.0%</span>
+            </div>
+
+            {/* Irish Specific Structure: Fixed Lockout & Variable Shock */}
+            <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-400 text-[10px]">Fixed Lockout</span>
+                  <span className="text-sky-400 font-mono font-bold text-[10px]">{fixedRateYears} yrs</span>
+                </div>
+                <div className="flex items-center bg-slate-900 border border-slate-750 rounded px-2 py-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={isFixedYearsFocused ? fixedYearsText : fixedRateYears}
+                    onFocus={() => setIsFixedYearsFocused(true)}
+                    onBlur={() => {
+                      setIsFixedYearsFocused(false);
+                      const parsed = parseInt(fixedYearsText, 10);
+                      if (isNaN(parsed) || parsed < 0) {
+                        setFixedYearsText(String(fixedRateYears));
+                      } else {
+                        const clamped = Math.min(10, Math.max(0, parsed));
+                        setFixedYearsText(String(clamped));
+                        handleFixedRateYearsChange(clamped);
+                      }
+                    }}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setFixedYearsText(raw);
+                      const parsed = parseInt(raw, 10);
+                      if (!isNaN(parsed) && parsed >= 0 && parsed <= 10) {
+                        handleFixedRateYearsChange(parsed);
+                      }
+                    }}
+                    className="w-full bg-transparent text-white font-mono text-xs focus:outline-none"
+                  />
+                  <span className="text-slate-500 text-[10px]">yrs</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-400 text-[10px]">Variable Shock</span>
+                  <span className={`font-mono font-bold text-[10px] ${rateShockPct === 0 ? 'text-slate-400' : 'text-amber-400'}`}>
+                    {rateShockPct > 0 ? `+${rateShockPct}%` : `${rateShockPct}%`}
+                  </span>
+                </div>
+                <div className="flex items-center bg-slate-900 border border-slate-750 rounded px-2 py-1">
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="-1"
+                    max="5"
+                    value={isRateShockFocused ? rateShockText : rateShockPct}
+                    onFocus={() => setIsRateShockFocused(true)}
+                    onBlur={() => {
+                      setIsRateShockFocused(false);
+                      const parsed = parseFloat(rateShockText);
+                      if (isNaN(parsed)) {
+                        setRateShockText(String(rateShockPct));
+                      } else {
+                        const clamped = Math.min(5, Math.max(-1, parsed));
+                        setRateShockText(String(clamped));
+                        handleRateShockChange(clamped);
+                      }
+                    }}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setRateShockText(raw);
+                      const parsed = parseFloat(raw);
+                      if (!isNaN(parsed) && parsed >= -1 && parsed <= 5) {
+                        handleRateShockChange(parsed);
+                      }
+                    }}
+                    className="w-full bg-transparent text-amber-300 font-mono text-xs focus:outline-none"
+                  />
+                  <span className="text-slate-500 text-[10px]">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-[10px] text-slate-400 flex justify-between items-center font-mono">
+              <span className="text-slate-500">Post-lock rate:</span>
+              <span className="text-emerald-400 font-bold">{(mortgageRate * 100 + rateShockPct).toFixed(2)}%</span>
+            </div>
+          </div>
 
           {/* 5. Ireland Rent Inflation (RPZ) */}
           <SliderControl
