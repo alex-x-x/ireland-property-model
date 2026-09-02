@@ -121,7 +121,7 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
               </div>
               {marketData?.closeDate && (
                 <p className="mt-1 text-[11px] text-sky-300 font-mono">
-                  Market Close Date: {marketData.closeDate} (Synced daily after US market close via GitHub Actions)
+                  Market Close Date: {marketData.closeDate} {import.meta.env.DEV ? '(Local snapshot: public/market-data.json)' : '(Synced daily after US close via GitHub Actions)'}
                 </p>
               )}
               {marketData?.errorMessage && (
