@@ -2,6 +2,7 @@ import React, { useState, useEffect, useTransition, memo, useCallback } from 're
 import { Sliders } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import { InfoTooltip } from './InfoTooltip';
+import { targetFxToYearlyDrift, yearlyDriftToTargetFx, getFxMilestones } from '../engine/currency';
 
 interface SidebarProps {
   config: SimulationConfig;
@@ -161,7 +162,268 @@ const SliderControl: React.FC<SliderControlProps> = memo(({
   );
 });
 
+interface CurrencyDriftControlProps {
+  yearlyDrift: number;
+  spotEurPerUsd: number;
+  onChange: (drift: number) => void;
+}
+
+const CurrencyDriftControl: React.FC<CurrencyDriftControlProps> = memo(({
+  yearlyDrift,
+  spotEurPerUsd,
+  onChange,
+}) => {
+  const [mode, setMode] = useState<'target' | 'drift'>('target');
+  const spotUsdPerEur = spotEurPerUsd > 0 ? 1 / spotEurPerUsd : 1.1111;
+  const currentTarget5Y = yearlyDriftToTargetFx(yearlyDrift, spotEurPerUsd, 5);
+
+  const [textVal, setTextVal] = useState<string>(
+    mode === 'target' ? currentTarget5Y.toFixed(2) : (yearlyDrift * 100).toFixed(1)
+  );
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTextVal(
+        mode === 'target'
+          ? currentTarget5Y.toFixed(2)
+          : (yearlyDrift * 100).toFixed(1)
+      );
+    }
+  }, [currentTarget5Y, yearlyDrift, mode, isFocused]);
+
+  const milestones = getFxMilestones(yearlyDrift, spotEurPerUsd);
+
+  const handleTargetSliderChange = (targetVal: number) => {
+    const computedDrift = targetFxToYearlyDrift(targetVal, spotEurPerUsd, 5);
+    onChange(computedDrift);
+  };
+
+  const handleDriftSliderChange = (driftVal: number) => {
+    onChange(driftVal);
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setTextVal(raw);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed)) {
+      if (mode === 'target') {
+        if (parsed > 0) {
+          onChange(targetFxToYearlyDrift(parsed, spotEurPerUsd, 5));
+        }
+      } else {
+        onChange(parsed / 100);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const parsed = parseFloat(textVal);
+    if (isNaN(parsed)) {
+      setTextVal(
+        mode === 'target'
+          ? currentTarget5Y.toFixed(2)
+          : (yearlyDrift * 100).toFixed(1)
+      );
+    } else {
+      setTextVal(parsed.toFixed(mode === 'target' ? 2 : 1));
+    }
+  };
+
+  const quickPills = [
+    { label: 'Parity ($1.00)', target: 1.00 },
+    { label: `Today ($${spotUsdPerEur.toFixed(2)})`, target: spotUsdPerEur },
+    { label: 'Fair ($1.18)', target: 1.18 },
+    { label: 'Weak $ ($1.25)', target: 1.25 },
+  ];
+
+  return (
+    <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2.5">
+      {/* Header with Mode Toggle and Input */}
+      <div className="flex justify-between items-center text-slate-300 font-medium">
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-200 text-xs font-bold tracking-tight">EUR/USD Drift</span>
+          <InfoTooltip
+            title="EUR/USD Currency Drift & 5-Year Target"
+            content={
+              <div className="space-y-1.5 text-xs">
+                <p>
+                  Controls the projected exchange rate between EUR and USD applied to your USD Google stock & USD cash.
+                </p>
+                <p>
+                  Set your expected <strong>5-Year Target EUR/USD rate</strong> (e.g. $1.18 per €1) or switch to <strong>Annual Drift %</strong>.
+                </p>
+                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
+                  <div className="text-rose-300 font-semibold">
+                    Target &gt; Today (e.g. $1.20): USD Weakens
+                  </div>
+                  <div className="text-slate-400 pl-2">
+                    Stock converts to fewer Euros, reducing wait advantage.
+                  </div>
+                  <div className="text-emerald-300 font-semibold pt-0.5">
+                    Target &lt; Today (e.g. $1.00): USD Strengthens
+                  </div>
+                  <div className="text-slate-400 pl-2">
+                    Stock converts to more Euros, boosting deposit power.
+                  </div>
+                </div>
+              </div>
+            }
+          />
+        </div>
+
+        {/* Mode Toggle & Input */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700 text-[10px] font-semibold">
+            <button
+              type="button"
+              onClick={() => setMode('target')}
+              className={`px-1.5 py-0.5 rounded transition-all ${
+                mode === 'target'
+                  ? 'bg-brand-600 text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Set terminal 5-year target exchange rate"
+            >
+              5Y Rate
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('drift')}
+              className={`px-1.5 py-0.5 rounded transition-all ${
+                mode === 'drift'
+                  ? 'bg-brand-600 text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Set annual percentage drift rate"
+            >
+              % p.a.
+            </button>
+          </div>
+
+          <div className="flex items-center px-2 py-0.5 rounded border border-slate-700 bg-slate-800 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-500/40">
+            {mode === 'target' && (
+              <span className="font-mono font-bold text-xs text-slate-400 mr-0.5">$</span>
+            )}
+            <input
+              type="number"
+              step={mode === 'target' ? 0.01 : 0.1}
+              value={textVal}
+              onChange={handleTextChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={handleBlur}
+              className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              title={mode === 'target' ? '5-Year Target EUR/USD rate' : 'Annual drift %'}
+            />
+            {mode === 'drift' && (
+              <span className="font-mono font-bold text-xs text-slate-400 ml-0.5">%</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Scenario Quick-Pill Chips */}
+      <div className="grid grid-cols-4 gap-1">
+        {quickPills.map((pill) => {
+          const isSelected = Math.abs(currentTarget5Y - pill.target) < 0.01;
+          return (
+            <button
+              key={pill.label}
+              type="button"
+              onClick={() => handleTargetSliderChange(pill.target)}
+              className={`text-[10px] py-1 px-1 rounded border text-center font-medium transition-all ${
+                isSelected
+                  ? 'bg-brand-900/60 border-brand-500 text-brand-200 font-bold'
+                  : 'bg-slate-800/80 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              {pill.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Slider */}
+      {mode === 'target' ? (
+        <div className="space-y-1">
+          <input
+            type="range"
+            min={0.95}
+            max={1.30}
+            step={0.01}
+            value={currentTarget5Y}
+            onChange={(e) => handleTargetSliderChange(parseFloat(e.target.value))}
+            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500"
+          />
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+            <span>$0.95 (Strong $)</span>
+            <span>${spotUsdPerEur.toFixed(2)} (Spot)</span>
+            <span>$1.30 (Weak $)</span>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <input
+            type="range"
+            min={-0.05}
+            max={0.05}
+            step={0.005}
+            value={yearlyDrift}
+            onChange={(e) => handleDriftSliderChange(parseFloat(e.target.value))}
+            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-slate-400"
+          />
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+            <span>-5% (USD Weaker)</span>
+            <span>0%</span>
+            <span>+5% (USD Stronger)</span>
+          </div>
+        </div>
+      )}
+
+      {/* Trajectory Milestone Strip */}
+      <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800/80 space-y-1.5 text-[11px]">
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 text-[10px] font-semibold uppercase">Implied Annual Drift:</span>
+          <span
+            className={`font-mono font-bold ${
+              Math.abs(yearlyDrift) < 0.001
+                ? 'text-slate-300'
+                : yearlyDrift < 0
+                ? 'text-rose-400'
+                : 'text-emerald-400'
+            }`}
+          >
+            {yearlyDrift > 0 ? '+' : ''}
+            {(yearlyDrift * 100).toFixed(1)}% p.a.{' '}
+            <span className="text-[10px] font-normal text-slate-400">
+              ({yearlyDrift < -0.001 ? 'USD weakens' : yearlyDrift > 0.001 ? 'USD strengthens' : 'flat'})
+            </span>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1 text-center font-mono text-[10px]">
+          <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
+            <span className="text-slate-400 block text-[9px]">Today</span>
+            <span className="font-bold text-slate-200">${milestones.now.toFixed(2)}</span>
+          </div>
+          <div className="bg-amber-950/30 p-1 rounded border border-amber-500/30">
+            <span className="text-amber-400 block text-[9px]">Month 24</span>
+            <span className="font-bold text-amber-300">${milestones.year2.toFixed(2)}</span>
+          </div>
+          <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
+            <span className="text-slate-400 block text-[9px]">Year 5</span>
+            <span className="font-bold text-slate-200">${milestones.year5.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
+
   const [, startTransition] = useTransition();
 
   // Local state for immediate slider feedback
@@ -360,45 +622,14 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
             onChange={handleRentChange}
           />
 
-          {/* 6. EUR/USD Drift */}
-          <SliderControl
-            label="EUR/USD Spot Drift (p.a.)"
-            tooltipTitle="EUR/USD Currency Drift"
-            tooltipContent={
-              <div className="space-y-1.5">
-                <p>
-                  Annual percentage shift in the USD/EUR exchange rate applied to USD-denominated assets (Google stock & USD cash).
-                </p>
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
-                  <div className="text-rose-300 font-semibold">
-                    ⬅ Move Left (&lt; 0%): USD Weakens / EUR Rises
-                  </div>
-                  <div className="text-slate-400 pl-2">
-                    USD-denominated stock converts into <strong>fewer Euros</strong>, reducing your Irish purchasing power.
-                  </div>
-                  <div className="text-emerald-300 font-semibold pt-0.5">
-                    ➡ Move Right (&gt; 0%): USD Strengthens / EUR Drops
-                  </div>
-                  <div className="text-slate-400 pl-2">
-                    USD stock converts into <strong>more Euros</strong>, boosting your deposit.
-                  </div>
-                </div>
-                <p className="text-[10px] text-brand-300/90 pt-0.5">
-                  📌 <strong>Past Year Reference:</strong> EUR/USD traded between ~1.04 and ~1.12 (~±3% to ±5% annual swing) based on ECB vs US Fed interest rate differentials.
-                </p>
-              </div>
-            }
-            value={driftRate}
-            min={-0.05}
-            max={0.05}
-            step={0.005}
-            inputStep={0.1}
-            precision={1}
-            colorTheme="slate"
-            ticks={['-5% (USD Weaker)', '0%', '+5% (USD Stronger)']}
+          {/* 6. EUR/USD Drift & 5-Year Target */}
+          <CurrencyDriftControl
+            yearlyDrift={driftRate}
+            spotEurPerUsd={config.macro.eur_usd_spot}
             onChange={handleDriftChange}
           />
         </div>
+
       </div>
     </aside>
   );
