@@ -2,7 +2,7 @@ import { SimulationConfig } from './types';
 
 export const DEFAULT_CONFIG: SimulationConfig = {
   meta: {
-    start_date: '2026-09-01',
+    start_date: '2026-08-29',
     forecast_months: 60,
     stock_symbol: 'GOOGL',
   },
