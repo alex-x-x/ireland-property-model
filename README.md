@@ -2,7 +2,7 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-alex--x--x.github.io%2Fireland--property--model-emerald?style=for-the-badge&logo=githubpages&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
 [![Privacy: 100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20Client--Side-emerald?style=for-the-badge&logo=shield&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
-[![Tests](https://img.shields.io/badge/tests-114%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
+[![Tests](https://img.shields.io/badge/tests-135%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-38bdf8)](https://tailwindcss.com/)
