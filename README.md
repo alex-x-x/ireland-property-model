@@ -13,8 +13,15 @@
 > 
 > 🔒 **100% Client-Side & Private:** All financial simulations, Irish marginal tax (52%) calculations, GSU schedules, and mortgage amortization algorithms execute **entirely within your browser's local JavaScript runtime**. Zero salary, net worth, equity grants, or personal financial inputs are ever transmitted to any remote server or backend.
 > 
-> **An interactive, real-time financial simulation engine to answer the core tech compensation dilemma:**  
-> *"Should I buy Irish real estate as soon as I hit the minimum deposit threshold, or keep renting to let unvested Google Stock Units (GSUs) and equity investments compound?"*
+> **An interactive, real-time financial simulation engine to answer the core tech compensation dilemmas:**  
+> 1. *"Should I buy Irish real estate as soon as I hit the minimum deposit threshold, or keep renting to let unvested Google Stock Units (GSUs) and equity investments compound?"*
+> 2. *"Once I decide to buy, what is the optimal mortgage and deposit strategy along the 2D Pareto Frontier to balance Lifetime Interest Paid against 5-Year Terminal Net Wealth?"*
+
+### ✨ Key Core Capabilities
+* 📈 **60-Month Trajectory Simulation:** Segregated monthly compounding across Cash, Index ETFs, and GSUs (Google 33/33/22/12 & 25/25/25/25 schedules after Irish 52% marginal tax).
+* 🗺️ **2D Sensitivity Heatmap & Hurdle Rate:** 72 macroeconomic scenarios with dynamic rate injection, exact indifference hurdle rates, and `Optimal` / `Wait 12M` / `Wait 24M` / `Wait 36M` / `Rent 5Y` comparison modes.
+* 📐 **2D Pareto Frontier Optimizer (Interest vs. Net Wealth):** Evaluates hundreds of candidate debt permutations across deposit ratios, terms, and cashflow-derived overpayments to map the non-dominated Pareto frontier and 4 curated strategy archetypes.
+* 🏦 **Mortgage Studio & Amortization Ledger:** Fixed-rate lockout periods (default 2Y), Central Bank variable rate shocks, March bonus lump-sum paydowns, and full downloadable ledger schedules.
 
 ---
 
@@ -50,7 +57,7 @@ For tech professionals in Ireland (at Alphabet, Meta, Microsoft, AWS, Stripe, an
    * In Ireland, every stock vesting milestone is subject to **52% marginal tax** (40% Income Tax + 8% USC + 4% PRSI) via automatic sell-to-cover.
 
 **What This Application Solves:**  
-This application builds a month-by-month mathematical simulation across **60 consecutive months (5-Year Horizon)** to compare your total net wealth (Liquid Assets + Home Equity) across different purchase timelines ($t=0$, $t=12\text{m}$, $t=24\text{m}$, $t=36\text{m}$, or renting all 60m) to give an **evidence-based, mathematically proven recommendation**.
+This application builds a month-by-month mathematical simulation across **60 consecutive months (5-Year Horizon)** to compare your total net wealth (Liquid Assets + Home Equity) across different purchase timelines ($t=0$, $t=12\text{m}$, $t=24\text{m}$, $t=36\text{m}$, or renting all 60m) and solves the debt structure along the **2D Pareto Frontier** to give an **evidence-based, mathematically proven recommendation**.
 
 ---
 
@@ -83,7 +90,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Command | Description |
 |---|---|
 | `npm run dev` | Runs the Vite development server with hot module reloading and CORS proxy |
-| `npm test` | Runs the complete Vitest test suite (95 mathematical & integration unit tests) |
+| `npm test` | Runs the complete Vitest test suite (135 mathematical & integration unit tests) |
 | `npm test:watch` | Runs Vitest in interactive watch mode |
 | `npm run build` | Typechecks with `tsc -b` and produces a production bundle in `dist/` |
 | `npm run preview` | Serves the production build locally |
@@ -92,9 +99,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🎯 How to Use This Model to Make Your Decision
 
-Follow this **4-step decision-making playbook** to transform complex financial trade-offs into an actionable, evidence-based roadmap.
+Follow this **5-step decision-making playbook** to transform complex financial trade-offs into an actionable, evidence-based roadmap.
 
-### 📋 The 4-Step Decision Playbook
+### 📋 The 5-Step Decision Playbook
 
 ```
 ┌────────────────────────────────┐     ┌────────────────────────────────┐
@@ -109,6 +116,13 @@ Follow this **4-step decision-making playbook** to transform complex financial t
 │  Compare Year-5 Net Wealth     │     │  Find Breakeven Stock Growth   │
 │  across Buy vs Wait scenarios. │     │  Rate between Buy vs Wait.     │
 └────────────────────────────────┘     └────────────────────────────────┘
+                                                       │
+                                                       ▼
+                                       ┌────────────────────────────────┐
+                                       │  Step 5: Optimize Debt (Pareto)│
+                                       │  Pick Curated Archetype on 2D  │
+                                       │  Interest vs Wealth Frontier.  │
+                                       └────────────────────────────────┘
 ```
 
 1. **Step 1: Set Your Personal Facts & Lock Your Profile**
@@ -123,6 +137,14 @@ Follow this **4-step decision-making playbook** to transform complex financial t
 4. **Step 4: Stress-Test on the 2D Heatmap (Find Your Breakeven Rate)**
    * Scan the **2D Sensitivity Heatmap** to locate the boundary between **WAIT & COMPOUND (Emerald)** and **BUY NOW (Brand Amber)**.
    * Check your **Indifference Hurdle Rate Banner** at the top of the grid: It calculates the exact stock return (e.g. $+9.9\%/\text{yr}$) needed to justify waiting given your assumed Irish property inflation.
+5. **Step 5: Optimize Your Mortgage Structure on the 2D Pareto Frontier**
+   * Once you choose a purchase month, consult the **2D Pareto Frontier (Lifetime Interest Paid vs. Terminal Net Wealth M60)**.
+   * Choose among the 4 curated strategy archetypes:
+     * 🏆 **Wealth Maximizer:** Minimizes cash down, maximizes liquid equity compounding.
+     * 🌿 **Green Arbitrageur:** Unlocks Irish $\le 80\%$ LTV discounted Green rates.
+     * 🎯 **Balanced Sweet Spot:** Knee of the Pareto curve (highest marginal wealth per euro of interest paid).
+     * 🛡️ **Debt-Free Crusher:** Aggressive cashflow-derived overpayments to extinguish debt early.
+   * Set your **Comfortable Monthly Ceiling** to filter out over-budget options and check the **Pre-Tax Stock Hurdle Rate** to verify if equity investing beats mortgage prepayments.
 
 ---
 
