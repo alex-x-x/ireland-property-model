@@ -183,7 +183,7 @@ async function main() {
 
   const finalPayload = {
     stockSymbol: 'GOOGL',
-    closePriceUsd: stockResult?.closePrice ?? existing?.closePriceUsd ?? 182.50,
+    closePriceUsd: stockResult?.closePrice ?? existing?.closePriceUsd ?? 334.00,
     closeDate: stockResult?.closeDate ?? existing?.closeDate ?? new Date().toISOString().split('T')[0],
     stockSource: stockResult?.source ?? existing?.stockSource ?? 'Committed Static Baseline',
     eurUsdRate: fxResult?.rate ?? existing?.eurUsdRate ?? 0.8600,
