@@ -37,6 +37,7 @@ export interface MortgageConfig {
   fixed_rate_years?: number; // Fixed rate period (e.g. 2 for 2-year fix)
   monthly_overpayment_eur?: number;
   annual_lump_sum_eur?: number;
+  max_contractual_monthly_payment_eur?: number | null;
 }
 
 export interface LiquidAssetsConfig {

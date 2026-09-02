@@ -618,6 +618,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
         currentMonthlyOverpayment={monthlyOverpayment}
         currentAnnualLumpSum={annualLumpSum}
         onApplyStrategy={handleApplyOptimizedStrategy}
+        onChange={onChange}
       />
 
       {/* 4. Irish Fixed-Rate Overpayment Simulator & Cashflow Integration */}
