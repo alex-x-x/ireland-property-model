@@ -60,6 +60,15 @@ describe('Market Data Service', () => {
     expect(parsed?.stockPriceUsd).toBe(184.25);
     expect(parsed?.closeDate).toBe('2026-09-01');
     expect(parsed?.eurUsdRate).toBe(0.8612);
+
+    // Matches GOOG (Class C) as well for Alphabet
+    const parsedGoog = parseMarketSnapshot(snapshotPayload, 'GOOG');
+    expect(parsedGoog).not.toBeNull();
+    expect(parsedGoog?.stockPriceUsd).toBe(184.25);
+
+    // Returns null for unrelated ticker
+    const parsedAapl = parseMarketSnapshot(snapshotPayload, 'AAPL');
+    expect(parsedAapl).toBeNull();
   });
 
   it('correctly detects stale vs fresh market data based on 24-hour TTL', () => {
