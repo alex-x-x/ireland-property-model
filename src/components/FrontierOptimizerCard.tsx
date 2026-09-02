@@ -635,8 +635,20 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                   <span className="text-slate-500">Bonus Lump:</span>
                   <span>{formatK(curated.sweetSpot.candidate.annualBonusLumpSum)}/yr</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Safety Score:</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 flex items-center gap-1">
+                    Safety Score:
+                    <InfoTooltip
+                      title="🛡️ Household Safety Score (0–100)"
+                      content={
+                        <div className="space-y-1.5 text-[11px]">
+                          <p>Composite financial resilience index evaluated at purchase date:</p>
+                          <p><strong>• Emergency Runway (max 50 pts):</strong> Months of living costs + mortgage covered by remaining liquid assets post-purchase (6+ months = 50 pts).</p>
+                          <p><strong>• Cashflow Buffer (max 50 pts):</strong> Free uncommitted monthly cashflow margin after living costs &amp; mortgage payment (€1,200+/mo = 50 pts).</p>
+                        </div>
+                      }
+                    />
+                  </span>
                   <span className="text-emerald-400 font-bold">{curated.sweetSpot.safetyScore}/100</span>
                 </div>
               </div>
@@ -899,8 +911,14 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                           <span>Payoff Duration:</span>
                           <span>{(res.actualPayoffMonths / 12).toFixed(1)} yrs</span>
                         </div>
-                        <div className="flex justify-between text-sky-300">
-                          <span>Safety Score:</span>
+                        <div
+                          className="flex justify-between text-sky-300"
+                          title="Household Safety Score (0–100): Combines post-purchase emergency runway (up to 6 months = 50 pts) and free monthly cashflow buffer (up to €1,200/mo = 50 pts)"
+                        >
+                          <span className="flex items-center gap-1 cursor-help">
+                            Safety Score
+                            <span className="text-[10px] text-slate-400 font-sans">ⓘ</span>:
+                          </span>
                           <span>{res.safetyScore} / 100</span>
                         </div>
                       </div>
