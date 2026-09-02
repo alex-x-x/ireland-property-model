@@ -200,25 +200,26 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               : 'bg-slate-850 border-slate-750 hover:border-purple-500/30'
           }`}>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-purple-400" />
-                  <span className="font-bold text-white text-xs">🏆 Wealth Maximizer</span>
-                  <InfoTooltip
-                    title="🏆 Wealth Maximizer Strategy"
-                    content={
-                      <div className="space-y-1.5 text-[11px]">
-                        <p><strong>Goal:</strong> Maximize total balance sheet net worth by Month 60.</p>
-                        <p><strong>Mechanism:</strong> Keeps maximum capital invested in high-return assets (Alphabet GSUs, global ETFs) rather than sinking all cash into upfront deposits or overpayments.</p>
-                        <p className="text-purple-300"><strong>Best When:</strong> Expected post-tax equity CAGR beats your mortgage interest rate (&gt; {(hurdleRateStockCrossover * 100).toFixed(1)}% pre-tax).</p>
-                        <p className="text-slate-400"><strong>Trade-off:</strong> Takes full {curated.wealthMaximizer.candidate.termYears} years to pay off, incurring more lifetime debt interest in exchange for higher asset compounding.</p>
-                      </div>
-                    }
-                  />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Award className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span className="font-bold text-white text-xs truncate">Wealth Maximizer</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Max Net Worth
-                </span>
+                <InfoTooltip
+                  title="🏆 Wealth Maximizer Strategy"
+                  content={
+                    <div className="space-y-1.5 text-[11px]">
+                      <p><strong>Goal:</strong> Maximize total balance sheet net worth by Month 60.</p>
+                      <p><strong>Mechanism:</strong> Keeps maximum capital invested in high-return assets (Alphabet GSUs, global ETFs) rather than sinking all cash into upfront deposits or overpayments.</p>
+                      <p className="text-purple-300"><strong>Best When:</strong> Expected post-tax equity CAGR beats your mortgage interest rate (&gt; {(hurdleRateStockCrossover * 100).toFixed(1)}% pre-tax).</p>
+                      <p className="text-slate-400"><strong>Trade-off:</strong> Takes full {curated.wealthMaximizer.candidate.termYears} years to pay off, incurring more lifetime debt interest in exchange for higher asset compounding.</p>
+                    </div>
+                  }
+                >
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 cursor-help transition-colors whitespace-nowrap">
+                    Max Net Worth
+                  </span>
+                </InfoTooltip>
               </div>
 
               <div className="pt-1">
@@ -279,26 +280,27 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               : 'bg-slate-850 border-slate-750 hover:border-emerald-500/30'
           }`}>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-emerald-400" />
-                  <span className="font-bold text-white text-xs">🌿 Green Arbitrageur</span>
-                  <InfoTooltip
-                    title="🌿 Green LTV Arbitrageur Strategy"
-                    content={
-                      <div className="space-y-1.5 text-[11px]">
-                        <p><strong>Goal:</strong> Secure the bank's discounted Green Mortgage margin with minimum cash drag.</p>
-                        <p><strong>Mechanism:</strong> Allocates just enough deposit to qualify for the 80% or 70% LTV Green band ({curated.greenArbitrageur.candidate.interestRatePct.toFixed(2)}% rate), keeping the remainder of liquid funds free to compound.</p>
-                        {curated.wealthMaximizer?.candidate.id === curated.greenArbitrageur.candidate.id && (
-                          <p className="text-amber-300"><strong>Note:</strong> In this specific scenario, the 80% Green Tier loan delivers the highest overall wealth, so this recipe matches Wealth Maximizer.</p>
-                        )}
-                      </div>
-                    }
-                  />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Target className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="font-bold text-white text-xs truncate">Green Arbitrageur</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Rate Discount
-                </span>
+                <InfoTooltip
+                  title="🌿 Green LTV Arbitrageur Strategy"
+                  content={
+                    <div className="space-y-1.5 text-[11px]">
+                      <p><strong>Goal:</strong> Secure the bank's discounted Green Mortgage margin with minimum cash drag.</p>
+                      <p><strong>Mechanism:</strong> Allocates just enough deposit to qualify for the 80% or 70% LTV Green band ({curated.greenArbitrageur.candidate.interestRatePct.toFixed(2)}% rate), keeping the remainder of liquid funds free to compound.</p>
+                      {curated.wealthMaximizer?.candidate.id === curated.greenArbitrageur.candidate.id && (
+                        <p className="text-amber-300"><strong>Note:</strong> In this specific scenario, the 80% Green Tier loan delivers the highest overall wealth, so this recipe matches Wealth Maximizer.</p>
+                      )}
+                    </div>
+                  }
+                >
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 cursor-help transition-colors whitespace-nowrap">
+                    Rate Discount
+                  </span>
+                </InfoTooltip>
               </div>
 
               <div className="pt-1">
@@ -306,7 +308,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 <span className="text-base font-extrabold font-mono text-emerald-300">
                   {formatK(curated.greenArbitrageur.terminalNetWealthM60)}
                 </span>
-                <span className="text-[10px] text-slate-400 block font-mono">
+                <span className="text-[10px] text-slate-400 block font-mono truncate">
                   LTV: {curated.greenArbitrageur.candidate.ltvPct.toFixed(0)}% (Green Tier)
                   {curated.wealthMaximizer?.candidate.id === curated.greenArbitrageur.candidate.id && (
                     <span className="text-amber-300 ml-1 font-sans">• Matches #1</span>
@@ -362,24 +364,25 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               : 'bg-slate-850 border-slate-750 hover:border-indigo-500/30'
           }`}>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-400" />
-                  <span className="font-bold text-white text-xs">🎯 Sweet Spot</span>
-                  <InfoTooltip
-                    title="🎯 Algorithmic Sweet Spot (Knee Point)"
-                    content={
-                      <div className="space-y-1.5 text-[11px]">
-                        <p><strong>Goal:</strong> Achieve the highest marginal interest savings per extra euro committed without taking cashflow risks.</p>
-                        <p><strong>Mechanism:</strong> Identifies the bend ("knee") on the Pareto curve where overpaying yields maximum bang-for-buck before diminishing returns flatten the curve, weighted by a strict safety buffer.</p>
-                        <p className="text-emerald-300"><strong>Safety Score:</strong> {curated.sweetSpot.safetyScore}/100 based on liquid emergency runway & free cashflow margin.</p>
-                      </div>
-                    }
-                  />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="font-bold text-white text-xs truncate">Sweet Spot</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Knee Point
-                </span>
+                <InfoTooltip
+                  title="🎯 Algorithmic Sweet Spot (Knee Point)"
+                  content={
+                    <div className="space-y-1.5 text-[11px]">
+                      <p><strong>Goal:</strong> Achieve the highest marginal interest savings per extra euro committed without taking cashflow risks.</p>
+                      <p><strong>Mechanism:</strong> Identifies the bend ("knee") on the Pareto curve where overpaying yields maximum bang-for-buck before diminishing returns flatten the curve, weighted by a strict safety buffer.</p>
+                      <p className="text-emerald-300"><strong>Safety Score:</strong> {curated.sweetSpot.safetyScore}/100 based on liquid emergency runway & free cashflow margin.</p>
+                    </div>
+                  }
+                >
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-help transition-colors whitespace-nowrap">
+                    Knee Point
+                  </span>
+                </InfoTooltip>
               </div>
 
               <div className="pt-1">
@@ -440,48 +443,50 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               : 'bg-slate-850 border-slate-750 hover:border-sky-500/30'
           }`}>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="w-4 h-4 text-sky-400" />
-                  <span className="font-bold text-white text-xs">🛡️ Debt-Free Crusher</span>
-                  <InfoTooltip
-                    title="🛡️ Debt-Free Crusher Strategy"
-                    content={
-                      <div className="space-y-1.5 text-[11px]">
-                        <p><strong>Goal:</strong> Pay off the mortgage and become 100% debt-free as fast as humanly possible.</p>
-                        <p><strong>Mechanism:</strong> Maximizes upfront deposit, selects a shorter term, and channels discretionary free cashflow + annual bonus directly into principal reduction.</p>
-                        <p className="text-sky-300"><strong>Result:</strong> Minimizes lifetime bank interest paid (€{Math.round(curated.debtFreeAccelerator.totalLifetimeInterest / 1000)}k), saving {curated.debtFreeAccelerator.yearsSaved.toFixed(1)} years of payments.</p>
-                      </div>
-                    }
-                  />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TrendingDown className="w-4 h-4 text-sky-400 shrink-0" />
+                  <span className="font-bold text-white text-xs truncate">Debt-Free Crusher</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                  Fastest Payoff
-                </span>
+                <InfoTooltip
+                  title="🛡️ Debt-Free Crusher Strategy"
+                  content={
+                    <div className="space-y-1.5 text-[11px]">
+                      <p><strong>Goal:</strong> Pay off the mortgage and become 100% debt-free in the shortest possible timeframe.</p>
+                      <p><strong>Mechanism:</strong> Maximizes upfront deposit, selects a shorter term, and channels discretionary free cashflow + annual bonus directly into principal reduction.</p>
+                      <p className="text-sky-300"><strong>Result:</strong> Minimizes lifetime bank interest paid ({formatK(curated.debtFreeAccelerator.totalLifetimeInterest)}), saving {curated.debtFreeAccelerator.yearsSaved.toFixed(1)} years of debt service.</p>
+                      <p className="text-slate-400"><strong>Trade-off:</strong> Commits liquidity to guaranteed debt payoff instead of potential equity market compounding.</p>
+                    </div>
+                  }
+                >
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 cursor-help transition-colors whitespace-nowrap">
+                    Fastest Payoff
+                  </span>
+                </InfoTooltip>
               </div>
 
               <div className="pt-1">
-                <span className="text-[10px] text-slate-400 block">Debt-Free Duration</span>
+                <span className="text-[10px] text-slate-400 block">Terminal Net Wealth (M60)</span>
                 <span className="text-base font-extrabold font-mono text-sky-300">
-                  {(curated.debtFreeAccelerator.actualPayoffMonths / 12).toFixed(1)} yrs
+                  {formatK(curated.debtFreeAccelerator.terminalNetWealthM60)}
                 </span>
-                <span className="text-[10px] text-sky-400 block font-mono">
-                  Saves {curated.debtFreeAccelerator.yearsSaved.toFixed(1)} yrs
+                <span className="text-[10px] text-sky-400 block font-mono truncate">
+                  Debt-free in {(curated.debtFreeAccelerator.actualPayoffMonths / 12).toFixed(1)} yrs (Saves {curated.debtFreeAccelerator.yearsSaved.toFixed(1)} yrs)
                 </span>
               </div>
 
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1 text-slate-300">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Deposit:</span>
-                  <span>{formatK(curated.debtFreeAccelerator.candidate.depositAmount)}</span>
+                  <span>{formatK(curated.debtFreeAccelerator.candidate.depositAmount)} ({(curated.debtFreeAccelerator.candidate.depositPct * 100).toFixed(0)}%)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Payoff:</span>
+                  <span>{(curated.debtFreeAccelerator.actualPayoffMonths / 12).toFixed(1)} yrs</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Overpay:</span>
                   <span>+€{curated.debtFreeAccelerator.candidate.monthlyOverpayment}/mo</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Bonus Lump:</span>
-                  <span>{formatK(curated.debtFreeAccelerator.candidate.annualBonusLumpSum)}/yr</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Lifetime Int:</span>
