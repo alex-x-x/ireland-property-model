@@ -81,15 +81,17 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
         <div className="p-6 space-y-5">
           {/* Status Banner */}
           <div
-            className={`p-3.5 rounded-xl border flex items-start gap-3 ${
+            className={`p-3 rounded-xl border flex items-start gap-3 ${
               marketData?.status === 'live'
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : marketData?.status === 'prev_close'
+                ? 'bg-sky-500/10 border-sky-500/30 text-sky-300'
                 : marketData?.status === 'cached'
                 ? 'bg-sky-500/10 border-sky-500/30 text-sky-300'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
             }`}
           >
-            {marketData?.status === 'live' ? (
+            {marketData?.status === 'live' || marketData?.status === 'prev_close' ? (
               <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             ) : marketData?.status === 'cached' ? (
               <Radio className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -100,11 +102,18 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
               <div className="font-semibold capitalize">
                 {marketData?.status === 'live'
                   ? 'Live Public Feed Active'
+                  : marketData?.status === 'prev_close'
+                  ? 'Official Market Close Snapshot Active'
                   : marketData?.status === 'cached'
                   ? 'Cached Feed Active'
                   : 'Offline Benchmark / Fallback Mode'}
               </div>
               <p className="mt-0.5 opacity-90">{marketData?.source}</p>
+              {marketData?.closeDate && (
+                <p className="mt-1 text-[11px] text-sky-300 font-mono">
+                  Market Close Date: {marketData.closeDate} (Synced daily after US market close via GitHub Actions)
+                </p>
+              )}
               {marketData?.errorMessage && (
                 <p className="mt-1 text-[11px] text-amber-400/90 italic">{marketData.errorMessage}</p>
               )}
@@ -120,18 +129,28 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
                   className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-bold border ${
                     marketData?.stockStatus === 'live'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : marketData?.stockStatus === 'prev_close'
+                      ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
                       : marketData?.stockStatus === 'cached'
                       ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
                       : 'bg-slate-700 text-slate-400 border-slate-600'
                   }`}
                 >
-                  {marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}
+                  {marketData?.stockStatus === 'prev_close'
+                    ? 'PREV CLOSE'
+                    : marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}
                 </span>
               </div>
               <div className="text-xl font-bold text-white mt-1">
                 ${marketData?.stockPriceUsd?.toFixed(2) || '346.50'} <span className="text-xs font-normal text-slate-400">USD</span>
               </div>
-              {marketData?.historicalStockPriceUsd && (
+              {marketData?.stockStatus === 'prev_close' && marketData?.closeDate && (
+                <div className="text-[11px] text-sky-300 mt-1 flex items-center gap-1">
+                  <span>Close Date:</span>
+                  <span className="font-mono font-semibold">{marketData.closeDate}</span>
+                </div>
+              )}
+              {marketData?.historicalStockPriceUsd && marketData.stockStatus !== 'prev_close' && (
                 <div className="text-[11px] text-slate-400 mt-1">
                   Start Date Close: ${marketData.historicalStockPriceUsd.toFixed(2)}
                 </div>

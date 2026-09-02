@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build --base=/ireland-property-model/",
+    "sync-market-data": "node scripts/fetch-market-data.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

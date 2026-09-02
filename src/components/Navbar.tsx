@@ -169,7 +169,11 @@ export const Navbar: React.FC<NavbarProps> = memo(({
               title={
                 isOverrideActive
                   ? 'Manual rate override active. Click to view or toggle back to market feed.'
-                  : `Market Data Feeds:\n• ${config.meta.stock_symbol || 'GOOGL'}: $${config.equity_engine.current_share_price_usd?.toFixed(2)} [${marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}]\n• USD/EUR: €${config.macro.eur_usd_spot?.toFixed(4)} per $1 (1 EUR = $${(1 / (config.macro.eur_usd_spot || 0.86)).toFixed(3)}) [${marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'}]`
+                  : `Market Data Feeds:\n• ${config.meta.stock_symbol || 'GOOGL'}: $${config.equity_engine.current_share_price_usd?.toFixed(2)} [${
+                      marketData?.stockStatus === 'prev_close'
+                        ? `PREV CLOSE: ${marketData?.closeDate || 'Latest'} (Daily GitHub sync)`
+                        : marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'
+                    }]\n• USD/EUR: €${config.macro.eur_usd_spot?.toFixed(4)} per $1 (1 EUR = $${(1 / (config.macro.eur_usd_spot || 0.86)).toFixed(3)}) [${marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'}]`
               }
             >
               <Radio className={`w-3.5 h-3.5 ${isOverrideActive ? 'text-rose-400 animate-pulse' : 'text-emerald-400 animate-pulse'}`} />
@@ -178,16 +182,29 @@ export const Navbar: React.FC<NavbarProps> = memo(({
               <span className="flex items-center gap-1">
                 <span className="font-semibold text-white">{config.meta.stock_symbol || 'GOOGL'}:</span>
                 <span className="font-mono text-purple-300">${config.equity_engine.current_share_price_usd?.toFixed(1) || '346.5'}</span>
-                <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
-                  isOverrideActive
-                    ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
-                    : marketData?.stockStatus === 'live'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                    : marketData?.stockStatus === 'cached'
-                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}>
-                  {isOverrideActive ? 'OVERRIDE' : marketData?.stockStatus || 'BENCHMARK'}
+                <span
+                  className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
+                    isOverrideActive
+                      ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
+                      : marketData?.stockStatus === 'live'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : marketData?.stockStatus === 'prev_close'
+                      ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                      : marketData?.stockStatus === 'cached'
+                      ? 'bg-slate-700/60 text-slate-300 border-slate-600/50'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                  title={
+                    marketData?.stockStatus === 'prev_close'
+                      ? `Previous day market close price ($${config.equity_engine.current_share_price_usd?.toFixed(2)} as of ${marketData?.closeDate || 'latest close'}), synced daily after US market close.`
+                      : undefined
+                  }
+                >
+                  {isOverrideActive
+                    ? 'OVERRIDE'
+                    : marketData?.stockStatus === 'prev_close'
+                    ? 'PREV CLOSE'
+                    : marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'}
                 </span>
               </span>
 
