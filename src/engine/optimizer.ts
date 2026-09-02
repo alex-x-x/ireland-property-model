@@ -158,7 +158,8 @@ export function evaluateMortgageStrategy(
   candidate: MortgageStrategyCandidate,
   config: SimulationConfig,
   baseMonthlyPoints: MonthlyDataPoint[],
-  purchaseMonth: number
+  purchaseMonth: number,
+  maxMonthlyBudgetEur?: number
 ): MortgageStrategyResult {
   const { meta, property, mortgage, liquid_assets, equity_engine, macro, tax } = config;
   const forecastMonths = meta.forecast_months;
@@ -291,6 +292,12 @@ export function evaluateMortgageStrategy(
   const terminalLiquidWealthM60 = currentCash + currentInv + currentGsu;
   const terminalNetWealthM60 = terminalHomeEquityM60 + terminalLiquidWealthM60;
 
+  // Total monthly commitment & DSTI ratio
+  const totalMonthlyPayment = overpaymentResult.standardMonthlyPayment + candidate.monthlyOverpayment;
+  const netMonthlyIncome = taxBreakdown.netMonthlyTakeHome;
+  const dstiPct = netMonthlyIncome > 0 ? totalMonthlyPayment / netMonthlyIncome : 0;
+  const exceedsBudget = maxMonthlyBudgetEur !== undefined ? totalMonthlyPayment > maxMonthlyBudgetEur + 0.01 : false;
+
   // Household Safety Score (0 to 100)
   // Factors:
   // 1. Emergency runway: post-purchase liquid / monthly living + mortgage (up to 12 months = 50 pts)
@@ -307,6 +314,9 @@ export function evaluateMortgageStrategy(
     totalUpfrontPaid,
     postPurchaseLiquidLeft,
     monthlyMortgagePayment: overpaymentResult.standardMonthlyPayment,
+    totalMonthlyPayment,
+    dstiPct,
+    exceedsBudget,
     variableMonthlyPayment: overpaymentResult.variableMonthlyPayment,
     freeCashflowBuffer,
     scheduledPayoffMonths: overpaymentResult.scheduledPayoffMonths,
@@ -328,31 +338,37 @@ export function evaluateMortgageStrategy(
  * Objective 2: Maximize Terminal Net Wealth at Month 60
  */
 export function computeParetoFrontier(results: MortgageStrategyResult[]): MortgageStrategyResult[] {
-  const fundable = results.filter((r) => r.isFundable);
+  const fundable = results.filter((r) => r.isFundable && !r.exceedsBudget);
   if (fundable.length === 0) return [];
 
   const nonDominated: MortgageStrategyResult[] = [];
 
-  for (const a of fundable) {
+  for (let i = 0; i < fundable.length; i++) {
+    const a = fundable[i];
     let isDominated = false;
-    for (const b of fundable) {
-      if (a === b) continue;
-      // B dominates A if B has lower or equal interest AND higher or equal wealth AND at least one strictly better
+
+    for (let j = 0; j < fundable.length; j++) {
+      if (i === j) continue;
+      const b = fundable[j];
+
+      // B dominates A if B has <= Lifetime Interest AND >= Terminal Net Wealth,
+      // with at least one strict inequality.
       const bHasLessOrEqualInterest = b.totalLifetimeInterest <= a.totalLifetimeInterest;
       const bHasMoreOrEqualWealth = b.terminalNetWealthM60 >= a.terminalNetWealthM60;
-      const bStrictlyBetter =
-        b.totalLifetimeInterest < a.totalLifetimeInterest || b.terminalNetWealthM60 > a.terminalNetWealthM60;
+      const bIsStrictlyBetter =
+        b.totalLifetimeInterest < a.totalLifetimeInterest ||
+        b.terminalNetWealthM60 > a.terminalNetWealthM60;
 
-      if (bHasLessOrEqualInterest && bHasMoreOrEqualWealth && bStrictlyBetter) {
+      if (bHasLessOrEqualInterest && bHasMoreOrEqualWealth && bIsStrictlyBetter) {
         isDominated = true;
         break;
       }
     }
+
     if (!isDominated) {
-      nonDominated.push({
-        ...a,
-        isParetoOptimal: true,
-      });
+      // Create copy to assign property safely
+      const resultCopy = { ...a, isParetoOptimal: true };
+      nonDominated.push(resultCopy);
     }
   }
 
@@ -370,7 +386,7 @@ export function computeParetoFrontier(results: MortgageStrategyResult[]): Mortga
 export function identifyCuratedArchetypes(
   results: MortgageStrategyResult[]
 ): CuratedStrategies {
-  const fundable = results.filter((r) => r.isFundable);
+  const fundable = results.filter((r) => r.isFundable && !r.exceedsBudget);
   if (fundable.length === 0) {
     return {
       wealthMaximizer: null,
@@ -410,11 +426,19 @@ export function identifyCuratedArchetypes(
   // Maximizes marginal interest saved per euro committed, penalized if safety score is poor
   const minDepositCandidate = fundable.find((r) => r.candidate.strategyType === 'min_deposit') || fundable[0];
   const sweetSpot = fundable.reduce((best, curr) => {
-    const extraCapital = Math.max(1, curr.totalUpfrontPaid - minDepositCandidate.totalUpfrontPaid);
+    const upfrontDelta = Math.max(0, curr.totalUpfrontPaid - minDepositCandidate.totalUpfrontPaid);
+    const extraCapital = Math.max(
+      1,
+      upfrontDelta + curr.candidate.monthlyOverpayment * 12 * 5 + curr.candidate.annualBonusLumpSum * 5
+    );
     const interestSaved = Math.max(0, minDepositCandidate.totalLifetimeInterest - curr.totalLifetimeInterest);
     const marginalEfficiency = (interestSaved / extraCapital) * (curr.safetyScore / 100);
 
-    const bestExtra = Math.max(1, best.totalUpfrontPaid - minDepositCandidate.totalUpfrontPaid);
+    const bestUpfrontDelta = Math.max(0, best.totalUpfrontPaid - minDepositCandidate.totalUpfrontPaid);
+    const bestExtra = Math.max(
+      1,
+      bestUpfrontDelta + best.candidate.monthlyOverpayment * 12 * 5 + best.candidate.annualBonusLumpSum * 5
+    );
     const bestSaved = Math.max(0, minDepositCandidate.totalLifetimeInterest - best.totalLifetimeInterest);
     const bestEfficiency = (bestSaved / bestExtra) * (best.safetyScore / 100);
 
@@ -429,27 +453,65 @@ export function identifyCuratedArchetypes(
   };
 }
 
+export const BUDGET_EPSILON_EUR = 0.01;
+
 /**
- * Main entrance to run full multidimensional mortgage and terminal net wealth optimization.
+ * Stage 1: Generates and executes 60-month amortization and wealth trajectory simulation
+ * for all candidate strategies. Depends strictly on macro config and selected purchase month.
  */
-export function runMortgageOptimization(
+export function evaluateAllCandidateStrategies(
   config: SimulationConfig,
   purchaseMonth: number,
   baseMonthlyPoints: MonthlyDataPoint[]
-): OptimizationAnalysis {
+): MortgageStrategyResult[] {
   const activePoint = baseMonthlyPoints[purchaseMonth] || baseMonthlyPoints[0];
   const candidates = generateCandidateStrategies(config, activePoint);
   const minDepositBaseline = candidates.find((c) => c.strategyType === 'min_deposit') || candidates[0];
   const baselineResult = evaluateMortgageStrategy(minDepositBaseline, config, baseMonthlyPoints, purchaseMonth);
 
-  const allResults = candidates.map((c) => {
+  return candidates.map((c) => {
     const res = evaluateMortgageStrategy(c, config, baseMonthlyPoints, purchaseMonth);
     res.wealthDeltaVsMinDeposit = res.terminalNetWealthM60 - baselineResult.terminalNetWealthM60;
     return res;
   });
+}
 
-  const paretoFrontier = computeParetoFrontier(allResults);
-  const curated = identifyCuratedArchetypes(allResults);
+/**
+ * Stage 2: Fast budget filtering, Pareto frontier extraction, and archetype curation.
+ * Executes in <0.1ms, enabling 60fps instant UI updates when scrubbing budget sliders.
+ */
+export function applyOptimizationBudgetFilter(
+  allResults: MortgageStrategyResult[],
+  config: SimulationConfig,
+  purchaseMonth: number,
+  baseMonthlyPoints: MonthlyDataPoint[],
+  maxMonthlyBudgetEur?: number
+): OptimizationAnalysis {
+  const activePoint = baseMonthlyPoints[purchaseMonth] || baseMonthlyPoints[0];
+  const activeSalary = getSalaryAtDate(activePoint.date, config.mortgage);
+  const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, config.tax);
+  const netMonthlyIncomeEur = taxBreakdown.netMonthlyTakeHome;
+
+  const hasBudgetLimit = typeof maxMonthlyBudgetEur === 'number' && maxMonthlyBudgetEur > 0;
+
+  // 1. Flag budget compliance
+  const evaluatedResults = allResults.map((r) => ({
+    ...r,
+    exceedsBudget: hasBudgetLimit ? r.totalMonthlyPayment > maxMonthlyBudgetEur + BUDGET_EPSILON_EUR : false,
+    isParetoOptimal: false,
+  }));
+
+  const compliantResults = evaluatedResults.filter((r) => r.isFundable && !r.exceedsBudget);
+  const paretoFrontier = computeParetoFrontier(compliantResults);
+  const curated = identifyCuratedArchetypes(compliantResults);
+
+  // 2. Mark isParetoOptimal on matching items in evaluatedResults for scatter rendering & tooltips
+  const paretoIds = new Set(paretoFrontier.map((p) => p.candidate.id));
+  for (const item of evaluatedResults) {
+    if (paretoIds.has(item.candidate.id)) {
+      item.isParetoOptimal = true;
+    }
+  }
 
   const hurdle = calculateStockHurdleRate(config.mortgage.mortgage_interest_rate);
 
@@ -457,10 +519,28 @@ export function runMortgageOptimization(
     purchaseMonth,
     purchaseDate: activePoint.date,
     propertyPrice: activePoint.propertyPrice,
-    allResults,
+    maxMonthlyBudgetEur: hasBudgetLimit ? maxMonthlyBudgetEur : undefined,
+    netMonthlyIncomeEur,
+    allResults: evaluatedResults,
+    compliantResults,
     paretoFrontier,
     curated,
     hurdleRateStockCrossover: hurdle.preTaxStockGrowthRate,
     activeMortgageRate: config.mortgage.mortgage_interest_rate,
   };
 }
+
+/**
+ * Main entrance to run full multidimensional mortgage and terminal net wealth optimization.
+ */
+export function runMortgageOptimization(
+  config: SimulationConfig,
+  purchaseMonth: number,
+  baseMonthlyPoints: MonthlyDataPoint[],
+  maxMonthlyBudgetEur?: number
+): OptimizationAnalysis {
+  const allResults = evaluateAllCandidateStrategies(config, purchaseMonth, baseMonthlyPoints);
+  return applyOptimizationBudgetFilter(allResults, config, purchaseMonth, baseMonthlyPoints, maxMonthlyBudgetEur);
+}
+
+
