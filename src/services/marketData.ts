@@ -206,21 +206,47 @@ export async function fetchMarketData(
   }
 
   // 3. Fetch Stock Price
-  // 3a. In local Vite development mode, try the local dev proxy first for real-time intraday quotes
+  // 3a. In local Vite development mode, try local dev proxies (Stooq & Yahoo)
   if (typeof window !== 'undefined' && (import.meta as any)?.env?.DEV) {
+    // 3a.1. Try Stooq dev proxy first (no crumbs, no GDPR consent walls)
     try {
-      const devProxyUrl = `/api/yahoo/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
-      const devResp = await fetch(devProxyUrl, { signal: AbortSignal.timeout(3000) });
-      if (devResp.ok) {
-        const devData = await devResp.json();
-        const regularMarketPrice = devData?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (regularMarketPrice) {
-          liveStockPrice = Number(regularMarketPrice);
-          sources.push(`Yahoo Finance Live Proxy (${symbol})`);
+      const cleanSym = symbol.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stooqSymbol = `${cleanSym}.us`;
+      const stooqUrl = `/api/stooq/q/l/?s=${encodeURIComponent(stooqSymbol)}&f=sd2t2ohlcv&h&e=csv`;
+      const stooqResp = await fetch(stooqUrl, { signal: AbortSignal.timeout(3500) });
+      if (stooqResp.ok) {
+        const text = await stooqResp.text();
+        const lines = text.trim().split('\n');
+        if (lines.length >= 2) {
+          const cols = lines[1].split(',');
+          // Columns: Symbol,Date,Time,Open,High,Low,Close,Volume
+          const closeVal = parseFloat(cols[6]);
+          if (!isNaN(closeVal) && closeVal > 0) {
+            liveStockPrice = closeVal;
+            sources.push(`Stooq Dev Proxy (${symbol.toUpperCase()})`);
+          }
         }
       }
     } catch {
-      // Fall through to snapshot
+      // Fall through to Yahoo proxy
+    }
+
+    // 3a.2. Try Yahoo dev proxy
+    if (liveStockPrice === null) {
+      try {
+        const devProxyUrl = `/api/yahoo/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
+        const devResp = await fetch(devProxyUrl, { signal: AbortSignal.timeout(3000) });
+        if (devResp.ok) {
+          const devData = await devResp.json();
+          const regularMarketPrice = devData?.chart?.result?.[0]?.meta?.regularMarketPrice;
+          if (regularMarketPrice) {
+            liveStockPrice = Number(regularMarketPrice);
+            sources.push(`Yahoo Finance Live Proxy (${symbol})`);
+          }
+        }
+      } catch {
+        // Fall through to snapshot
+      }
     }
   }
 
