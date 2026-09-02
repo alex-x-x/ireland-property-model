@@ -283,7 +283,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                       <h5 className="font-bold text-white text-xs sm:text-sm">Find Your Breakeven on the Heatmap</h5>
                     </div>
                     <p className="text-xs text-slate-300">
-                      Scan the <strong>2D Sensitivity Heatmap</strong> to find the boundary between <strong>BUY NOW (Emerald)</strong> and <strong>WAIT & COMPOUND (Purple)</strong>.
+                      Scan the <strong>2D Sensitivity Heatmap</strong> to find the boundary between <strong>WAIT & COMPOUND (Emerald)</strong> and <strong>BUY NOW (Brand Amber)</strong>.
                     </p>
                     <p className="text-xs text-slate-400">
                       👉 <strong>Action:</strong> Identify the <em>Equilibrium Stock Growth Rate</em> (e.g. 15%/yr). If you expect tech to beat that rate, wait; otherwise, buy now.
@@ -633,23 +633,29 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                   {/* Timeline logic */}
                   <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2">
                     <h5 className="font-bold text-white text-xs sm:text-sm text-brand-300">
-                      1. How to Think About the Horizon Slider (1Y, 2Y, 3Y, 5Y)
+                      1. How to Think About the Wait Time Strategy Controls
                     </h5>
                     <p className="text-slate-300">
-                      The decision to wait is never open-ended — it is always evaluated over a <strong>specific comparison timeframe ($H$)</strong>:
+                      All heatmap scenarios are evaluated at a fixed benchmark — <strong>Month 60 (Year 5) Terminal Net Wealth</strong> — ensuring a mathematically pure apples-to-apples comparison. The strategy buttons control <em>when you buy</em>:
                     </p>
                     <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
                       <li>
-                        <strong>1-Year Horizon (M12):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 12"</em>. Sunk rent is low (~€30k), so a moderate stock return (~10%–12%) is often enough for waiting to win.
+                        <strong>Optimal Wait (⚡):</strong> Automatically evaluates which waiting period delivers the highest terminal net wealth for each economic permutation.
                       </li>
                       <li>
-                        <strong>2-Year Horizon (M24):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 24"</em>. Gives your unvested GSUs two years of compounding, but accumulates ~€60k–€70k in sunk rent.
+                        <strong>Wait 12M:</strong> Tests <em>"Buy at Month 0 vs Wait 12 Months"</em>. Sunk rent is low (~€30k), so moderate stock returns (~10%–12%) often justify waiting.
                       </li>
                       <li>
-                        <strong>3-Year Horizon (M36):</strong> Tests <em>"Buy at Month 0 vs Wait until Month 36"</em>. Sunk rent approaches ~€90k–€100k+, raising the bar: tech stock must grow at 16%–20%+ to justify waiting this long.
+                        <strong>Wait 24M:</strong> Tests <em>"Buy at Month 0 vs Wait 24 Months"</em>. Gives your unvested GSUs two years of compounding, but accumulates ~€60k–€70k in sunk rent.
                       </li>
                       <li>
-                        <strong>5-Year Horizon (M60 - Recommended Benchmark):</strong> Evaluates the complete 5-year balance sheet (Remaining Liquid Assets + Amortized Home Equity) across all waiting options.
+                        <strong>Wait 36M:</strong> Tests <em>"Buy at Month 0 vs Wait 36 Months"</em>. Sunk rent approaches ~€90k–€100k+, raising the bar: tech stocks must deliver strong growth to overcome rental leakage.
+                      </li>
+                      <li>
+                        <strong>Rent 5Y (Never Buy):</strong> Classic pure Rent vs. Buy comparison over 5 years.
+                      </li>
+                      <li>
+                        <strong>Custom Slider:</strong> Allows time-traveling across any custom delay (1 to 48 months) to see the tipping point evolve.
                       </li>
                     </ul>
                   </div>
@@ -674,7 +680,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                         </div>
                       </li>
                       <li>
-                        Now switch the <strong>Heatmap Horizon to 2Y (M24)</strong> to verify that your 24-month strategy remains inside the green <code className="text-emerald-300">WAIT</code> zone even if market conditions fluctuate.
+                        Now switch the <strong>Heatmap to Wait 24M</strong> to verify that your 24-month strategy remains inside the green <code className="text-emerald-300">WAIT</code> zone under fluctuating market conditions.
                       </li>
                     </ol>
                   </div>
