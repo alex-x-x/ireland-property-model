@@ -188,3 +188,57 @@ export interface PresetScenario {
   description: string;
   config: NestedPartial<SimulationConfig>;
 }
+
+export interface MortgageStrategyCandidate {
+  id: string;
+  depositAmount: number;
+  depositPct: number;
+  loanAmount: number;
+  ltvPct: number;
+  termYears: number;
+  interestRatePct: number;
+  fixedRateYears: number;
+  monthlyOverpayment: number;
+  annualBonusLumpSum: number;
+  strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'max_deposit' | 'custom';
+}
+
+export interface MortgageStrategyResult {
+  candidate: MortgageStrategyCandidate;
+  isFundable: boolean;
+  totalUpfrontPaid: number;
+  postPurchaseLiquidLeft: number;
+  monthlyMortgagePayment: number;
+  variableMonthlyPayment?: number;
+  freeCashflowBuffer: number;
+  scheduledPayoffMonths: number;
+  actualPayoffMonths: number;
+  yearsSaved: number;
+  totalLifetimeInterest: number;
+  totalInterestSaved: number;
+  terminalNetWealthM60: number;
+  terminalHomeEquityM60: number;
+  terminalLiquidWealthM60: number;
+  wealthDeltaVsMinDeposit: number;
+  safetyScore: number; // 0-100 score based on liquid buffer and cashflow
+  isParetoOptimal?: boolean;
+}
+
+export interface CuratedStrategies {
+  wealthMaximizer: MortgageStrategyResult | null;
+  greenArbitrageur: MortgageStrategyResult | null;
+  sweetSpot: MortgageStrategyResult | null;
+  debtFreeAccelerator: MortgageStrategyResult | null;
+}
+
+export interface OptimizationAnalysis {
+  purchaseMonth: number;
+  purchaseDate: string;
+  propertyPrice: number;
+  allResults: MortgageStrategyResult[];
+  paretoFrontier: MortgageStrategyResult[];
+  curated: CuratedStrategies;
+  hurdleRateStockCrossover: number; // e.g. 0.035 (3.5%)
+  activeMortgageRate: number;
+}
+
