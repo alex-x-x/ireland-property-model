@@ -207,6 +207,15 @@ $$\Delta \text{Wealth} = \text{Net Wealth}_{\text{Wait}} - \text{Net Wealth}_{\t
 * If $\Delta \text{Wealth} > 0$: **Wait and compound.** Equity growth exceeds property inflation + rent drag.
 * If $\Delta \text{Wealth} \le 0$: **Buy immediately.** Rent drag and property inflation exceed investment returns.
 
+### Sensitivity Matrix & Wait Time Decision Framework:
+1. **Fixed Terminal Wealth Evaluation ($t = 60$):**
+   All delay strategies (`optimal`, `12m`, `24m`, `36m`, `rent`, or custom months $W$) benchmark against buying ASAP at $t = 60$ (Year 5). This eliminates early truncation distortions where front-loaded transaction friction (Stamp Duty, legal fees) obscures long-term equity compounding.
+2. **Dynamic Axis Injection:**
+   The evaluation axes dynamically inject the user's exact property inflation rate $g_p$ (columns) and stock growth rate $g_s$ (rows) whenever they differ from standard grid steps by more than $\pm 0.25\%$, guaranteeing zero-snapping evaluation.
+3. **Linear Breakeven Hurdle Rate Interpolation:**
+   For a given property growth column, the exact indifference stock hurdle rate $g_s^*$ where $\Delta \text{Wealth}(g_s^*) = 0$ is computed via linear interpolation across the zero-crossing interval $[g_{s,1}, g_{s,2}]$:
+   $$g_s^* = g_{s,1} + \frac{-\Delta_1}{\Delta_2 - \Delta_1} (g_{s,2} - g_{s,1})$$
+
 ---
 
 ## 6. Live Market Data Integration (Google GSUs & FX)

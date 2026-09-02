@@ -20,3 +20,4 @@ Interactive financial decision-modeling application simulating 60-month wealth t
 - Irish FTB deposit threshold: 10% minimum deposit + tiered Stamp Duty (1% up to €1M, 2% excess) + €3,000 legal/closing fees.
 - Irish GSU Vesting Tax: 52% marginal rate (Income Tax 40% + USC 8% + PRSI 4%) via sell-to-cover at vest.
 - Compounding formula: `(1 + g)^(1/12)` per month.
+- Sensitivity Benchmark: Evaluates wait strategies at Month 60 terminal net wealth; dynamically injects exact user stock/property rates into grid axes.
