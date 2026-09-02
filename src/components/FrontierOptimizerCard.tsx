@@ -853,9 +853,9 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 }}
                 cursor="pointer"
               >
-                {scatterData.map((entry, index) => (
+                {scatterData.map((entry) => (
                   <Cell
-                    key={`cell-${index}`}
+                    key={entry.id}
                     fill={entry.exceedsBudget ? '#334155' : entry.isPareto ? '#c084fc' : '#475569'}
                     fillOpacity={entry.exceedsBudget ? 0.2 : entry.isPareto ? 0.95 : 0.4}
                     r={entry.exceedsBudget ? 2 : entry.isPareto ? 4.5 : 2.5}
