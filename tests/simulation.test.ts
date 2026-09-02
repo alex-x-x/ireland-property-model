@@ -143,8 +143,11 @@ describe('Simulation Engine', () => {
 
     const sim = runSimulation(configWithHeldShares);
     expect(sim[0].retainedShares).toBe(500);
-    // At M0: 500 shares * $150 * 0.91 FX = €68,250
-    expect(sim[0].gsuPool).toBeCloseTo(500 * 150 * 0.91, 1);
+    // At M0: 500 shares * price * FX
+    expect(sim[0].gsuPool).toBeCloseTo(
+      500 * configWithHeldShares.equity_engine.current_share_price_usd * configWithHeldShares.macro.eur_usd_spot,
+      1
+    );
   });
 
   it('correctly calculates target deposit from explicit deposit_eur when minimum_deposit_pct is undefined', () => {
@@ -165,13 +168,16 @@ describe('Simulation Engine', () => {
   });
 
   it('calculates monthly savings from Irish net take-home pay when savings_calculation_mode is net_pay_derived', () => {
-    // Base salary: €190,000.
-    // Net Monthly Take-Home (SRCOP €53k, credits €9k) = €9,524.76/mo
+    // Gross Annual Base Salary = €190,000. Net Monthly Take-Home (SRCOP €53k, credits €9k) = €9,524.76/mo
     // Monthly Rent = €2,500/mo (RPZ 0% for simple comparison)
     // Monthly Living Expenses = €2,500/mo
     // Derived Monthly Savings = €9,524.76 - €2,500 - €2,500 = €4,524.76/mo
     const configNetDerived = {
       ...DEFAULT_CONFIG,
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        buyer_gross_annual_base_salary_eur: 190000,
+      },
       macro: {
         ...DEFAULT_CONFIG.macro,
         current_monthly_rent_eur: 2500,
@@ -449,6 +455,8 @@ describe('Simulation Engine', () => {
         cash_usd: 0,
         investments_eur: 0,
         investments_usd: 0,
+        cash_safety_buffer_eur: 0,
+        cash_safety_buffer_usd: 0,
         monthly_salary_savings_eur: 2000, // saves €24k over 12 months -> €89k cash
       },
       equity_engine: {
