@@ -15,7 +15,7 @@ import {
 import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
 import { PRESET_SCENARIOS } from '../engine/presets';
 import { exportConfigToJson, downloadJsonFile, exportMonthlyPointsToCsv, downloadCsvFile } from '../engine/export';
-import { MarketDataResult } from '../services/marketData';
+import { MarketDataResult, formatMarketDataTimestamp } from '../services/marketData';
 
 interface NavbarProps {
   config: SimulationConfig;
@@ -110,6 +110,8 @@ export const Navbar: React.FC<NavbarProps> = memo(({
     config.equity_engine.current_share_price_usd === marketData.stockPriceUsd &&
     config.macro.eur_usd_spot === marketData.eurUsdRate;
 
+  const updateInfo = formatMarketDataTimestamp(marketData?.timestamp);
+
   return (
     <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3">
       <div className="max-w-[1720px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -171,9 +173,19 @@ export const Navbar: React.FC<NavbarProps> = memo(({
                   ? 'Manual rate override active. Click to view or toggle back to market feed.'
                   : `Market Data Feeds:\n• ${config.meta.stock_symbol || 'GOOGL'}: $${config.equity_engine.current_share_price_usd?.toFixed(2)} [${
                       marketData?.stockStatus === 'prev_close'
-                        ? `PREV CLOSE: ${marketData?.closeDate || 'Latest'} (Daily GitHub sync)`
+                        ? `PREV CLOSE: ${marketData?.closeDate || 'Latest'} (Synced ${updateInfo.formattedTime})`
+                        : marketData?.stockStatus === 'cached'
+                        ? `CACHED: ${updateInfo.formattedTime} (${updateInfo.relativeTime})`
+                        : marketData?.stockStatus === 'live'
+                        ? `LIVE: ${updateInfo.formattedTime}`
                         : marketData?.stockStatus?.toUpperCase() || 'BENCHMARK'
-                    }]\n• USD/EUR: €${config.macro.eur_usd_spot?.toFixed(4)} per $1 (1 EUR = $${(1 / (config.macro.eur_usd_spot || 0.86)).toFixed(3)}) [${marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'}]`
+                    }]\n• USD/EUR: €${config.macro.eur_usd_spot?.toFixed(4)} per $1 [${
+                      marketData?.fxStatus === 'cached'
+                        ? `CACHED: ${updateInfo.formattedTime} (${updateInfo.relativeTime})`
+                        : marketData?.fxStatus === 'live'
+                        ? `LIVE: ${updateInfo.formattedTime}`
+                        : marketData?.fxStatus?.toUpperCase() || 'BENCHMARK'
+                    }]\n• Last sync: ${updateInfo.formattedTime} (${updateInfo.relativeTime})`
               }
             >
               <Radio className={`w-3.5 h-3.5 ${isOverrideActive ? 'text-rose-400 animate-pulse' : 'text-emerald-400 animate-pulse'}`} />
@@ -195,9 +207,15 @@ export const Navbar: React.FC<NavbarProps> = memo(({
                       : 'bg-slate-800 text-slate-400 border-slate-700'
                   }`}
                   title={
-                    marketData?.stockStatus === 'prev_close'
-                      ? `Previous day market close price ($${config.equity_engine.current_share_price_usd?.toFixed(2)} as of ${marketData?.closeDate || 'latest close'}), synced daily after US market close.`
-                      : undefined
+                    isOverrideActive
+                      ? 'Manual rate override active'
+                      : marketData?.stockStatus === 'cached'
+                      ? `Cached locally at ${updateInfo.formattedTime} (${updateInfo.relativeTime}). Click to refresh.`
+                      : marketData?.stockStatus === 'prev_close'
+                      ? `Previous day market close price ($${config.equity_engine.current_share_price_usd?.toFixed(2)} as of ${marketData?.closeDate || 'latest close'}), synced at ${updateInfo.formattedTime}.`
+                      : marketData?.stockStatus === 'live'
+                      ? `Live market feed updated at ${updateInfo.formattedTime} (${updateInfo.relativeTime}).`
+                      : 'Offline benchmark price ($346.50)'
                   }
                 >
                   {isOverrideActive
@@ -214,15 +232,26 @@ export const Navbar: React.FC<NavbarProps> = memo(({
               <span className="flex items-center gap-1">
                 <span className="font-semibold text-white">USD/EUR:</span>
                 <span className="font-mono text-amber-300">€{config.macro.eur_usd_spot?.toFixed(3) || '0.860'}</span>
-                <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
-                  isOverrideActive
-                    ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
-                    : marketData?.fxStatus === 'live'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                    : marketData?.fxStatus === 'cached'
-                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}>
+                <span
+                  className={`text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded border ${
+                    isOverrideActive
+                      ? 'bg-rose-900/80 text-rose-200 border-rose-500/50'
+                      : marketData?.fxStatus === 'live'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : marketData?.fxStatus === 'cached'
+                      ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                  title={
+                    isOverrideActive
+                      ? 'Manual rate override active'
+                      : marketData?.fxStatus === 'cached'
+                      ? `Cached locally at ${updateInfo.formattedTime} (${updateInfo.relativeTime}). Click to refresh.`
+                      : marketData?.fxStatus === 'live'
+                      ? `Live ECB FX rate updated at ${updateInfo.formattedTime} (${updateInfo.relativeTime}).`
+                      : 'Offline benchmark FX rate (€0.860)'
+                  }
+                >
                   {isOverrideActive ? 'OVERRIDE' : marketData?.fxStatus || 'BENCHMARK'}
                 </span>
               </span>

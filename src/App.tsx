@@ -95,8 +95,8 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const handleRefreshMarketData = useCallback(async (symbol: string) => {
-    const res = await fetchMarketData(symbol, config.meta.start_date);
+  const handleRefreshMarketData = useCallback(async (symbol: string, forceFresh: boolean = true) => {
+    const res = await fetchMarketData(symbol, config.meta.start_date, forceFresh);
     setMarketData(res);
     if (!config.macro.use_manual_market_override) {
       setConfig((prev) => {

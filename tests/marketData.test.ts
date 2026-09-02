@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fetchMarketData, getFallbackMarketData, isMarketDataStale, MARKET_DATA_TTL_MS, parseMarketSnapshot } from '../src/services/marketData';
+import { fetchMarketData, getFallbackMarketData, isMarketDataStale, MARKET_DATA_TTL_MS, parseMarketSnapshot, formatMarketDataTimestamp } from '../src/services/marketData';
 import { DEFAULT_CONFIG } from '../src/engine/constants';
 import { runSimulation } from '../src/engine/simulation';
 
@@ -12,6 +12,21 @@ describe('Market Data Service', () => {
     expect(fallback.stockPriceUsd).toBe(346.50);
     expect(fallback.eurUsdRate).toBe(0.860);
     expect(fallback.source).toContain('Fallback');
+  });
+
+  it('correctly formats market data timestamp and relative update time', () => {
+    const nowIso = new Date().toISOString();
+    const resultNow = formatMarketDataTimestamp(nowIso);
+    expect(resultNow.formattedTime).toBeTruthy();
+    expect(resultNow.relativeTime).toBe('just now');
+
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const resultTenMin = formatMarketDataTimestamp(tenMinAgo);
+    expect(resultTenMin.relativeTime).toBe('10m ago');
+
+    const invalid = formatMarketDataTimestamp(undefined);
+    expect(invalid.formattedTime).toBe('Unknown');
+    expect(invalid.relativeTime).toBe('');
   });
 
   it('handles fetchMarketData without throwing unhandled exceptions and includes distinct statuses', async () => {

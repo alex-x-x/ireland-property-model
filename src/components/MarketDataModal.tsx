@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, RefreshCw, Radio, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
-import { MarketDataResult } from '../services/marketData';
+import { X, RefreshCw, Radio, CheckCircle, AlertTriangle, ArrowRight, Clock, Check } from 'lucide-react';
+import { MarketDataResult, formatMarketDataTimestamp } from '../services/marketData';
 import { SimulationConfig } from '../engine/types';
 
 interface MarketDataModalProps {
@@ -29,11 +29,17 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
   const [manualFxRate, setManualFxRate] = useState(config.macro.eur_usd_spot);
   const [isManualOverride, setIsManualOverride] = useState(!!config.macro.use_manual_market_override);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshStatus, setLastRefreshStatus] = useState<string | null>(null);
+
+  const updateInfo = formatMarketDataTimestamp(marketData?.timestamp);
 
   const handleRefreshClick = async () => {
     setIsRefreshing(true);
+    setLastRefreshStatus(null);
     await onRefresh(symbol);
     setIsRefreshing(false);
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLastRefreshStatus(`Refreshed at ${now}`);
   };
 
   const handleApplyClick = () => {
@@ -109,6 +115,10 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
                   : 'Offline Benchmark / Fallback Mode'}
               </div>
               <p className="mt-0.5 opacity-90">{marketData?.source}</p>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Price Update Time: <strong className="text-slate-200">{updateInfo.formattedTime}</strong> ({updateInfo.relativeTime})</span>
+              </div>
               {marketData?.closeDate && (
                 <p className="mt-1 text-[11px] text-sky-300 font-mono">
                   Market Close Date: {marketData.closeDate} (Synced daily after US market close via GitHub Actions)
@@ -144,6 +154,12 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
               <div className="text-xl font-bold text-white mt-1">
                 ${marketData?.stockPriceUsd?.toFixed(2) || '346.50'} <span className="text-xs font-normal text-slate-400">USD</span>
               </div>
+              {marketData?.stockStatus === 'cached' && (
+                <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  <span>Cached at {updateInfo.formattedTime} ({updateInfo.relativeTime})</span>
+                </div>
+              )}
               {marketData?.stockStatus === 'prev_close' && marketData?.closeDate && (
                 <div className="text-[11px] text-sky-300 mt-1 flex items-center gap-1">
                   <span>Close Date:</span>
@@ -175,6 +191,12 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
               <div className="text-xl font-bold text-white mt-1">
                 €{marketData?.eurUsdRate?.toFixed(4) || '0.8600'} <span className="text-xs font-normal text-slate-400">/ $1 USD</span>
               </div>
+              {marketData?.fxStatus === 'cached' && (
+                <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  <span>Cached at {updateInfo.formattedTime} ({updateInfo.relativeTime})</span>
+                </div>
+              )}
               <div className="text-[11px] text-slate-400 mt-1">
                 Inversion: 1 EUR = ${(1 / (marketData?.eurUsdRate || 0.86)).toFixed(4)} USD
               </div>
@@ -195,15 +217,22 @@ export const MarketDataModal: React.FC<MarketDataModalProps> = ({
               </select>
             </div>
 
-            <div className="pt-5">
+            <div className="pt-5 flex items-center gap-2">
               <button
                 onClick={handleRefreshClick}
                 disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg shadow-md transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg shadow-md transition-colors cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span>{isRefreshing ? 'Fetching...' : 'Fetch Live'}</span>
               </button>
+
+              {lastRefreshStatus && (
+                <span className="text-[11px] font-medium text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-2.5 py-1.5 rounded-lg flex items-center gap-1 animate-in fade-in">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{lastRefreshStatus}</span>
+                </span>
+              )}
             </div>
           </div>
 
