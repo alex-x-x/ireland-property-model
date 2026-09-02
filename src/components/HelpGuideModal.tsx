@@ -18,7 +18,7 @@ interface HelpGuideModalProps {
   onClose: () => void;
 }
 
-type TabType = 'overview' | 'playbook' | 'widgets' | 'interpretation' | 'math';
+type TabType = 'overview' | 'playbook' | 'widgets' | 'optimizer' | 'interpretation' | 'math';
 
 export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -99,6 +99,18 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
           </button>
 
           <button
+            onClick={() => setActiveTab('optimizer')}
+            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'optimizer'
+                ? 'border-brand-500 text-brand-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>4. Frontier & Loan Optimizer</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('interpretation')}
             className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === 'interpretation'
@@ -107,7 +119,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>4. Key Interpretation Tips</span>
+            <span>5. Key Interpretation Tips</span>
           </button>
 
           <button
@@ -119,7 +131,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Scale className="w-4 h-4 text-purple-400" />
-            <span>5. Mathematical Deep Dive</span>
+            <span>6. Mathematical Deep Dive</span>
           </button>
         </div>
 
@@ -503,7 +515,105 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
             </div>
           )}
 
-          {/* TAB 4: INTERPRETATION TIPS */}
+          {/* TAB 4: FRONTIER & LOAN OPTIMIZER */}
+          {activeTab === 'optimizer' && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Executive Summary Card */}
+              <div className="p-5 rounded-2xl bg-linear-to-br from-purple-950/40 via-slate-850 to-indigo-950/30 border border-purple-500/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-sm sm:text-base font-bold text-white">Multidimensional Pareto Frontier & Loan Optimizer</h3>
+                </div>
+                <p className="text-slate-300 leading-normal">
+                  Traditional bank calculators focus exclusively on minimizing debt in isolation, urging buyers to deploy all available cash into deposits or overpay aggressively. However, in real life, every euro deployed into your mortgage carries an <strong>equity opportunity cost</strong> and changes your <strong>household liquidity buffer</strong>.
+                </p>
+                <p className="text-slate-300 leading-normal">
+                  The Frontier Optimizer connects your mortgage decisions directly to the 60-month simulation engine to evaluate the trade-offs across <strong>Terminal Net Wealth (M60)</strong>, <strong>Lifetime Interest Paid</strong>, and <strong>Household Safety</strong>.
+                </p>
+              </div>
+
+              {/* The 4 Curated Strategy Archetypes */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
+                  🏛️ The 4 Strategy Archetypes
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-slate-850 border border-purple-500/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-300 font-bold font-mono text-xs flex items-center justify-center">1</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">🏆 The Wealth Maximizer</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Philosophy:</strong> Borrow maximum allowable leverage (minimum deposit, longer term, €0 overpayment). Keep surplus capital compounding in high-performing Alphabet GSUs and global equities.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Best When:</strong> Expected post-tax equity CAGR beats your mortgage interest rate (&gt; 5%–6% pre-tax).
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-850 border border-emerald-500/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold font-mono text-xs flex items-center justify-center">2</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">🌿 The Green LTV Arbitrageur</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Philosophy:</strong> Target the exact 80% or 70% LTV threshold to unlock the lowest bank margin (Green Mortgage rate), while keeping the rest of your cash invested.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Best When:</strong> You want a lower interest rate on the entire loan balance without starving your liquid reserves.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-850 border border-indigo-500/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 font-bold font-mono text-xs flex items-center justify-center">3</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">🎯 The Algorithmic Sweet Spot (Knee Point)</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Philosophy:</strong> The mathematical point on the Pareto curve that maximizes marginal interest saved per euro committed, while preserving a healthy 6-month liquid cushion.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Best When:</strong> You want the optimal balance between wealth generation, debt paydown, and financial peace of mind.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-850 border border-sky-500/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-300 font-bold font-mono text-xs flex items-center justify-center">4</span>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">🛡️ The Debt-Free Crusher</h5>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      <strong>Philosophy:</strong> Maximize upfront deposit, choose a shorter term (15–20 yrs), and commit 50% of free monthly cashflow + 100% net bonus into direct principal paydown.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      👉 <strong>Best When:</strong> Being completely debt-free as fast as possible is your primary financial goal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* How to Read the Scatter Plot */}
+              <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
+                  📊 How to Read the 2D Pareto Scatter Plot
+                </h4>
+                <div className="space-y-2 text-xs text-slate-300">
+                  <p>
+                    The scatter plot visualizes dozens of simulated combinations at your selected purchase month:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-slate-400">
+                    <li><strong>X-Axis (Lifetime Interest Paid):</strong> Moving further to the left means paying less total interest to the bank.</li>
+                    <li><strong>Y-Axis (Terminal Net Wealth at M60):</strong> Moving higher up means finishing Year 5 with a larger total balance sheet (Home Equity + Remaining Liquid Assets).</li>
+                    <li><strong>The Purple Frontier Line:</strong> Connects non-dominated solutions. Any point below the line is mathematically inferior (you could get higher wealth with the same interest, or lower interest with the same wealth).</li>
+                    <li><strong>Interactive Loading:</strong> Click any dot or use the <strong>"Apply Strategy"</strong> button to immediately sync that recipe to the live Mortgage Studio sliders and charts.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: INTERPRETATION TIPS */}
           {activeTab === 'interpretation' && (
             <div className="space-y-6 animate-fadeIn">
               {/* Deep Dive on Heatmap & Timeline */}
@@ -720,6 +830,45 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                   </div>
                   <p className="text-[11px] text-slate-400 font-sans">
                     When a salary promotion occurs (e.g. +€30k gross), extra net take-home pay (+~€1,250/mo) immediately flows into higher monthly cash accumulation.
+                  </p>
+                </div>
+              </details>
+
+              {/* Math 7 */}
+              <details className="group p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2 cursor-pointer transition-colors open:bg-slate-800/80">
+                <summary className="font-bold text-white text-xs flex items-center justify-between">
+                  <span className="text-purple-300">📐 7. Pareto Multi-Objective Frontier Non-Domination</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="pt-2 text-xs space-y-2 text-slate-300 border-t border-slate-750 mt-2 font-mono">
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    A mortgage configuration A is Pareto-optimal (non-dominated) if no other candidate B satisfies:
+                  </p>
+                  <div className="p-2.5 rounded bg-slate-900 text-purple-300 space-y-1">
+                    <div>Interest(B) ≤ Interest(A) ∧ NetWealth(B) ≥ NetWealth(A)</div>
+                    <div>with at least one strict inequality.</div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    This eliminates all suboptimal recipes and provides the exact boundary of optimal trade-offs.
+                  </p>
+                </div>
+              </details>
+
+              {/* Math 8 */}
+              <details className="group p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-2 cursor-pointer transition-colors open:bg-slate-800/80">
+                <summary className="font-bold text-white text-xs flex items-center justify-between">
+                  <span className="text-amber-300">📐 8. Stock Hurdle Rate Crossover Formula</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="pt-2 text-xs space-y-2 text-slate-300 border-t border-slate-750 mt-2 font-mono">
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    To beat guaranteed tax-free mortgage interest r_mortgage, pre-tax stock growth g_stock must satisfy:
+                  </p>
+                  <div className="p-2.5 rounded bg-slate-900 text-amber-300">
+                    g_stock × (1 - CGT) ≥ r_mortgage  ⟹  g_stock ≥ r_mortgage / (1 - 0.33)
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    Example: At a 3.50% mortgage rate, pre-tax stock growth must exceed 3.50% / 0.67 = 5.22% p.a.
                   </p>
                 </div>
               </details>

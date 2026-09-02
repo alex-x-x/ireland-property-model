@@ -19,7 +19,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { SimulationConfig, MonthlyDataPoint } from '../engine/types';
+import { SimulationConfig, MonthlyDataPoint, MortgageStrategyResult } from '../engine/types';
 import {
   calculateMortgageWithOverpayments,
   getSalaryAtDate,
@@ -28,6 +28,8 @@ import {
 import { calculateIrishTaxBreakdown } from '../engine/tax';
 import { InfoTooltip } from './InfoTooltip';
 import { AmortizationScheduleModal } from './AmortizationScheduleModal';
+import { FrontierOptimizerCard } from './FrontierOptimizerCard';
+
 
 interface MortgageStudioWidgetProps {
   config: SimulationConfig;
@@ -114,6 +116,16 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     setRateShockPct(1.5);
   };
 
+  const handleApplyOptimizedStrategy = React.useCallback((strategy: MortgageStrategyResult) => {
+    const c = strategy.candidate;
+    setCustomLoanAmount(Math.round(c.loanAmount));
+    setInterestRatePct(c.interestRatePct);
+    setTermYears(c.termYears);
+    setFixedRateYears(c.fixedRateYears);
+    setMonthlyOverpayment(c.monthlyOverpayment);
+    setAnnualLumpSum(c.annualBonusLumpSum);
+  }, []);
+
   const effectiveVariableRatePct = interestRatePct + rateShockPct;
 
   // Run overpayment simulation engine
@@ -153,9 +165,9 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   );
   const maxSafeOverpayment = Math.max(0, Math.floor((freeCashflowBuffer * 0.5) / 50) * 50);
 
-  // Bonus on file (gross vs net after 52% Irish marginal tax)
+  // Bonus on file (gross vs net after Irish marginal tax)
   const grossBonusEur = activeSalary.bonusEur;
-  const netBonusEur = Math.round(grossBonusEur * 0.48); // 52% marginal rate: 40% IT + 8% USC + 4% PRSI
+  const netBonusEur = Math.round(grossBonusEur * (1 - config.equity_engine.marginal_tax_rate_ireland));
   const halfNetBonusEur = Math.round(netBonusEur * 0.5);
 
   // Interest rate shock options (Irish/ECB benchmarks: 0% Flat, +0.5% Variable Bump, +1.0% Hike, +1.5%/+2.0% Central Bank Stress, +3.0% Severe)
@@ -380,7 +392,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
           <input
             type="range"
             min={Math.max(0, propertyPrice - maxLoanAllowed)}
-            max={propertyPrice - baseMinDeposit}
+            max={Math.max(Math.max(0, propertyPrice - maxLoanAllowed), propertyPrice - baseMinDeposit)}
             step="5000"
             value={activeDepositAmount}
             onChange={(e) => {
@@ -538,9 +550,23 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
         </div>
       </div>
 
+      {/* Multidimensional Pareto Frontier & Strategy Optimizer */}
+      <FrontierOptimizerCard
+        config={config}
+        monthlyPoints={monthlyPoints}
+        selectedMonth={selectedMonth}
+        currentLoanAmount={activeLoanAmount}
+        currentInterestRatePct={interestRatePct}
+        currentTermYears={termYears}
+        currentMonthlyOverpayment={monthlyOverpayment}
+        currentAnnualLumpSum={annualLumpSum}
+        onApplyStrategy={handleApplyOptimizedStrategy}
+      />
+
       {/* 4. Irish Fixed-Rate Overpayment Simulator & Cashflow Integration */}
       <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+
           <div>
             <div className="flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-emerald-400" />

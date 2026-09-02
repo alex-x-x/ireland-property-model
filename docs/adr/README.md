@@ -18,3 +18,5 @@ Conventions (lightweight [MADR](https://adr.github.io/madr/) style):
 | [0002](0002-tailwind-4-css-theme-architecture.md) | Tailwind CSS 4 CSS-First Theme Architecture | Accepted |
 | [0003](0003-recharts-3-visualization-modernization.md) | Recharts 3 Visualization Modernization & Native React 19 Integration | Accepted |
 | [0004](0004-web-worker-and-render-pipeline-optimization.md) | Web Worker Background Simulation & Render Pipeline Architecture | Accepted |
+| [0005](0005-multidimensional-mortgage-frontier-optimizer.md) | Multidimensional Mortgage & Terminal Net Wealth Frontier Optimizer | Accepted |
+
