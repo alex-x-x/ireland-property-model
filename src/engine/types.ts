@@ -199,6 +199,7 @@ export interface MortgageStrategyCandidate {
   interestRatePct: number;
   fixedRateYears: number;
   monthlyOverpayment: number;
+  overpaymentSurplusPct?: number; // % of free monthly disposable cashflow (e.g. 0.25 = 25%)
   annualBonusLumpSum: number;
   strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'max_deposit' | 'custom';
 }
@@ -208,10 +209,13 @@ export interface MortgageStrategyResult {
   isFundable: boolean;
   totalUpfrontPaid: number;
   postPurchaseLiquidLeft: number;
-  monthlyMortgagePayment: number;
+  monthlyMortgagePayment: number; // Standard contractual P&I payment
+  mandatoryMonthlyPayment: number; // Contractual scheduled P&I
+  discretionaryMonthlyOverpayment: number; // Voluntary monthly overpayment
   totalMonthlyPayment: number; // Scheduled P&I + active monthly overpayment
-  dstiPct: number; // Debt-Service-to-Income: totalMonthlyPayment / netMonthlyTakeHome
-  exceedsBudget?: boolean;
+  dstiPct: number; // Debt-Service-to-Income: mandatoryMonthlyPayment / netMonthlyTakeHome
+  totalDstiPct: number; // Total Debt-Service-to-Income including voluntary overpayments
+  exceedsBudget?: boolean; // Evaluated against mandatoryMonthlyPayment vs maxMonthlyBudgetEur
   variableMonthlyPayment?: number;
   freeCashflowBuffer: number;
   scheduledPayoffMonths: number;
@@ -226,6 +230,7 @@ export interface MortgageStrategyResult {
   safetyScore: number; // 0-100 score based on liquid buffer and cashflow
   isParetoOptimal?: boolean;
 }
+
 
 export interface CuratedStrategies {
   wealthMaximizer: MortgageStrategyResult | null;

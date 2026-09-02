@@ -8,10 +8,12 @@ import {
 } from './types';
 import {
   calculateMortgageWithOverpayments,
+  calculateMonthlyMortgagePayment,
   getSalaryAtDate,
 } from './mortgage';
 import { calculateIrishTaxBreakdown } from './tax';
 import { calculateStampDuty } from './simulation';
+
 
 /**
  * Calculates the exact Irish pre-tax and post-tax stock hurdle rate.
@@ -102,8 +104,8 @@ export function generateCandidateStrategies(
 
 
   const termsToTest = [15, 20, 25, 30, 35];
-  const overpaymentSteps = [0, 200, 400, 750, 1200];
   const bonusRatios = [0, 0.5, 1.0];
+  const surplusRatios = [0, 0.25, 0.50, 0.75];
 
   const candidates: MortgageStrategyCandidate[] = [];
   let candidateIndex = 1;
@@ -125,7 +127,19 @@ export function generateCandidateStrategies(
     }
 
     for (const termYears of termsToTest) {
-      for (const monthlyOverpayment of overpaymentSteps) {
+      // Calculate mandatory contractual monthly payment for this specific loan amount & term
+      const mandatoryPmt = calculateMonthlyMortgagePayment(loanAmount, interestRatePct / 100, termYears);
+      const livingExpenses = config.tax?.monthly_living_expenses_eur ?? 2500;
+      const monthlyMaintenanceInitial = (propertyPrice * config.mortgage.yearly_maintenance_rate) / 12;
+      const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, config.tax);
+      const netMonthlyIncome = taxBreakdown.netMonthlyTakeHome;
+
+      // True free disposable cashflow surplus remaining after mandatory mortgage + living + maintenance
+      const freeMonthlySurplus = Math.max(0, netMonthlyIncome - mandatoryPmt - monthlyMaintenanceInitial - livingExpenses);
+
+      for (const surplusRatio of surplusRatios) {
+        const monthlyOverpayment = Math.round((freeMonthlySurplus * surplusRatio) / 25) * 25;
+
         for (const bonusRatio of bonusRatios) {
           const annualBonusLumpSum = Math.round(netBonusEur * bonusRatio);
 
@@ -139,6 +153,7 @@ export function generateCandidateStrategies(
             interestRatePct,
             fixedRateYears: 2,
             monthlyOverpayment,
+            overpaymentSurplusPct: surplusRatio,
             annualBonusLumpSum,
             strategyType: depPreset.type,
           });
@@ -293,10 +308,13 @@ export function evaluateMortgageStrategy(
   const terminalNetWealthM60 = terminalHomeEquityM60 + terminalLiquidWealthM60;
 
   // Total monthly commitment & DSTI ratio
-  const totalMonthlyPayment = overpaymentResult.standardMonthlyPayment + candidate.monthlyOverpayment;
+  const mandatoryMonthlyPayment = overpaymentResult.standardMonthlyPayment;
+  const discretionaryMonthlyOverpayment = candidate.monthlyOverpayment;
+  const totalMonthlyPayment = mandatoryMonthlyPayment + discretionaryMonthlyOverpayment;
   const netMonthlyIncome = taxBreakdown.netMonthlyTakeHome;
-  const dstiPct = netMonthlyIncome > 0 ? totalMonthlyPayment / netMonthlyIncome : 0;
-  const exceedsBudget = maxMonthlyBudgetEur !== undefined ? totalMonthlyPayment > maxMonthlyBudgetEur + 0.01 : false;
+  const dstiPct = netMonthlyIncome > 0 ? mandatoryMonthlyPayment / netMonthlyIncome : 0;
+  const totalDstiPct = netMonthlyIncome > 0 ? totalMonthlyPayment / netMonthlyIncome : 0;
+  const exceedsBudget = maxMonthlyBudgetEur !== undefined ? mandatoryMonthlyPayment > maxMonthlyBudgetEur + BUDGET_EPSILON_EUR : false;
 
   // Household Safety Score (0 to 100)
   // Factors:
@@ -313,9 +331,12 @@ export function evaluateMortgageStrategy(
     isFundable,
     totalUpfrontPaid,
     postPurchaseLiquidLeft,
-    monthlyMortgagePayment: overpaymentResult.standardMonthlyPayment,
+    monthlyMortgagePayment: mandatoryMonthlyPayment,
+    mandatoryMonthlyPayment,
+    discretionaryMonthlyOverpayment,
     totalMonthlyPayment,
     dstiPct,
+    totalDstiPct,
     exceedsBudget,
     variableMonthlyPayment: overpaymentResult.variableMonthlyPayment,
     freeCashflowBuffer,
@@ -494,10 +515,10 @@ export function applyOptimizationBudgetFilter(
 
   const hasBudgetLimit = typeof maxMonthlyBudgetEur === 'number' && maxMonthlyBudgetEur > 0;
 
-  // 1. Flag budget compliance
+  // 1. Flag budget compliance against contractual mandatory monthly payment
   const evaluatedResults = allResults.map((r) => ({
     ...r,
-    exceedsBudget: hasBudgetLimit ? r.totalMonthlyPayment > maxMonthlyBudgetEur + BUDGET_EPSILON_EUR : false,
+    exceedsBudget: hasBudgetLimit ? r.mandatoryMonthlyPayment > maxMonthlyBudgetEur + BUDGET_EPSILON_EUR : false,
     isParetoOptimal: false,
   }));
 

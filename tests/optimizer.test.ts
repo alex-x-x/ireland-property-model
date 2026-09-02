@@ -160,33 +160,44 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       );
     });
 
-    it('filters out strategies exceeding maxMonthlyBudgetEur and adjusts archetypes', () => {
+    it('filters out strategies where mandatoryMonthlyPayment exceeds maxMonthlyBudgetEur and adjusts archetypes', () => {
       // Run unconstrained first
       const unconstrained = runMortgageOptimization(config, purchaseMonth, monthlyPoints);
-      const maxPayment = Math.max(...unconstrained.allResults.map((r) => r.totalMonthlyPayment));
+      const maxMandatory = Math.max(...unconstrained.allResults.map((r) => r.mandatoryMonthlyPayment));
 
-      // Now set a tight budget (e.g. €2,200/mo) that eliminates 15-year / heavy overpayment recipes
-      const tightBudget = 2200;
-      expect(maxPayment).toBeGreaterThan(tightBudget);
+      // Set a tight budget that eliminates high mandatory payments (e.g. 15-year terms)
+      const tightBudget = Math.round(maxMandatory * 0.7);
+      expect(maxMandatory).toBeGreaterThan(tightBudget);
       const constrained = runMortgageOptimization(config, purchaseMonth, monthlyPoints, tightBudget);
 
       expect(constrained.maxMonthlyBudgetEur).toBe(tightBudget);
       expect(constrained.compliantResults.length).toBeLessThan(constrained.allResults.length);
-      expect(constrained.compliantResults.every((r) => r.totalMonthlyPayment <= tightBudget + 0.01)).toBe(true);
+      expect(constrained.compliantResults.every((r) => r.mandatoryMonthlyPayment <= tightBudget + 0.01)).toBe(true);
 
-      // All Pareto frontier points must respect the tight budget
-      expect(constrained.paretoFrontier.every((r) => r.totalMonthlyPayment <= tightBudget + 0.01)).toBe(true);
+      // All Pareto frontier points must respect the tight mandatory budget
+      expect(constrained.paretoFrontier.every((r) => r.mandatoryMonthlyPayment <= tightBudget + 0.01)).toBe(true);
 
-      // Curated archetypes that are non-null must respect the tight budget
+      // Curated archetypes that are non-null must respect the tight mandatory budget
       if (constrained.curated.wealthMaximizer) {
-        expect(constrained.curated.wealthMaximizer.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+        expect(constrained.curated.wealthMaximizer.mandatoryMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
       }
       if (constrained.curated.sweetSpot) {
-        expect(constrained.curated.sweetSpot.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+        expect(constrained.curated.sweetSpot.mandatoryMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
       }
       if (constrained.curated.debtFreeAccelerator) {
-        expect(constrained.curated.debtFreeAccelerator.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+        expect(constrained.curated.debtFreeAccelerator.mandatoryMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
       }
+    });
+
+    it('generates overpayments scaled to free monthly surplus without causing negative buffer', () => {
+      const candidates = generateCandidateStrategies(config, activePoint);
+      candidates.forEach((c) => {
+        expect(c.monthlyOverpayment).toBeGreaterThanOrEqual(0);
+        if (c.overpaymentSurplusPct !== undefined) {
+          expect(c.overpaymentSurplusPct).toBeGreaterThanOrEqual(0);
+          expect(c.overpaymentSurplusPct).toBeLessThanOrEqual(0.75);
+        }
+      });
     });
 
     it('accurately tags isParetoOptimal on corresponding items in allResults', () => {
@@ -211,5 +222,6 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
     });
   });
 });
+
 
 

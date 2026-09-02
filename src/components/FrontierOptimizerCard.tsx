@@ -5,6 +5,7 @@ import {
   TrendingDown,
   Target,
   Zap,
+  Flame,
   Info,
   ChevronDown,
   ChevronUp,
@@ -56,6 +57,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
 }) => {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [maxMonthlyBudgetEur, setMaxMonthlyBudgetEur] = useState<number | null>(null);
+  const [hideOverBudget, setHideOverBudget] = useState<boolean>(true);
 
   // Stage 1: Expensive candidate generation & 60-month simulation (runs only when config/month changes)
   const baseEvaluations = useMemo(() => {
@@ -97,9 +99,10 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
     return `€${Math.round(val / 1000)}k`;
   };
 
-  // Prepare chart scatter data
+  // Prepare chart scatter data (filtered by hideOverBudget toggle)
   const scatterData = useMemo(() => {
-    return allResults.map((r) => ({
+    const dataSource = hideOverBudget ? compliantResults : allResults;
+    return dataSource.map((r) => ({
       xInterest: Math.round(r.totalLifetimeInterest),
       yWealth: Math.round(r.terminalNetWealthM60),
       isPareto: Boolean(r.isParetoOptimal),
@@ -107,7 +110,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
       id: r.candidate.id,
       result: r,
     }));
-  }, [allResults]);
+  }, [allResults, compliantResults, hideOverBudget]);
 
   // Frontier line sorted by interest ascending
   const frontierLineData = useMemo(() => {
@@ -195,9 +198,9 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-indigo-400 shrink-0" />
             <div>
-              <span className="font-bold text-white text-xs sm:text-sm">Comfortable Max Monthly Outlay (P&I + Overpayment)</span>
+              <span className="font-bold text-white text-xs sm:text-sm">Max Contractual Monthly Payment (Mandatory P&I)</span>
               <p className="text-[11px] text-slate-400">
-                Filters out aggressive recipes that exceed your household monthly budget or Debt-Service-to-Income (DSTI) ceiling.
+                Filters out recipes where scheduled loan payments exceed your ceiling. Discretionary overpayments are funded from remaining cashflow surplus.
               </p>
             </div>
           </div>
@@ -289,7 +292,6 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
         </div>
       </div>
 
-
       {/* Collapsible Methodology / Interpretation Guide */}
       {isGuideOpen && (
         <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs text-slate-300 animate-fadeIn">
@@ -365,7 +367,11 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1 text-slate-300">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Outlay:</span>
-                  <span className="text-indigo-300 font-bold">€{Math.round(curated.wealthMaximizer.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(curated.wealthMaximizer.dstiPct * 100)}%)</span>
+                  <span className="text-purple-300 font-bold">
+                    €{Math.round(curated.wealthMaximizer.mandatoryMonthlyPayment).toLocaleString()}/mo
+                    {curated.wealthMaximizer.discretionaryMonthlyOverpayment > 0 && ` (+€${Math.round(curated.wealthMaximizer.discretionaryMonthlyOverpayment).toLocaleString()})`}
+                    {' '}({Math.round(curated.wealthMaximizer.dstiPct * 100)}% DSTI)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Deposit:</span>
@@ -449,7 +455,11 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1 text-slate-300">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Outlay:</span>
-                  <span className="text-emerald-300 font-bold">€{Math.round(curated.greenArbitrageur.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(curated.greenArbitrageur.dstiPct * 100)}%)</span>
+                  <span className="text-emerald-300 font-bold">
+                    €{Math.round(curated.greenArbitrageur.mandatoryMonthlyPayment).toLocaleString()}/mo
+                    {curated.greenArbitrageur.discretionaryMonthlyOverpayment > 0 && ` (+€${Math.round(curated.greenArbitrageur.discretionaryMonthlyOverpayment).toLocaleString()})`}
+                    {' '}({Math.round(curated.greenArbitrageur.dstiPct * 100)}% DSTI)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Deposit:</span>
@@ -486,7 +496,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           </div>
         )}
 
-        {/* Card 3: Algorithmic Sweet Spot (Knee Point) */}
+        {/* Card 3: Balanced Efficiency Sweet Spot */}
         {curated.sweetSpot && (
           <div className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
             isStrategyActive(curated.sweetSpot)
@@ -496,16 +506,16 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span className="font-bold text-white text-xs truncate">Sweet Spot</span>
+                  <Flame className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="font-bold text-white text-xs truncate">Balanced Sweet Spot</span>
                 </div>
                 <InfoTooltip
-                  title="🎯 Algorithmic Sweet Spot (Knee Point)"
+                  title="⚡ Balanced Efficiency Sweet Spot"
                   content={
                     <div className="space-y-1.5 text-[11px]">
-                      <p><strong>Goal:</strong> Achieve the highest marginal interest savings per extra euro committed without taking cashflow risks.</p>
-                      <p><strong>Mechanism:</strong> Identifies the bend ("knee") on the Pareto curve where overpaying yields maximum bang-for-buck before diminishing returns flatten the curve, weighted by a strict safety buffer.</p>
-                      <p className="text-emerald-300"><strong>Safety Score:</strong> {curated.sweetSpot.safetyScore}/100 based on liquid emergency runway & free cashflow margin.</p>
+                      <p><strong>Goal:</strong> Achieve the highest marginal return per extra euro committed to debt paydown.</p>
+                      <p><strong>Mechanism:</strong> Identifies the maximum curvature ("knee point") on the Pareto Frontier, where interest reduction is steepest before diminishing returns set in.</p>
+                      <p className="text-emerald-400"><strong>Balance:</strong> Saves substantial interest ({formatK(curated.sweetSpot.totalInterestSaved)}) without stripping away your liquid buffer.</p>
                     </div>
                   }
                 >
@@ -528,7 +538,11 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1 text-slate-300">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Outlay:</span>
-                  <span className="text-indigo-300 font-bold">€{Math.round(curated.sweetSpot.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(curated.sweetSpot.dstiPct * 100)}%)</span>
+                  <span className="text-indigo-300 font-bold">
+                    €{Math.round(curated.sweetSpot.mandatoryMonthlyPayment).toLocaleString()}/mo
+                    {curated.sweetSpot.discretionaryMonthlyOverpayment > 0 && ` (+€${Math.round(curated.sweetSpot.discretionaryMonthlyOverpayment).toLocaleString()})`}
+                    {' '}({Math.round(curated.sweetSpot.dstiPct * 100)}% DSTI)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Payoff:</span>
@@ -608,7 +622,11 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono space-y-1 text-slate-300">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Outlay:</span>
-                  <span className="text-sky-300 font-bold">€{Math.round(curated.debtFreeAccelerator.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(curated.debtFreeAccelerator.dstiPct * 100)}%)</span>
+                  <span className="text-sky-300 font-bold">
+                    €{Math.round(curated.debtFreeAccelerator.mandatoryMonthlyPayment).toLocaleString()}/mo
+                    {curated.debtFreeAccelerator.discretionaryMonthlyOverpayment > 0 && ` (+€${Math.round(curated.debtFreeAccelerator.discretionaryMonthlyOverpayment).toLocaleString()})`}
+                    {' '}({Math.round(curated.debtFreeAccelerator.dstiPct * 100)}% DSTI)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Deposit:</span>
@@ -668,7 +686,18 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
             </p>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+            {/* Hide Over-Budget Points Toggle */}
+            <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-semibold text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-750 hover:border-slate-600 transition-colors">
+              <input
+                type="checkbox"
+                checked={hideOverBudget}
+                onChange={(e) => setHideOverBudget(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-700 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-slate-800"
+              />
+              <span>Only Show Affordable</span>
+            </label>
+
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-sm shadow-purple-400" />
               <span className="text-slate-300">Pareto Optimal Frontier</span>
@@ -677,7 +706,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <span className="w-2.5 h-2.5 rounded-full bg-slate-600" />
               <span className="text-slate-400">Dominated / Off-Frontier</span>
             </div>
-            {maxMonthlyBudgetEur !== null && (
+            {!hideOverBudget && maxMonthlyBudgetEur !== null && (
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-slate-750" />
                 <span className="text-slate-500">Over Budget</span>
@@ -748,7 +777,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
 
                       {res.exceedsBudget && (
                         <div className="p-1 rounded bg-rose-950/60 border border-rose-800 text-[10px] text-rose-300 font-sans">
-                          ⚠️ Exceeds Monthly Budget: €{Math.round(res.totalMonthlyPayment).toLocaleString()}/mo &gt; €{maxMonthlyBudgetEur?.toLocaleString()}/mo
+                          ⚠️ Mandatory Payment Exceeds Budget: €{Math.round(res.mandatoryMonthlyPayment).toLocaleString()}/mo &gt; €{maxMonthlyBudgetEur?.toLocaleString()}/mo
                         </div>
                       )}
 
@@ -762,8 +791,18 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                           <strong>{formatK(res.totalLifetimeInterest)}</strong>
                         </div>
                         <div className="flex justify-between text-indigo-300">
-                          <span>Monthly Outlay:</span>
-                          <strong>€{Math.round(res.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(res.dstiPct * 100)}%)</strong>
+                          <span>Mandatory PMT:</span>
+                          <strong>€{Math.round(res.mandatoryMonthlyPayment).toLocaleString()}/mo ({Math.round(res.dstiPct * 100)}% DSTI)</strong>
+                        </div>
+                        {res.discretionaryMonthlyOverpayment > 0 && (
+                          <div className="flex justify-between text-emerald-400">
+                            <span>Voluntary Overpay:</span>
+                            <strong>+€{Math.round(res.discretionaryMonthlyOverpayment).toLocaleString()}/mo ({Math.round((c.overpaymentSurplusPct ?? 0) * 100)}% surplus)</strong>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-slate-300">
+                          <span>Total Monthly Outlay:</span>
+                          <strong>€{Math.round(res.totalMonthlyPayment).toLocaleString()}/mo ({Math.round(res.totalDstiPct * 100)}%)</strong>
                         </div>
                         <div className="flex justify-between text-slate-300">
                           <span>Loan / Deposit:</span>
