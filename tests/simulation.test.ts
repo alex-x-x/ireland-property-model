@@ -34,7 +34,9 @@ describe('Simulation Engine', () => {
     expect(simulation[0].propertyPrice).toBe(1000000);
     expect(simulation[12].propertyPrice).toBeCloseTo(1050000, -1);
 
-    const expectedInitialCash = 50000 + 10000 * 0.91;
+    const expectedInitialCash =
+      DEFAULT_CONFIG.liquid_assets.cash_eur +
+      DEFAULT_CONFIG.liquid_assets.cash_usd * DEFAULT_CONFIG.macro.eur_usd_spot;
     expect(simulation[0].cash).toBeCloseTo(expectedInitialCash, 1);
     expect(simulation[60].totalLiquidWealth).toBeGreaterThan(simulation[0].totalLiquidWealth);
   });
@@ -62,14 +64,17 @@ describe('Simulation Engine', () => {
   });
 
   it('models annual bonus payout in March into cash savings after Irish 52% tax', () => {
-    // Start date: 2026-08-29 -> March 2027 occurs at month index 7
+    // Start date: 2026-09-01 -> March 2027 occurs at month index 6
     const sim = runSimulation(DEFAULT_CONFIG);
     const marchMonth = sim.find((p) => p.date.endsWith('-03'));
     expect(marchMonth).toBeDefined();
     expect(marchMonth!.netBonusReceivedEur).toBeGreaterThan(0);
 
-    // Target bonus: €35,000 * (1 - 0.52) = €16,800 net bonus injected into cash in March
-    expect(marchMonth!.netBonusReceivedEur).toBeCloseTo(35000 * 0.48, 0);
+    // Target bonus: €30,000 * (1 - 0.52) = €14,400 net bonus injected into cash in March
+    expect(marchMonth!.netBonusReceivedEur).toBeCloseTo(
+      (DEFAULT_CONFIG.mortgage.buyer_annual_bonus_eur ?? 30000) * 0.48,
+      0
+    );
   });
 
   it('preserves and compounds retained GSU shares across monthly vests without selling', () => {
