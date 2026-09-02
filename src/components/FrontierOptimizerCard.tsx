@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import {
   Sparkles,
   Award,
@@ -42,6 +42,7 @@ interface FrontierOptimizerCardProps {
   currentMonthlyOverpayment: number;
   currentAnnualLumpSum: number;
   onApplyStrategy: (strategy: MortgageStrategyResult) => void;
+  onChange?: (updatedConfig: SimulationConfig) => void;
 }
 
 export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(({
@@ -54,10 +55,71 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
   currentMonthlyOverpayment,
   currentAnnualLumpSum,
   onApplyStrategy,
+  onChange,
 }) => {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
-  const [maxMonthlyBudgetEur, setMaxMonthlyBudgetEur] = useState<number | null>(null);
+  const configuredBudget = config.mortgage.max_contractual_monthly_payment_eur ?? null;
+  const [maxMonthlyBudgetEur, setMaxMonthlyBudgetEur] = useState<number | null>(configuredBudget);
+  const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const [textVal, setTextVal] = useState<string>(
+    configuredBudget !== null ? String(configuredBudget) : ''
+  );
   const [hideOverBudget, setHideOverBudget] = useState<boolean>(true);
+
+  // Synchronize when config updates externally
+  useEffect(() => {
+    const updated = config.mortgage.max_contractual_monthly_payment_eur ?? null;
+    setMaxMonthlyBudgetEur(updated);
+    if (!isInputFocused) {
+      setTextVal(updated !== null ? String(updated) : '');
+    }
+  }, [config.mortgage.max_contractual_monthly_payment_eur, isInputFocused]);
+
+  const handleBudgetChange = (newBudget: number | null) => {
+    setMaxMonthlyBudgetEur(newBudget);
+    if (!isInputFocused) {
+      setTextVal(newBudget !== null ? String(newBudget) : '');
+    }
+    if (onChange && config.mortgage.max_contractual_monthly_payment_eur !== newBudget) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          max_contractual_monthly_payment_eur: newBudget,
+        },
+      });
+    }
+  };
+
+  const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    setTextVal(raw);
+    if (raw === '') {
+      handleBudgetChange(null);
+    } else {
+      const parsed = parseInt(raw, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        handleBudgetChange(parsed);
+      }
+    }
+  };
+
+  const handleInputBlur = () => {
+    setIsInputFocused(false);
+    if (textVal === '' || textVal === '0') {
+      handleBudgetChange(null);
+      setTextVal('');
+    } else {
+      const parsed = parseInt(textVal.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        handleBudgetChange(parsed);
+        setTextVal(String(parsed));
+      } else {
+        handleBudgetChange(null);
+        setTextVal('');
+      }
+    }
+  };
 
   // Stage 1: Expensive candidate generation & 60-month simulation (runs only when config/month changes)
   const baseEvaluations = useMemo(() => {
@@ -206,9 +268,30 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-indigo-300">
-              {maxMonthlyBudgetEur === null ? 'Uncapped (All Permutations)' : `€${maxMonthlyBudgetEur.toLocaleString()}/mo`}
-            </span>
+            <div className="flex items-center bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-750 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all">
+              <span className="text-indigo-400 font-mono font-bold text-xs mr-1 select-none">€</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={isInputFocused ? textVal : (maxMonthlyBudgetEur !== null ? maxMonthlyBudgetEur.toLocaleString() : '')}
+                placeholder="Uncapped"
+                onChange={handleTextInputChange}
+                onFocus={() => {
+                  setIsInputFocused(true);
+                  setTextVal(maxMonthlyBudgetEur !== null ? String(maxMonthlyBudgetEur) : '');
+                }}
+                onBlur={handleInputBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="w-20 bg-transparent text-left font-mono font-bold text-xs text-indigo-200 focus:outline-none placeholder:text-slate-500 placeholder:font-normal"
+                title="Enter custom monthly payment ceiling in EUR, or clear for uncapped"
+              />
+              <span className="text-slate-400 font-mono text-xs ml-0.5 select-none">/mo</span>
+            </div>
             {maxMonthlyBudgetEur !== null && netMonthlyIncomeEur > 0 && (
               <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
                 (maxMonthlyBudgetEur / netMonthlyIncomeEur) <= 0.35
@@ -228,7 +311,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-slate-400 font-semibold">Quick Presets:</span>
             <button
-              onClick={() => setMaxMonthlyBudgetEur(conservativePreset)}
+              onClick={() => handleBudgetChange(conservativePreset)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                 maxMonthlyBudgetEur === conservativePreset
                   ? 'bg-emerald-600 text-white border-emerald-500'
@@ -238,7 +321,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               Conservative (30% DSTI • €{conservativePreset.toLocaleString()})
             </button>
             <button
-              onClick={() => setMaxMonthlyBudgetEur(standardPreset)}
+              onClick={() => handleBudgetChange(standardPreset)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                 maxMonthlyBudgetEur === standardPreset
                   ? 'bg-indigo-600 text-white border-indigo-500'
@@ -248,7 +331,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               Standard (35% DSTI • €{standardPreset.toLocaleString()})
             </button>
             <button
-              onClick={() => setMaxMonthlyBudgetEur(aggressivePreset)}
+              onClick={() => handleBudgetChange(aggressivePreset)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                 maxMonthlyBudgetEur === aggressivePreset
                   ? 'bg-amber-600 text-white border-amber-500'
@@ -258,7 +341,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               Aggressive (45% DSTI • €{aggressivePreset.toLocaleString()})
             </button>
             <button
-              onClick={() => setMaxMonthlyBudgetEur(null)}
+              onClick={() => handleBudgetChange(null)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                 maxMonthlyBudgetEur === null
                   ? 'bg-purple-600 text-white border-purple-500'
@@ -276,8 +359,8 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               min={sliderMin}
               max={sliderMax}
               step={50}
-              value={maxMonthlyBudgetEur ?? sliderMax}
-              onChange={(e) => setMaxMonthlyBudgetEur(parseInt(e.target.value))}
+              value={maxMonthlyBudgetEur !== null ? Math.min(sliderMax, Math.max(sliderMin, maxMonthlyBudgetEur)) : sliderMax}
+              onChange={(e) => handleBudgetChange(parseInt(e.target.value, 10))}
               className="w-full h-2 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-indigo-500"
             />
             <span className="text-[11px] text-slate-500 font-mono">€{sliderMax.toLocaleString()}</span>

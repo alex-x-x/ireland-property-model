@@ -40,6 +40,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
         note: 'Staff / L6 Promotion (+€40k base)',
       },
     ],
+    max_contractual_monthly_payment_eur: null,
   },
   liquid_assets: {
     cash_eur: 50000,

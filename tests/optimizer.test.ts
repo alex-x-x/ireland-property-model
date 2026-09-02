@@ -220,6 +220,28 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       expect(analysis.curated.sweetSpot).toBeNull();
       expect(analysis.curated.debtFreeAccelerator).toBeNull();
     });
+
+    it('defaults max_contractual_monthly_payment_eur to null in DEFAULT_CONFIG and supports budget persistence', () => {
+      expect(DEFAULT_CONFIG.mortgage.max_contractual_monthly_payment_eur).toBeNull();
+
+      const customConfig: SimulationConfig = {
+        ...DEFAULT_CONFIG,
+        mortgage: {
+          ...DEFAULT_CONFIG.mortgage,
+          max_contractual_monthly_payment_eur: 2800,
+        },
+      };
+
+      const customAnalysis = runMortgageOptimization(
+        customConfig,
+        purchaseMonth,
+        monthlyPoints,
+        customConfig.mortgage.max_contractual_monthly_payment_eur ?? undefined
+      );
+
+      expect(customAnalysis.maxMonthlyBudgetEur).toBe(2800);
+      expect(customAnalysis.compliantResults.every((r) => r.mandatoryMonthlyPayment <= 2800 + 0.01)).toBe(true);
+    });
   });
 });
 
