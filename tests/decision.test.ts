@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { runDecisionAnalysis } from '../src/engine/decision';
 import { DEFAULT_CONFIG } from '../src/engine/constants';
 import { runSimulation } from '../src/engine/simulation';
+import { SimulationConfig } from '../src/engine/types';
 
 describe('Decision Engine', () => {
   it('evaluates buy vs wait opportunity cost and generates clear scenarios and deltas', () => {
@@ -335,6 +336,43 @@ describe('Decision Engine', () => {
 
     expect(wait24mLoss).toBeGreaterThan(buyAsapLoss);
     expect(wait24mLoss - buyAsapLoss).toBeCloseTo(deltaErosion, 0);
+  });
+
+  it('incorporates fixed rate lockout and variable rate shock into post-purchase mortgage trajectory', () => {
+    const flatConfig: SimulationConfig = {
+      ...DEFAULT_CONFIG,
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        fixed_rate_years: 2,
+        variable_rate_shock_pct: 0,
+      },
+    };
+
+    const shockedConfig: SimulationConfig = {
+      ...DEFAULT_CONFIG,
+      mortgage: {
+        ...DEFAULT_CONFIG.mortgage,
+        fixed_rate_years: 2,
+        variable_rate_shock_pct: 2.0, // +2% variable shock
+      },
+    };
+
+    const pointsFlat = runSimulation(flatConfig);
+    const decisionFlat = runDecisionAnalysis(flatConfig, pointsFlat);
+
+    const pointsShocked = runSimulation(shockedConfig);
+    const decisionShocked = runDecisionAnalysis(shockedConfig, pointsShocked);
+
+    const flatBuyAsap = decisionFlat.scenarios.find((s) => s.id === 'buy_asap')!;
+    const shockedBuyAsap = decisionShocked.scenarios.find((s) => s.id === 'buy_asap')!;
+
+    expect(flatBuyAsap).toBeDefined();
+    expect(shockedBuyAsap).toBeDefined();
+
+    // With a +2% variable rate shock starting Month 25, cumulative interest paid by M60 must be higher
+    expect(shockedBuyAsap.cumulativeMortgageInterestPaid).toBeGreaterThan(flatBuyAsap.cumulativeMortgageInterestPaid);
+    // And remaining liquid wealth at M60 must be lower due to higher monthly mortgage payments after month 24
+    expect(shockedBuyAsap.remainingLiquidWealthAtM60).toBeLessThan(flatBuyAsap.remainingLiquidWealthAtM60);
   });
 });
 

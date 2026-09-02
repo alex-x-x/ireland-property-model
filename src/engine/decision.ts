@@ -4,7 +4,7 @@ import {
   PurchaseScenario,
   SimulationConfig,
 } from './types';
-import { calculateMortgageAmortization, getSalaryAtDate } from './mortgage';
+import { calculateMortgageWithOverpayments, getSalaryAtDate } from './mortgage';
 import { addMonthsToDate } from './vesting';
 import { calculateIrishTaxBreakdown } from './tax';
 
@@ -115,12 +115,37 @@ function simulateTrajectoryForPurchaseMonth(
   }
 
   const monthsUnderMortgage = forecastMonths - buyMonth;
-  const amort = calculateMortgageAmortization(
-    initialMortgagePrincipal,
-    mortgage.mortgage_interest_rate,
-    mortgage.mortgage_term_years,
-    monthsUnderMortgage
+  const fixedRateYears = mortgage.fixed_rate_years ?? 2;
+  const variableRateShock = mortgage.variable_rate_shock_pct ?? 0;
+  const variableRate = mortgage.mortgage_interest_rate + variableRateShock / 100;
+
+  const amortResult = calculateMortgageWithOverpayments(
+    {
+      principal: initialMortgagePrincipal,
+      annualRate: mortgage.mortgage_interest_rate,
+      termYears: mortgage.mortgage_term_years,
+      fixedRateYears,
+      variableRate,
+      monthlyOverpayment: 0,
+      annualLumpSumOverpayment: 0,
+    },
+    buyPoint.date
   );
+
+  const scheduleIndex = Math.min(monthsUnderMortgage, amortResult.schedule.length) - 1;
+  const pointAtM60 = scheduleIndex >= 0 ? amortResult.schedule[scheduleIndex] : undefined;
+  const remainingMortgageBalanceAtM60 =
+    monthsUnderMortgage === 0
+      ? initialMortgagePrincipal
+      : monthsUnderMortgage > amortResult.schedule.length
+      ? 0
+      : pointAtM60 ? pointAtM60.balance : 0;
+  const cumulativeMortgageInterestPaid = pointAtM60
+    ? pointAtM60.cumulativeInterestPaid
+    : (monthsUnderMortgage > amortResult.schedule.length ? amortResult.totalInterestWithOverpayment : 0);
+  const cumulativeMortgagePrincipalPaid = pointAtM60
+    ? pointAtM60.cumulativePrincipalPaid
+    : (monthsUnderMortgage > amortResult.schedule.length ? initialMortgagePrincipal : 0);
 
   let currentCash = cashAfterBuy;
   let currentInv = invAfterBuy;
@@ -146,15 +171,24 @@ function simulateTrajectoryForPurchaseMonth(
     const dateStr = pt ? pt.date : baseMonthToDate(meta.start_date, m);
     const activeSalary = getSalaryAtDate(dateStr, mortgage);
 
+    const elapsedMonths = m - buyMonth;
+    const isPaidOff = elapsedMonths > amortResult.actualPayoffMonths;
+    const isFixed = !isPaidOff && elapsedMonths <= fixedRateYears * 12;
+    const currentMortgagePayment = isPaidOff
+      ? 0
+      : isFixed
+      ? amortResult.standardMonthlyPayment
+      : (amortResult.variableMonthlyPayment ?? amortResult.standardMonthlyPayment);
+
     let monthlySavings = liquid_assets.monthly_salary_savings_eur;
     if (config.tax && config.tax.savings_calculation_mode === 'net_pay_derived') {
       const taxBreakdown = calculateIrishTaxBreakdown(activeSalary.baseSalary, config.tax);
       const livingExpenses = config.tax.monthly_living_expenses_eur ?? 2500;
       // Post-purchase savings: Net Take-Home - Mortgage - Maintenance - Living Expenses
-      monthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - (amort.monthlyPayment + monthlyMaintenance) - livingExpenses);
+      monthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - (currentMortgagePayment + monthlyMaintenance) - livingExpenses);
     } else {
       // User stops paying rent, pays mortgage + maintenance
-      const savingsDelta = currentRent - (amort.monthlyPayment + monthlyMaintenance);
+      const savingsDelta = currentRent - (currentMortgagePayment + monthlyMaintenance);
       monthlySavings = Math.max(0, liquid_assets.monthly_salary_savings_eur + savingsDelta);
     }
     currentCash += monthlySavings;
@@ -169,21 +203,20 @@ function simulateTrajectoryForPurchaseMonth(
 
   const remainingLiquidWealthAtM60 = currentCash + currentInv + currentGsu;
   const propertyValueAtM60 = currentPropValue;
-  const remainingMortgageBalanceAtM60 = amort.remainingBalance;
   const homeEquityAtM60 = Math.max(0, propertyValueAtM60 - remainingMortgageBalanceAtM60);
   const totalNetWealthAtM60 = remainingLiquidWealthAtM60 + homeEquityAtM60;
 
   return {
     remainingLiquidWealthAtM60,
     cumulativeRentPaid,
-    cumulativeMortgageInterestPaid: amort.cumulativeInterestPaid,
-    cumulativeMortgagePrincipalPaid: amort.cumulativePrincipalPaid,
+    cumulativeMortgageInterestPaid,
+    cumulativeMortgagePrincipalPaid,
     cumulativeMaintenancePaid,
     propertyValueAtM60,
     remainingMortgageBalanceAtM60,
     homeEquityAtM60,
     totalNetWealthAtM60,
-    monthlyMortgagePayment: amort.monthlyPayment,
+    monthlyMortgagePayment: amortResult.standardMonthlyPayment,
     initialMortgagePrincipal,
     depositPaid,
     stampDutyPaid,

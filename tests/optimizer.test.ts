@@ -87,6 +87,56 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       const result = evaluateMortgageStrategy(candidate, config, monthlyPoints, purchaseMonth);
       expect(result.isFundable).toBe(false);
     });
+
+    it('incorporates fixed_rate_years from config and applies variable rate shock to lifetime interest and monthly payment', () => {
+      const customConfig: SimulationConfig = {
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          fixed_rate_years: 3,
+          variable_rate_shock_pct: 1.5,
+        },
+      };
+
+      const candidates = generateCandidateStrategies(customConfig, activePoint);
+      expect(candidates[0].fixedRateYears).toBe(3);
+
+      const candidate: MortgageStrategyCandidate = {
+        id: 'shock_test_candidate',
+        depositAmount: 160000,
+        depositPct: 0.20,
+        loanAmount: 640000,
+        ltvPct: 80,
+        termYears: 25,
+        interestRatePct: 3.5,
+        fixedRateYears: 3,
+        monthlyOverpayment: 0,
+        annualBonusLumpSum: 0,
+        strategyType: 'green_80',
+      };
+
+      const flatConfig: SimulationConfig = {
+        ...customConfig,
+        mortgage: {
+          ...customConfig.mortgage,
+          variable_rate_shock_pct: 0,
+        },
+      };
+
+      const resultFlat = evaluateMortgageStrategy(candidate, flatConfig, monthlyPoints, purchaseMonth);
+      const resultShocked = evaluateMortgageStrategy(candidate, customConfig, monthlyPoints, purchaseMonth);
+
+      // Shocked lifetime interest must be significantly higher than flat rate
+      expect(resultShocked.totalLifetimeInterest).toBeGreaterThan(resultFlat.totalLifetimeInterest);
+      expect(resultShocked.totalLifetimeInterest - resultFlat.totalLifetimeInterest).toBeGreaterThan(50000);
+
+      // Variable monthly payment should be populated and higher than standard fixed payment
+      expect(resultShocked.variableMonthlyPayment).toBeDefined();
+      expect(resultShocked.variableMonthlyPayment!).toBeGreaterThan(resultShocked.mandatoryMonthlyPayment);
+
+      // Post-fixed trajectory impact: at M60, terminal liquid wealth should be lower due to higher variable monthly payments
+      expect(resultShocked.terminalLiquidWealthM60).toBeLessThan(resultFlat.terminalLiquidWealthM60);
+    });
   });
 
   describe('computeParetoFrontier', () => {
