@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   BookOpen,
@@ -8,6 +8,8 @@ import {
   Building,
   Award,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Scale,
   Compass,
@@ -20,32 +22,139 @@ interface HelpGuideModalProps {
 
 type TabType = 'overview' | 'playbook' | 'widgets' | 'optimizer' | 'interpretation' | 'math';
 
+interface TabItem {
+  id: TabType;
+  number: string;
+  title: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const TABS: TabItem[] = [
+  {
+    id: 'overview',
+    number: '1',
+    title: 'Core Dilemma',
+    subtitle: 'The 3-way financial tug-of-war',
+    icon: Sparkles,
+  },
+  {
+    id: 'playbook',
+    number: '2',
+    title: 'How to Decide',
+    subtitle: '4-step playbook & real cases',
+    icon: Compass,
+  },
+  {
+    id: 'widgets',
+    number: '3',
+    title: 'Widget Guide',
+    subtitle: 'Breakdown of all 6 components',
+    icon: Layers,
+  },
+  {
+    id: 'optimizer',
+    number: '4',
+    title: 'Frontier Optimizer',
+    subtitle: 'Pareto curve & loan presets',
+    icon: Sparkles,
+  },
+  {
+    id: 'interpretation',
+    number: '5',
+    title: 'Interpretation Tips',
+    subtitle: 'Heatmap, tipping points & rules',
+    icon: Sparkles,
+  },
+  {
+    id: 'math',
+    number: '6',
+    title: 'Mathematical Deep Dive',
+    subtitle: 'Formulas, 52% tax & proofs',
+    icon: Scale,
+  },
+];
+
 export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const activeTabIndex = TABS.findIndex((t) => t.id === activeTab);
+  const activeTabObj = TABS[activeTabIndex] || TABS[0];
+  const prevTab = activeTabIndex > 0 ? TABS[activeTabIndex - 1] : null;
+  const nextTab = activeTabIndex < TABS.length - 1 ? TABS[activeTabIndex + 1] : null;
+
+  // Reset scroll to top when changing tabs
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
+
+  // Keyboard navigation: Escape to close, Up/Left and Down/Right to cycle tabs
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      if (targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT') {
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setActiveTab((curr) => {
+          const idx = TABS.findIndex((t) => t.id === curr);
+          return idx < TABS.length - 1 ? TABS[idx + 1].id : curr;
+        });
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setActiveTab((curr) => {
+          const idx = TABS.findIndex((t) => t.id === curr);
+          return idx > 0 ? TABS[idx - 1].id : curr;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+    >
       <div
-        className="bg-slate-900 border border-slate-750 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp"
+        className="bg-slate-900 border border-slate-750 rounded-2xl w-full max-w-5xl h-[92vh] sm:h-[88vh] max-h-[860px] min-h-[440px] flex flex-col shadow-2xl overflow-hidden animate-scaleUp"
         role="dialog"
         aria-modal="true"
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-10">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 shrink-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
-              <BookOpen className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-linear-to-tr from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20 shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <span>Model Methodology & User Guide</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-lg font-bold text-white tracking-tight">
+                  Model Methodology & User Guide
+                </h2>
                 <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
                   Documentation
                 </span>
-              </h2>
-              <p className="text-xs text-slate-400">
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-1 sm:line-clamp-none">
                 Intuitive walkthroughs, decision playbook, widget breakdowns & mathematical proofs
               </p>
             </div>
@@ -53,90 +162,111 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
             title="Close Guide (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-800 bg-slate-850/60 px-6 gap-2 overflow-x-auto custom-scrollbar">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'overview'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>1. Core Dilemma</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('playbook')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'playbook'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Compass className="w-4 h-4 text-emerald-400" />
-            <span>2. How to Decide (Playbook & Cases)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('widgets')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'widgets'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>3. Widget Guide</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('optimizer')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'optimizer'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span>4. Frontier & Loan Optimizer</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('interpretation')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'interpretation'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>5. Key Interpretation Tips</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('math')}
-            className={`flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'math'
-                ? 'border-brand-500 text-brand-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Scale className="w-4 h-4 text-purple-400" />
-            <span>6. Mathematical Deep Dive</span>
-          </button>
+        {/* Mobile Section Selector (< md) */}
+        <div className="md:hidden border-b border-slate-800 bg-slate-850/90 px-4 py-2 shrink-0 flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-slate-400 shrink-0">Topic:</span>
+          <div className="relative flex-1">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as TabType)}
+              className="w-full bg-slate-800 text-slate-200 text-xs font-semibold py-1.5 pl-3 pr-8 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer appearance-none"
+            >
+              {TABS.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.number}. {tab.title} — {tab.subtitle}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
 
-        {/* Modal Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-slate-300 text-xs sm:text-sm leading-relaxed">
+        {/* Modal Main Body (2 Columns on md+) */}
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+          {/* Left Sidebar Navigation (Desktop / Tablet md+) */}
+          <aside className="hidden md:flex flex-col w-64 lg:w-72 shrink-0 border-r border-slate-800 bg-slate-900/50">
+            <div className="p-3 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
+                Guide Navigation
+              </span>
+              <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
+                {activeTabIndex + 1}/{TABS.length}
+              </span>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar" aria-label="Guide Sections">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 group cursor-pointer ${
+                      isActive
+                        ? 'bg-brand-500/15 border border-brand-500/30 text-white shadow-sm shadow-brand-950/40'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+                    }`}
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                        isActive
+                          ? 'bg-brand-500/25 text-brand-300'
+                          : 'bg-slate-800 text-slate-400 group-hover:text-slate-200 group-hover:bg-slate-750'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[11px] font-mono font-bold ${isActive ? 'text-brand-300' : 'text-slate-500'}`}>
+                          {tab.number}.
+                        </span>
+                        <span className={`text-xs font-semibold truncate ${isActive ? 'text-white font-bold' : 'text-slate-300'}`}>
+                          {tab.title}
+                        </span>
+                      </div>
+                      <p className={`text-[10px] truncate leading-tight mt-0.5 ${isActive ? 'text-brand-300/80' : 'text-slate-400'}`}>
+                        {tab.subtitle}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-brand-400 self-center shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="p-3 border-t border-slate-800/80 bg-slate-900/60 text-[11px] text-slate-400 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+              <span>Use ↑ / ↓ arrow keys to switch</span>
+            </div>
+          </aside>
+
+          {/* Right Content Pane */}
+          <section className="flex-1 min-w-0 flex flex-col h-full bg-slate-900/30 overflow-hidden">
+            {/* Active Topic Banner / Breadcrumb */}
+            <div className="px-5 sm:px-6 py-2.5 border-b border-slate-800/60 bg-slate-850/40 shrink-0 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-slate-400">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Section {activeTabIndex + 1} of {TABS.length}</span>
+                <span className="text-slate-600">•</span>
+                <span className="font-medium text-slate-200">{activeTabObj.title}</span>
+              </div>
+              <span className="text-[11px] font-medium text-brand-300/80 hidden sm:inline">
+                {activeTabObj.subtitle}
+              </span>
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div ref={contentRef} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar text-slate-300 text-xs sm:text-sm leading-relaxed">
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-fadeIn">
@@ -883,17 +1013,59 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               </details>
             </div>
           )}
+
+              {/* Sequential Navigation Bottom Bar */}
+              <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                {prevTab ? (
+                  <button
+                    onClick={() => setActiveTab(prevTab.id)}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4 shrink-0" />
+                    <div className="text-left">
+                      <div className="text-[10px] text-slate-400">Previous</div>
+                      <div className="font-bold">{prevTab.number}. {prevTab.title}</div>
+                    </div>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                {nextTab ? (
+                  <button
+                    onClick={() => setActiveTab(nextTab.id)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 hover:text-white border border-brand-500/40 text-xs font-semibold transition-colors cursor-pointer ml-auto"
+                  >
+                    <div className="text-right">
+                      <div className="text-[10px] text-brand-400">Next</div>
+                      <div className="font-bold">{nextTab.number}. {nextTab.title}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 shrink-0" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={onClose}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-colors cursor-pointer ml-auto"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Finished Guide • Back to Model</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-3 border-t border-slate-800 bg-slate-900 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-400">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>100% Client-Side Simulation • Zero Data Sent to Servers</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="hidden sm:inline">100% Client-Side Simulation • Zero Data Sent to Servers</span>
+            <span className="sm:hidden text-[11px]">100% Client-Side Simulation</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md transition-colors"
+            className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
           >
             Got it, Back to Model
           </button>
