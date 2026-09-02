@@ -28,6 +28,8 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     cbi_max_lti_multiple: 4.0, // Central Bank of Ireland FTB LTI rule
     approval_in_principle_amount_eur: null, // null defaults to CBI 4.0x calculation (4.0 * €230k = €920k)
     bonus_payout_month: 3, // Annual March bonus payout
+    variable_rate_shock_pct: 1.5, // Central Bank stress test default (+1.50%)
+    fixed_rate_years: 2, // 2-year fixed lock
     salary_adjustments: [
       {
         id: 'adj_promo_y2',

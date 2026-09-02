@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import {
   Calculator,
   TrendingDown,
@@ -34,11 +34,13 @@ import { FrontierOptimizerCard } from './FrontierOptimizerCard';
 interface MortgageStudioWidgetProps {
   config: SimulationConfig;
   monthlyPoints: MonthlyDataPoint[];
+  onChange?: (updatedConfig: SimulationConfig) => void;
 }
 
 export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   config,
   monthlyPoints,
+  onChange,
 }) => {
   // Find earliest affordable month as initial default, or Month 0
   const initialAffordableMonth = useMemo(() => {
@@ -70,10 +72,27 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     config.mortgage.mortgage_interest_rate * 100
   );
   const [termYears, setTermYears] = useState<number>(config.mortgage.mortgage_term_years);
-  const [fixedRateYears, setFixedRateYears] = useState<number>(2); // Irish benchmark: 2-year fixed lock
+  const [fixedRateYears, setFixedRateYears] = useState<number>(
+    config.mortgage.fixed_rate_years ?? 2
+  ); // Irish benchmark: 2-year fixed lock
   const [monthlyOverpayment, setMonthlyOverpayment] = useState<number>(0);
   const [annualLumpSum, setAnnualLumpSum] = useState<number>(0);
-  const [rateShockPct, setRateShockPct] = useState<number>(1.5);
+  const [rateShockPct, setRateShockPct] = useState<number>(
+    config.mortgage.variable_rate_shock_pct ?? 1.5
+  );
+
+  // Synchronize state when config properties update externally
+  useEffect(() => {
+    if (config.mortgage.variable_rate_shock_pct !== undefined) {
+      setRateShockPct(config.mortgage.variable_rate_shock_pct);
+    }
+  }, [config.mortgage.variable_rate_shock_pct]);
+
+  useEffect(() => {
+    if (config.mortgage.fixed_rate_years !== undefined) {
+      setFixedRateYears(config.mortgage.fixed_rate_years);
+    }
+  }, [config.mortgage.fixed_rate_years]);
 
   const activeLoanAmount = customLoanAmount !== null ? customLoanAmount : defaultLoanAmount;
   const activeDepositAmount = Math.max(0, propertyPrice - activeLoanAmount);
@@ -82,6 +101,32 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   const totalUpfrontPaid = activeDepositAmount + stampDuty + legalFees;
   const postPurchaseLiquidLeft = Math.max(0, activePoint.totalLiquidWealth - totalUpfrontPaid);
   const isDepositFundable = activePoint.totalLiquidWealth >= totalUpfrontPaid;
+
+  const handleUpdateRateShock = (shock: number) => {
+    setRateShockPct(shock);
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          variable_rate_shock_pct: shock,
+        },
+      });
+    }
+  };
+
+  const handleUpdateFixedRateYears = (years: number) => {
+    setFixedRateYears(years);
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          fixed_rate_years: years,
+        },
+      });
+    }
+  };
 
   // Handle Preset Strategy Buttons
   const handleSetMinDeposit = () => {
@@ -110,10 +155,22 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     setCustomLoanAmount(null);
     setInterestRatePct(config.mortgage.mortgage_interest_rate * 100);
     setTermYears(config.mortgage.mortgage_term_years);
-    setFixedRateYears(2);
+    const defaultFixed = config.mortgage.fixed_rate_years ?? 2;
+    const defaultShock = config.mortgage.variable_rate_shock_pct ?? 1.5;
+    setFixedRateYears(defaultFixed);
     setMonthlyOverpayment(0);
     setAnnualLumpSum(0);
-    setRateShockPct(1.5);
+    setRateShockPct(defaultShock);
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          fixed_rate_years: defaultFixed,
+          variable_rate_shock_pct: defaultShock,
+        },
+      });
+    }
   };
 
   const handleApplyOptimizedStrategy = React.useCallback((strategy: MortgageStrategyResult) => {
@@ -597,7 +654,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                 min="0"
                 max="10"
                 value={fixedRateYears}
-                onChange={(e) => setFixedRateYears(parseInt(e.target.value, 10) || 0)}
+                onChange={(e) => handleUpdateFixedRateYears(parseInt(e.target.value, 10) || 0)}
                 className="min-w-0 w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
               />
               <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs font-sans">years</span>
@@ -625,7 +682,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                 min="-2"
                 max="5"
                 value={rateShockPct}
-                onChange={(e) => setRateShockPct(parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleUpdateRateShock(parseFloat(e.target.value) || 0)}
                 className={`min-w-0 w-full bg-transparent font-mono font-bold text-xs focus:outline-none ${rateShockPct === 0 ? 'text-slate-300' : rateShockPct <= 1.0 ? 'text-sky-300' : 'text-amber-300'}`}
               />
               <span className="shrink-0 whitespace-nowrap text-slate-400 text-xs">% hike</span>
@@ -635,7 +692,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
               {RATE_SHOCK_OPTIONS.map((opt) => (
                 <button
                   key={opt}
-                  onClick={() => setRateShockPct(opt)}
+                  onClick={() => handleUpdateRateShock(opt)}
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
                     rateShockPct === opt
                       ? opt === 0

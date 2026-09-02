@@ -8,6 +8,7 @@ import {
   getSalaryAtDate,
   calculateMortgageWithOverpayments,
 } from '../src/engine/mortgage';
+import { DEFAULT_CONFIG } from '../src/engine/constants';
 
 describe('Mortgage Engine', () => {
   it('calculates monthly mortgage payments accurately using standard annuity formula', () => {
@@ -646,6 +647,33 @@ describe('Mortgage Engine', () => {
       expect(totalInterestPaid).toBeCloseTo(result.totalInterestWithOverpayment, 1);
       expect(result.totalInterestSaved).toBe(result.totalInterestStandard - result.totalInterestWithOverpayment);
       expect(result.totalInterestSaved).toBeGreaterThan(0);
+    });
+
+    it('persists and calculates variable rate shock correctly from configuration defaults', () => {
+      const fixedYears = DEFAULT_CONFIG.mortgage.fixed_rate_years ?? 2;
+      const rateShock = DEFAULT_CONFIG.mortgage.variable_rate_shock_pct ?? 1.5;
+      const initialRate = DEFAULT_CONFIG.mortgage.mortgage_interest_rate;
+      const effectiveVarRate = initialRate + rateShock / 100;
+
+      expect(fixedYears).toBe(2);
+      expect(rateShock).toBe(1.5);
+      expect(effectiveVarRate).toBeCloseTo(0.05, 3); // 3.50% + 1.50% = 5.00%
+
+      const result = calculateMortgageWithOverpayments(
+        {
+          principal: 500000,
+          annualRate: initialRate,
+          termYears: 25,
+          fixedRateYears: fixedYears,
+          variableRate: effectiveVarRate,
+          monthlyOverpayment: 0,
+        },
+        DEFAULT_CONFIG.meta.start_date
+      );
+
+      expect(result.variableMonthlyPayment).toBeGreaterThan(result.standardMonthlyPayment);
+      expect(result.schedule[0].interestRate).toBeCloseTo(initialRate, 4);
+      expect(result.schedule[fixedYears * 12 + 1].interestRate).toBeCloseTo(effectiveVarRate, 4);
     });
   });
 });

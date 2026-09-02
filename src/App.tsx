@@ -272,7 +272,7 @@ export const App: React.FC = () => {
             <SensitivityMatrix config={debouncedConfig} />
 
             {/* Interactive Mortgage Studio & Loan Optimizer */}
-            <MortgageStudioWidget config={debouncedConfig} monthlyPoints={monthlyPoints} />
+            <MortgageStudioWidget config={debouncedConfig} monthlyPoints={monthlyPoints} onChange={setConfig} />
           </div>
         </div>
       </main>

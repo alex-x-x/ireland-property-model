@@ -33,6 +33,10 @@ export interface MortgageConfig {
   approval_in_principle_amount_eur?: number | null; // explicit AIP loan limit
   salary_adjustments?: SalaryAdjustment[]; // Planned future salary increases
   bonus_payout_month?: number; // Month of annual bonus payment (1-12, default: 3 for March)
+  variable_rate_shock_pct?: number; // Interest rate stress shock (e.g. 1.5 for +1.50%)
+  fixed_rate_years?: number; // Fixed rate period (e.g. 2 for 2-year fix)
+  monthly_overpayment_eur?: number;
+  annual_lump_sum_eur?: number;
 }
 
 export interface LiquidAssetsConfig {
