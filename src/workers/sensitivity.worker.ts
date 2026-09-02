@@ -1,11 +1,13 @@
-import { computeSensitivityMatrix, SensitivityRow } from '../engine/sensitivity';
+import { computeSensitivityMatrix, SensitivityRow, SensitivityWaitMode } from '../engine/sensitivity';
 import { SimulationConfig } from '../engine/types';
 
 export interface SensitivityWorkerRequest {
   type: 'COMPUTE_MATRIX';
   requestId: number;
   config: SimulationConfig;
-  horizonMonths: number;
+  waitMode?: SensitivityWaitMode;
+  stockRates?: number[];
+  propRates?: number[];
 }
 
 export interface SensitivityWorkerResponse {
@@ -15,9 +17,14 @@ export interface SensitivityWorkerResponse {
 }
 
 self.onmessage = (e: MessageEvent<SensitivityWorkerRequest>) => {
-  const { type, requestId, config, horizonMonths } = e.data;
+  const { type, requestId, config, waitMode, stockRates, propRates } = e.data;
   if (type === 'COMPUTE_MATRIX') {
-    const gridData = computeSensitivityMatrix(config, horizonMonths);
+    const gridData = computeSensitivityMatrix(
+      config,
+      waitMode ?? 'optimal',
+      stockRates,
+      propRates
+    );
     const response: SensitivityWorkerResponse = {
       type: 'MATRIX_RESULT',
       requestId,

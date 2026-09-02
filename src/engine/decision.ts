@@ -8,7 +8,7 @@ import { calculateMortgageWithOverpayments, getSalaryAtDate } from './mortgage';
 import { addMonthsToDate } from './vesting';
 import { calculateIrishTaxBreakdown } from './tax';
 
-interface PostPurchaseSimulation {
+export interface PostPurchaseSimulation {
   remainingLiquidWealthAtM60: number;
   cumulativeRentPaid: number;
   cumulativeMortgageInterestPaid: number;
@@ -27,7 +27,7 @@ interface PostPurchaseSimulation {
   propertyPurchasePrice: number;
 }
 
-function simulateTrajectoryForPurchaseMonth(
+export function simulateTrajectoryForPurchaseMonth(
   buyMonth: number | null,
   config: SimulationConfig,
   baseMonthlyPoints: MonthlyDataPoint[]
@@ -41,8 +41,8 @@ function simulateTrajectoryForPurchaseMonth(
   const rentMonthlyMult = Math.pow(1 + (macro.rent_yearly_growth_rate || 0), 1 / 12);
 
   // If never buy (Rent all 60 months)
-  if (buyMonth === null || buyMonth > forecastMonths) {
-    const endPoint = baseMonthlyPoints[forecastMonths];
+  if (buyMonth === null || buyMonth < 0 || buyMonth > forecastMonths) {
+    const endPoint = baseMonthlyPoints[Math.min(forecastMonths, baseMonthlyPoints.length - 1)];
     return {
       remainingLiquidWealthAtM60: endPoint.totalLiquidWealth,
       cumulativeRentPaid: endPoint.cumulativeRent,
@@ -63,7 +63,8 @@ function simulateTrajectoryForPurchaseMonth(
     };
   }
 
-  const buyPoint = baseMonthlyPoints[buyMonth];
+  const buyIndex = Math.min(buyMonth, baseMonthlyPoints.length - 1);
+  const buyPoint = baseMonthlyPoints[buyIndex];
   const propertyPurchasePrice = buyPoint.propertyPrice;
   const effectiveDepositPct =
     property.minimum_deposit_pct !== undefined && property.minimum_deposit_pct !== null

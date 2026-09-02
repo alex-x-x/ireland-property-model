@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SimulationConfig } from '../engine/types';
-import { computeSensitivityMatrix, SensitivityRow } from '../engine/sensitivity';
+import { computeSensitivityMatrix, SensitivityRow, SensitivityWaitMode } from '../engine/sensitivity';
 import { SensitivityWorkerRequest, SensitivityWorkerResponse } from '../workers/sensitivity.worker';
 
 export interface UseSensitivityCalculatorResult {
@@ -14,17 +14,24 @@ export interface UseSensitivityCalculatorResult {
  */
 export function useSensitivityCalculator(
   config: SimulationConfig,
-  horizonMonths: number = 60,
-  debounceMs: number = 150
+  waitMode: SensitivityWaitMode = 'optimal',
+  stockRates?: number[],
+  propRates?: number[],
+  debounceMs: number = 50
 ): UseSensitivityCalculatorResult {
   const [gridData, setGridData] = useState<SensitivityRow[]>(() =>
-    computeSensitivityMatrix(config, horizonMonths)
+    computeSensitivityMatrix(config, waitMode, stockRates, propRates)
   );
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
 
   const workerRef = useRef<Worker | null>(null);
   const currentRequestIdRef = useRef<number>(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialMountRef = useRef<boolean>(true);
+
+  // Keep ref of latest params to avoid stale closures in worker.onerror
+  const latestParamsRef = useRef({ config, waitMode, stockRates, propRates });
+  latestParamsRef.current = { config, waitMode, stockRates, propRates };
 
   // Initialize Web Worker once
   useEffect(() => {
@@ -47,11 +54,17 @@ export function useSensitivityCalculator(
         worker.onerror = (_err) => {
           // If worker fails, gracefully fall back to synchronous calculation
           try {
-            const fallbackGrid = computeSensitivityMatrix(config, horizonMonths);
+            const fallbackGrid = computeSensitivityMatrix(
+              latestParamsRef.current.config,
+              latestParamsRef.current.waitMode,
+              latestParamsRef.current.stockRates,
+              latestParamsRef.current.propRates
+            );
             setGridData(fallbackGrid);
           } catch {
             // Ignore fallback error
           }
+          workerRef.current = null;
           setIsCalculating(false);
         };
 
@@ -70,29 +83,37 @@ export function useSensitivityCalculator(
     };
   }, []);
 
-  // Dispatch calculation when config or horizon changes
+  // Dispatch calculation when config, waitMode, or custom rates change
   useEffect(() => {
+    // Skip duplicate dispatch on initial mount since useState already computed it
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+
     setIsCalculating(true);
+    // Immediately increment request ID to invalidate any currently in-flight responses
+    const nextRequestId = ++currentRequestIdRef.current;
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      const requestId = ++currentRequestIdRef.current;
-
       if (workerRef.current) {
         const message: SensitivityWorkerRequest = {
           type: 'COMPUTE_MATRIX',
-          requestId,
+          requestId: nextRequestId,
           config,
-          horizonMonths,
+          waitMode,
+          stockRates,
+          propRates,
         };
         workerRef.current.postMessage(message);
       } else {
         // Synchronous fallback if no worker is available
-        const result = computeSensitivityMatrix(config, horizonMonths);
-        if (requestId === currentRequestIdRef.current) {
+        const result = computeSensitivityMatrix(config, waitMode, stockRates, propRates);
+        if (nextRequestId === currentRequestIdRef.current) {
           setGridData(result);
           setIsCalculating(false);
         }
@@ -104,7 +125,7 @@ export function useSensitivityCalculator(
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [config, horizonMonths, debounceMs]);
+  }, [config, waitMode, stockRates, propRates, debounceMs]);
 
   return { gridData, isCalculating };
 }
