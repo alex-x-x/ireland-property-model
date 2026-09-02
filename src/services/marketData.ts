@@ -78,6 +78,29 @@ export const STORAGE_CACHE_KEY = 'dublin_property_model_market_cache';
 export const MARKET_DATA_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours persistent session cache
 const CACHE_TTL_MS = MARKET_DATA_TTL_MS;
 
+export function formatMarketDataTimestamp(isoString?: string): { formattedTime: string; relativeTime: string } {
+  if (!isoString) return { formattedTime: 'Unknown', relativeTime: '' };
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return { formattedTime: 'Unknown', relativeTime: '' };
+
+  const formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const diffMs = Math.max(0, Date.now() - d.getTime());
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+
+  let relativeTime = 'just now';
+  if (diffMin >= 60) {
+    relativeTime = `${diffHours}h ago`;
+  } else if (diffMin >= 1) {
+    relativeTime = `${diffMin}m ago`;
+  } else if (diffSec > 10) {
+    relativeTime = `${diffSec}s ago`;
+  }
+
+  return { formattedTime, relativeTime };
+}
+
 export function isMarketDataStale(
   data: MarketDataResult | null | undefined,
   maxAgeMs: number = MARKET_DATA_TTL_MS
@@ -118,9 +141,10 @@ function saveCachedData(data: MarketDataResult): void {
 
 export async function fetchMarketData(
   symbol: string = 'GOOGL',
-  startDateStr: string = '2026-08-29'
+  startDateStr: string = '2026-08-29',
+  forceFresh: boolean = false
 ): Promise<MarketDataResult> {
-  const localCache = loadCachedData(symbol);
+  const localCache = forceFresh ? null : loadCachedData(symbol);
 
   let liveFxRate: number | null = null;
   let historicalFxRate: number | null = null;
@@ -130,11 +154,11 @@ export async function fetchMarketData(
   let closeDate: string | undefined = undefined;
   const sources: string[] = [];
 
-  // 1. Fetch EUR/USD FX Rate (Frankfurter / ECB or Open ER API)
+  // 1. Fetch EUR/USD FX Rate (Open ER API or Frankfurter ECB direct)
   const fxEndpoints = [
-    '/api/fx/latest?from=USD&to=EUR',
     'https://open.er-api.com/v6/latest/USD',
     'https://api.frankfurter.app/latest?from=USD&to=EUR',
+    '/api/fx/latest?from=USD&to=EUR',
   ];
 
   for (const endpoint of fxEndpoints) {
@@ -156,8 +180,8 @@ export async function fetchMarketData(
   // 2. Fetch Historical FX Rate if date provided
   if (startDateStr) {
     const histEndpoints = [
-      `/api/fx/${startDateStr}?from=USD&to=EUR`,
       `https://api.frankfurter.app/${startDateStr}?from=USD&to=EUR`,
+      `/api/fx/${startDateStr}?from=USD&to=EUR`,
     ];
     for (const hEndpoint of histEndpoints) {
       try {
