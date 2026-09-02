@@ -144,4 +144,72 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       expect(hurdle.preTaxStockGrowthRate).toBeCloseTo(0.035 / 0.67, 3);
     });
   });
+
+  describe('Budget Constraints & DSTI (Debt-Service-to-Income)', () => {
+    it('computes totalMonthlyPayment and dstiPct correctly for evaluated strategies', () => {
+      const analysis = runMortgageOptimization(config, purchaseMonth, monthlyPoints);
+      expect(analysis.netMonthlyIncomeEur).toBeGreaterThan(0);
+      expect(analysis.allResults.length).toBeGreaterThan(0);
+
+      const first = analysis.allResults[0];
+      expect(first.totalMonthlyPayment).toBeGreaterThan(0);
+      expect(first.dstiPct).toBeGreaterThan(0);
+      expect(first.totalMonthlyPayment).toBeCloseTo(
+        first.monthlyMortgagePayment + first.candidate.monthlyOverpayment,
+        1
+      );
+    });
+
+    it('filters out strategies exceeding maxMonthlyBudgetEur and adjusts archetypes', () => {
+      // Run unconstrained first
+      const unconstrained = runMortgageOptimization(config, purchaseMonth, monthlyPoints);
+      const maxPayment = Math.max(...unconstrained.allResults.map((r) => r.totalMonthlyPayment));
+
+      // Now set a tight budget (e.g. €2,200/mo) that eliminates 15-year / heavy overpayment recipes
+      const tightBudget = 2200;
+      expect(maxPayment).toBeGreaterThan(tightBudget);
+      const constrained = runMortgageOptimization(config, purchaseMonth, monthlyPoints, tightBudget);
+
+      expect(constrained.maxMonthlyBudgetEur).toBe(tightBudget);
+      expect(constrained.compliantResults.length).toBeLessThan(constrained.allResults.length);
+      expect(constrained.compliantResults.every((r) => r.totalMonthlyPayment <= tightBudget + 0.01)).toBe(true);
+
+      // All Pareto frontier points must respect the tight budget
+      expect(constrained.paretoFrontier.every((r) => r.totalMonthlyPayment <= tightBudget + 0.01)).toBe(true);
+
+      // Curated archetypes that are non-null must respect the tight budget
+      if (constrained.curated.wealthMaximizer) {
+        expect(constrained.curated.wealthMaximizer.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+      }
+      if (constrained.curated.sweetSpot) {
+        expect(constrained.curated.sweetSpot.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+      }
+      if (constrained.curated.debtFreeAccelerator) {
+        expect(constrained.curated.debtFreeAccelerator.totalMonthlyPayment).toBeLessThanOrEqual(tightBudget + 0.01);
+      }
+    });
+
+    it('accurately tags isParetoOptimal on corresponding items in allResults', () => {
+      const analysis = runMortgageOptimization(config, purchaseMonth, monthlyPoints);
+      const paretoIds = new Set(analysis.paretoFrontier.map((p) => p.candidate.id));
+
+      const taggedParetoItems = analysis.allResults.filter((r) => r.isParetoOptimal);
+      expect(taggedParetoItems.length).toBe(analysis.paretoFrontier.length);
+      expect(taggedParetoItems.every((r) => paretoIds.has(r.candidate.id))).toBe(true);
+    });
+
+    it('handles zero-compliance extreme low budget (€100/mo) gracefully without exceptions', () => {
+      const impossibleBudget = 100;
+      const analysis = runMortgageOptimization(config, purchaseMonth, monthlyPoints, impossibleBudget);
+
+      expect(analysis.compliantResults).toHaveLength(0);
+      expect(analysis.paretoFrontier).toHaveLength(0);
+      expect(analysis.curated.wealthMaximizer).toBeNull();
+      expect(analysis.curated.greenArbitrageur).toBeNull();
+      expect(analysis.curated.sweetSpot).toBeNull();
+      expect(analysis.curated.debtFreeAccelerator).toBeNull();
+    });
+  });
 });
+
+

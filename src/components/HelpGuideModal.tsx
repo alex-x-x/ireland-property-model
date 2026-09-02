@@ -596,7 +596,7 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               {/* How to Read the Scatter Plot */}
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-750 space-y-3">
                 <h4 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
-                  📊 How to Read the 2D Pareto Scatter Plot
+                  📊 How to Read the 2D Pareto Scatter Plot & Monthly Budget Ceiling
                 </h4>
                 <div className="space-y-2 text-xs text-slate-300">
                   <p>
@@ -606,12 +606,14 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                     <li><strong>X-Axis (Lifetime Interest Paid):</strong> Moving further to the left means paying less total interest to the bank.</li>
                     <li><strong>Y-Axis (Terminal Net Wealth at M60):</strong> Moving higher up means finishing Year 5 with a larger total balance sheet (Home Equity + Remaining Liquid Assets).</li>
                     <li><strong>The Purple Frontier Line:</strong> Connects non-dominated solutions. Any point below the line is mathematically inferior (you could get higher wealth with the same interest, or lower interest with the same wealth).</li>
+                    <li><strong>Comfortable Max Monthly Outlay Slider:</strong> A mathematical model in a vacuum might recommend a 15-year term with €1,200/mo overpayments (€4,500+/mo total outlay). Setting your comfortable monthly payment ceiling filters out recipes exceeding your budget or Irish Debt-Service-to-Income (DSTI) comfort levels (recommended &lt;35% of net pay), recalculating the Pareto frontier exclusively among affordable strategies.</li>
                     <li><strong>Interactive Loading:</strong> Click any dot or use the <strong>"Apply Strategy"</strong> button to immediately sync that recipe to the live Mortgage Studio sliders and charts.</li>
                   </ul>
                 </div>
               </div>
             </div>
           )}
+
 
           {/* TAB 5: INTERPRETATION TIPS */}
           {activeTab === 'interpretation' && (

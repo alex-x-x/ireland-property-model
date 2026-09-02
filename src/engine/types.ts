@@ -209,6 +209,9 @@ export interface MortgageStrategyResult {
   totalUpfrontPaid: number;
   postPurchaseLiquidLeft: number;
   monthlyMortgagePayment: number;
+  totalMonthlyPayment: number; // Scheduled P&I + active monthly overpayment
+  dstiPct: number; // Debt-Service-to-Income: totalMonthlyPayment / netMonthlyTakeHome
+  exceedsBudget?: boolean;
   variableMonthlyPayment?: number;
   freeCashflowBuffer: number;
   scheduledPayoffMonths: number;
@@ -235,10 +238,14 @@ export interface OptimizationAnalysis {
   purchaseMonth: number;
   purchaseDate: string;
   propertyPrice: number;
+  maxMonthlyBudgetEur?: number;
+  netMonthlyIncomeEur: number;
   allResults: MortgageStrategyResult[];
+  compliantResults: MortgageStrategyResult[];
   paretoFrontier: MortgageStrategyResult[];
   curated: CuratedStrategies;
   hurdleRateStockCrossover: number; // e.g. 0.035 (3.5%)
   activeMortgageRate: number;
 }
+
 
