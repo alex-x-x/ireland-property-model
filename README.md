@@ -2,7 +2,7 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-alex--x--x.github.io%2Fireland--property--model-emerald?style=for-the-badge&logo=githubpages&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
 [![Privacy: 100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20Client--Side-emerald?style=for-the-badge&logo=shield&logoColor=white)](https://alex-x-x.github.io/ireland-property-model/)
-[![Tests](https://img.shields.io/badge/tests-95%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
+[![Tests](https://img.shields.io/badge/tests-114%20passed-success)](https://github.com/alex-x-x/ireland-property-model)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-38bdf8)](https://tailwindcss.com/)
@@ -240,6 +240,27 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
   * **Multi-Curve Paydown Chart:** Renders **Remaining Debt Balance**, **Cumulative Principal (Loan Body) Paid**, and **Cumulative Interest Paid to Bank** with view toggles (`All Curves`, `Debt Balance`, `Principal vs Interest`).
   * **Full Month-by-Month Amortization Ledger Modal:** Interactive ledger modal displaying every single monthly payment, principal/interest breakdown, phase badges (`🔒 Fixed Lock`, `⚡ Overpayment`, `🎁 March Bonus`, `🎉 Paid Off`), year filters, search, and CSV export.
 
+### 8. Multidimensional Pareto Frontier & Loan Optimizer (Strategy Explorer)
+* **Purpose:** Solves the multi-objective optimization problem between **maximizing Year-5 Terminal Net Wealth ($M60$)** and **minimizing Lifetime Interest Paid to the Bank**, evaluating hundreds of simulated debt permutations in real time.
+* **2D Pareto Scatter Plot:**
+  * **X-Axis (Lifetime Interest Paid):** Moving left reduces total bank interest paid.
+  * **Y-Axis (Year-5 Net Wealth):** Moving higher finishes Year 5 with a larger total balance sheet.
+  * **The Purple Frontier Curve:** Connects all non-dominated, Pareto-optimal strategies. Points below the curve are mathematically dominated.
+* **4 Curated Strategy Archetypes:**
+  1. 🏆 **Wealth Maximizer:** Highest possible terminal net wealth at Month 60 (leverages low-rate mortgage debt to leave maximum capital compounding in equity).
+  2. 🌿 **Green Arbitrageur:** Best wealth strategy that unlocks Irish $\le 80\%$ LTV Green mortgage rates.
+  3. 🎯 **Balanced Sweet Spot:** Knee of the Pareto curve providing the highest marginal wealth per euro of interest paid.
+  4. 🛡️ **Debt-Free Crusher:** Fastest debt payoff with the lowest lifetime interest paid.
+* **Contractual Budget Ceiling & "Only Show Affordable" Toggle:**
+  * Filters out recipes whose mandatory monthly loan payments exceed your comfortable monthly payment ceiling or Irish Debt-Service-to-Income ($<35\%$ DSTI) comfort levels.
+  * Defaults to hiding over-budget points so the Pareto frontier forms the clean top boundary of your viable strategy universe.
+* **Dynamic Cashflow-Derived Overpayments:**
+  * Discretionary overpayments scale dynamically as discrete fractions ($0\%, 25\%, 50\%, 75\%$) of **free disposable monthly cashflow**, guaranteeing no strategy ever generates a household cashflow deficit.
+* **Pre-Tax Stock Hurdle Rate:**
+  * Computes the exact gross equity return (accounting for Irish 33% CGT) needed for investing remaining capital in the stock market to beat aggressive mortgage paydown.
+* **1-Click Apply Strategy:**
+  * Clicking any card or scatter point immediately syncs that loan structure, term, rate, and overpayment schedule to the live Mortgage Studio sliders and charts.
+
 ---
 
 ## 💡 Practical Usage & Critical Interpretation Tips
@@ -376,6 +397,20 @@ $$\text{Home Equity}_{60}(S) = P_{60} - \text{Remaining Mortgage Balance}_{60}(S
 $$\Delta W(S) = \text{Net Wealth}_{60}(S) - \text{Net Wealth}_{60}(\text{Buy ASAP})$$
 
 A positive $\Delta W$ means waiting generated more wealth than buying immediately.
+</details>
+
+<details>
+<summary><strong>📐 9. Pareto Multi-Objective Optimization & Stock Hurdle Rate (Click to expand)</strong></summary>
+
+* **Pareto Non-Domination Criterion:**
+  A mortgage strategy $A = (I_A, W_A)$ dominates strategy $B = (I_B, W_B)$ if and only if:
+  $$(I_A \le I_B \land W_A \ge W_B) \land (I_A < I_B \lor W_A > W_B)$$
+  where $I$ is Lifetime Interest Paid (minimize) and $W$ is Year-5 Terminal Net Wealth $M60$ (maximize). The Pareto frontier $\mathcal{P}$ is the set of all non-dominated compliant strategies.
+
+* **Irish CGT-Adjusted Pre-Tax Stock Hurdle Rate:**
+  To evaluate whether deploying cash into mortgage paydown (yielding a guaranteed, tax-free return equal to mortgage rate $i$) beats investing in equities subject to Irish 33% Capital Gains Tax (CGT):
+  $$r_{\text{stock, hurdle}} = \frac{i}{1 - \text{CGT}} = \frac{i}{1 - 0.33} = \frac{i}{0.67}$$
+  For example, a **3.50% AIB Green mortgage** requires an equity portfolio to achieve at least **+5.22% pre-tax CAGR** to outperform mortgage interest savings.
 </details>
 
 ---
