@@ -1,0 +1,12 @@
+{
+  "stockSymbol": "GOOGL",
+  "closePriceUsd": 182.50,
+  "closeDate": "2026-09-01",
+  "stockSource": "Nasdaq / Yahoo Market Close Snapshot",
+  "eurUsdRate": 0.8600,
+  "eurUsdDate": "2026-09-01",
+  "fxSource": "European Central Bank (ECB)",
+  "type": "prev_close",
+  "status": "closed",
+  "updatedAt": "2026-09-01T22:00:00.000Z"
+}

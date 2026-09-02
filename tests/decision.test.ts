@@ -278,4 +278,63 @@ describe('Decision Engine', () => {
     // At M60, remaining liquid wealth must be greater than or equal to the unspent cash safety buffer
     expect(buyAsap!.remainingLiquidWealthAtM60).toBeGreaterThanOrEqual(25000);
   });
+
+  it('verifies that negative EUR/USD drift degrades the opportunity cost delta of waiting 24 months', () => {
+    // High equity scenario where waiting 24M is advantageous under 0% drift
+    const config0 = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 1000000,
+        yearly_growth_rate: 0.035,
+      },
+      equity_engine: {
+        ...DEFAULT_CONFIG.equity_engine,
+        stock_yearly_growth_rate: 0.16,
+        initial_vested_shares_held: 800,
+      },
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        eur_usd_yearly_drift: 0.0,
+      },
+    };
+
+    const configNeg3 = {
+      ...config0,
+      macro: {
+        ...config0.macro,
+        eur_usd_yearly_drift: -0.03, // -3% USD depreciation p.a.
+      },
+    };
+
+    const points0 = runSimulation(config0);
+    const decision0 = runDecisionAnalysis(config0, points0);
+
+    const pointsNeg3 = runSimulation(configNeg3);
+    const decisionNeg3 = runDecisionAnalysis(configNeg3, pointsNeg3);
+
+    const delta24m_0 = decision0.deltas.delta24m!;
+    const delta24m_neg3 = decisionNeg3.deltas.delta24m!;
+
+    // 1. Under 0% drift, waiting 24M generates higher wealth or a substantially better outcome than with -3% drift
+    expect(delta24m_0).toBeGreaterThan(delta24m_neg3);
+
+    // 2. A -3% annual currency drag over 24-60 months causes a significant drop in 24M waiting advantage (>€15,000)
+    const deltaErosion = delta24m_0 - delta24m_neg3;
+    expect(deltaErosion).toBeGreaterThan(15000);
+
+    // 3. Waiting 24M loses significantly more absolute wealth from USD depreciation than Buying ASAP,
+    // because the buyer converts assets to an EUR property early while the waiter remains fully exposed to USD.
+    const buyAsap0 = decision0.scenarios.find((s) => s.id === 'buy_asap')!;
+    const wait24m0 = decision0.scenarios.find((s) => s.id === 'wait_24m')!;
+    const buyAsapNeg3 = decisionNeg3.scenarios.find((s) => s.id === 'buy_asap')!;
+    const wait24mNeg3 = decisionNeg3.scenarios.find((s) => s.id === 'wait_24m')!;
+
+    const buyAsapLoss = buyAsap0.totalNetWealthAtM60 - buyAsapNeg3.totalNetWealthAtM60;
+    const wait24mLoss = wait24m0.totalNetWealthAtM60 - wait24mNeg3.totalNetWealthAtM60;
+
+    expect(wait24mLoss).toBeGreaterThan(buyAsapLoss);
+    expect(wait24mLoss - buyAsapLoss).toBeCloseTo(deltaErosion, 0);
+  });
 });
+

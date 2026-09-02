@@ -75,7 +75,7 @@ export const App: React.FC = () => {
           setConfig((prev) => {
             const nextEquity = { ...prev.equity_engine };
             const nextMacro = { ...prev.macro };
-            if (res.isLiveStock || res.stockStatus === 'cached') {
+            if (res.isLiveStock || res.stockStatus === 'cached' || res.stockStatus === 'prev_close') {
               nextEquity.current_share_price_usd = res.stockPriceUsd;
             }
             if (res.isLiveFx || res.fxStatus === 'cached') {
@@ -102,7 +102,7 @@ export const App: React.FC = () => {
       setConfig((prev) => {
         const nextEquity = { ...prev.equity_engine };
         const nextMacro = { ...prev.macro };
-        if (res.isLiveStock || res.stockStatus === 'cached') {
+        if (res.isLiveStock || res.stockStatus === 'cached' || res.stockStatus === 'prev_close') {
           nextEquity.current_share_price_usd = res.stockPriceUsd;
         }
         if (res.isLiveFx || res.fxStatus === 'cached') {

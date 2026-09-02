@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fetchMarketData, getFallbackMarketData, isMarketDataStale, MARKET_DATA_TTL_MS } from '../src/services/marketData';
+import { fetchMarketData, getFallbackMarketData, isMarketDataStale, MARKET_DATA_TTL_MS, parseMarketSnapshot } from '../src/services/marketData';
 import { DEFAULT_CONFIG } from '../src/engine/constants';
 import { runSimulation } from '../src/engine/simulation';
 
@@ -16,11 +16,35 @@ describe('Market Data Service', () => {
 
   it('handles fetchMarketData without throwing unhandled exceptions and includes distinct statuses', async () => {
     const result = await fetchMarketData('GOOGL', '2026-08-29');
-    expect(['live', 'cached', 'fallback']).toContain(result.status);
-    expect(['live', 'cached', 'benchmark']).toContain(result.stockStatus);
+    expect(['live', 'prev_close', 'cached', 'fallback']).toContain(result.status);
+    expect(['live', 'prev_close', 'cached', 'benchmark']).toContain(result.stockStatus);
     expect(['live', 'cached', 'benchmark']).toContain(result.fxStatus);
     expect(result.stockPriceUsd).toBeGreaterThan(0);
     expect(result.eurUsdRate).toBeGreaterThan(0);
+  });
+
+  it('correctly processes and applies static market-data snapshot payload as prev_close', () => {
+    const snapshotPayload = {
+      stockSymbol: 'GOOGL',
+      closePriceUsd: 184.25,
+      closeDate: '2026-09-01',
+      stockSource: 'Nasdaq / Yahoo Market Close Snapshot',
+      eurUsdRate: 0.8612,
+      eurUsdDate: '2026-09-01',
+      fxSource: 'European Central Bank (ECB)',
+      type: 'prev_close',
+      status: 'closed',
+      updatedAt: '2026-09-01T22:00:00.000Z',
+    };
+
+    // We test parseMarketSnapshot helper
+    const parsed = parseMarketSnapshot(snapshotPayload, 'GOOGL');
+    expect(parsed).not.toBeNull();
+    expect(parsed?.stockStatus).toBe('prev_close');
+    expect(parsed?.isPrevClose).toBe(true);
+    expect(parsed?.stockPriceUsd).toBe(184.25);
+    expect(parsed?.closeDate).toBe('2026-09-01');
+    expect(parsed?.eurUsdRate).toBe(0.8612);
   });
 
   it('correctly detects stale vs fresh market data based on 24-hour TTL', () => {

@@ -663,4 +663,65 @@ describe('Simulation Engine', () => {
       expect(sim[m].isAffordable).toBe(sim[m].totalLiquidWealth >= sim[m].targetCapital + expectedBuffer);
     }
   });
+
+  it('strictly verifies compounding of EUR/USD drift and its mathematical impact on USD asset conversion', () => {
+    const drift = -0.03; // -3% per annum
+    const spotFx = 0.90; // €0.90 per $1
+    const driftConfig = {
+      ...DEFAULT_CONFIG,
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        eur_usd_spot: spotFx,
+        eur_usd_yearly_drift: drift,
+      },
+    };
+
+    const zeroDriftConfig = {
+      ...DEFAULT_CONFIG,
+      macro: {
+        ...DEFAULT_CONFIG.macro,
+        eur_usd_spot: spotFx,
+        eur_usd_yearly_drift: 0.0,
+      },
+    };
+
+    const simDrift = runSimulation(driftConfig);
+    const simZero = runSimulation(zeroDriftConfig);
+
+    // 1. Verify exact monthly compounding formula: FX(m) = FX_0 * (1 + drift)^(m / 12)
+    for (let m = 0; m <= 60; m++) {
+      const expectedFx = spotFx * Math.pow(1 + drift, m / 12);
+      expect(simDrift[m].fxRate).toBeCloseTo(expectedFx, 6);
+    }
+
+    // 2. Exact milestone verification:
+    // At Month 24 (2 years): (1 - 0.03)^2 = 0.9409 -> €0.90 * 0.9409 = €0.84681 per USD (-5.91% drop)
+    expect(simDrift[24].fxRate).toBeCloseTo(spotFx * Math.pow(0.97, 2), 5);
+    expect(simDrift[24].fxRate / spotFx).toBeCloseTo(0.9409, 4);
+
+    // At Month 60 (5 years): (1 - 0.03)^5 = 0.858734 -> €0.90 * 0.858734 = €0.77286 per USD (-14.13% drop)
+    expect(simDrift[60].fxRate).toBeCloseTo(spotFx * Math.pow(0.97, 5), 5);
+    expect(simDrift[60].fxRate / spotFx).toBeCloseTo(Math.pow(0.97, 5), 4);
+
+    // 3. Verify GSU pool valuation: gsuPool(m) = retainedShares(m) * sharePriceUsd(m) * fxRate(m)
+    for (let m = 0; m <= 60; m++) {
+      const expectedGsuVal = simDrift[m].retainedShares * simDrift[m].stockPriceUsd * simDrift[m].fxRate;
+      expect(simDrift[m].gsuPool).toBeCloseTo(expectedGsuVal, 2);
+    }
+
+    // 4. Verify equity valuation difference between 0% drift and -3% drift
+    // At Month 24, identical shares and USD share price have their EUR value reduced by exactly (1 - 0.9409) = 5.91%
+    const gsuRatioM24 = simDrift[24].gsuPool / simZero[24].gsuPool;
+    expect(gsuRatioM24).toBeCloseTo(0.9409, 3);
+
+    // At Month 60, EUR value of identical shares is reduced by exactly 14.13%
+    const gsuRatioM60 = simDrift[60].gsuPool / simZero[60].gsuPool;
+    expect(gsuRatioM60).toBeCloseTo(Math.pow(0.97, 5), 3);
+
+    // Absolute euro impact on GSU portfolio at Month 24 exceeds €9,500 and at Month 60 exceeds €40,000
+    const gsuLossM24 = simZero[24].gsuPool - simDrift[24].gsuPool;
+    const gsuLossM60 = simZero[60].gsuPool - simDrift[60].gsuPool;
+    expect(gsuLossM24).toBeGreaterThan(9500);
+    expect(gsuLossM60).toBeGreaterThan(40000);
+  });
 });
