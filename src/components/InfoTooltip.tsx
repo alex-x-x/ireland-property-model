@@ -9,6 +9,7 @@ interface InfoTooltipProps {
   size?: 'sm' | 'md';
   position?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
+  children?: React.ReactNode;
 }
 
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
@@ -17,6 +18,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   iconType = 'help',
   size = 'sm',
   className = '',
+  children,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -106,17 +108,21 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         }
       }}
     >
-      <button
-        type="button"
-        className="p-0.5 rounded text-slate-400 hover:text-brand-300 focus:outline-none focus:text-brand-300 transition-colors"
-        aria-label={title || 'More information'}
-      >
-        {iconType === 'help' ? (
-          <HelpCircle className={iconSizeClass} />
-        ) : (
-          <Info className={iconSizeClass} />
-        )}
-      </button>
+      {children ? (
+        children
+      ) : (
+        <button
+          type="button"
+          className="p-0.5 rounded text-slate-400 hover:text-brand-300 focus:outline-none focus:text-brand-300 transition-colors"
+          aria-label={title || 'More information'}
+        >
+          {iconType === 'help' ? (
+            <HelpCircle className={iconSizeClass} />
+          ) : (
+            <Info className={iconSizeClass} />
+          )}
+        </button>
+      )}
 
       {isOpen && coords &&
         createPortal(
