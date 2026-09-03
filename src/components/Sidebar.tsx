@@ -5,6 +5,7 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  DollarSign,
   Coins,
 } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
@@ -127,9 +128,9 @@ const SliderControl: React.FC<SliderControlProps> = memo(({
   }[colorTheme];
 
   return (
-    <div className={`bg-slate-850/80 p-3 rounded-xl border ${themeStyles.card} space-y-1.5`}>
+    <div className={`bg-slate-850/60 p-2.5 rounded-xl border ${themeStyles.card} space-y-1.5`}>
       <div className="flex justify-between items-center text-slate-300 font-medium">
-        <span className={`${themeStyles.label} flex items-center gap-1`}>
+        <span className={`${themeStyles.label} flex items-center gap-1 text-xs font-semibold`}>
           <span>{label}</span>
           <InfoTooltip title={tooltipTitle} content={tooltipContent} />
         </span>
@@ -158,10 +159,10 @@ const SliderControl: React.FC<SliderControlProps> = memo(({
           setTextVal((val * 100).toFixed(precision));
           onChange(val);
         }}
-        className={`w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer ${themeStyles.slider}`}
+        className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer ${themeStyles.slider}`}
       />
       {ticks && (
-        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+        <div className="flex justify-between text-[9.5px] text-slate-500 font-mono">
           <span>{ticks[0]}</span>
           <span>{ticks[1]}</span>
           <span>{ticks[2]}</span>
@@ -183,6 +184,7 @@ const CurrencyDriftControl: React.FC<CurrencyDriftControlProps> = memo(({
   onChange,
 }) => {
   const [mode, setMode] = useState<'target' | 'drift'>('target');
+  const [isExpanded, setIsExpanded] = useState<boolean>(false); // Collapsible by default
   const spotUsdPerEur = spotEurPerUsd > 0 ? 1 / spotEurPerUsd : 1.1111;
   const currentTarget5Y = yearlyDriftToTargetFx(yearlyDrift, spotEurPerUsd, 5);
 
@@ -249,184 +251,184 @@ const CurrencyDriftControl: React.FC<CurrencyDriftControlProps> = memo(({
   ];
 
   return (
-    <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2.5">
-      {/* Header with Mode Toggle and Input */}
-      <div className="flex justify-between items-center text-slate-300 font-medium">
+    <div className="bg-slate-850/80 rounded-xl border border-slate-750 overflow-hidden transition-all">
+      {/* Collapsible Sub-header Button */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-800/80 transition-colors"
+      >
         <div className="flex items-center gap-1.5">
+          <DollarSign className="w-3.5 h-3.5 text-brand-400" />
           <span className="text-slate-200 text-xs font-bold tracking-tight">EUR/USD Drift</span>
           <InfoTooltip
             title="EUR/USD Currency Drift & 5-Year Target"
-            content={
-              <div className="space-y-1.5 text-xs">
-                <p>
-                  Controls the projected exchange rate between EUR and USD applied to your USD Google stock & USD cash.
-                </p>
-                <p>
-                  Set your expected <strong>5-Year Target EUR/USD rate</strong> (e.g. $1.18 per €1) or switch to <strong>Annual Drift %</strong>.
-                </p>
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
-                  <div className="text-rose-300 font-semibold">
-                    Target &gt; Today (e.g. $1.20): USD Weakens
-                  </div>
-                  <div className="text-slate-400 pl-2">
-                    Stock converts to fewer Euros, reducing wait advantage.
-                  </div>
-                  <div className="text-emerald-300 font-semibold pt-0.5">
-                    Target &lt; Today (e.g. $1.00): USD Strengthens
-                  </div>
-                  <div className="text-slate-400 pl-2">
-                    Stock converts to more Euros, boosting deposit power.
-                  </div>
-                </div>
+            content="Controls the projected exchange rate between EUR and USD applied to your USD Google stock & USD cash."
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5 font-mono text-xs">
+          <span className="text-[10px] text-slate-400">
+            ({yearlyDrift > 0 ? '+' : ''}{(yearlyDrift * 100).toFixed(1)}%/yr)
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-brand-950/60 text-brand-300 border border-brand-500/40 font-bold">
+            ${currentTarget5Y.toFixed(2)}
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded Widget Body */}
+      {isExpanded && (
+        <div className="p-3 pt-1 border-t border-slate-800 space-y-2.5 text-xs">
+          {/* Mode Switcher & Direct Input */}
+          <div className="flex justify-between items-center">
+            <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700 text-[10px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setMode('target')}
+                className={`px-2 py-0.5 rounded transition-all ${
+                  mode === 'target'
+                    ? 'bg-brand-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Set terminal 5-year target exchange rate"
+              >
+                5Y Rate
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('drift')}
+                className={`px-2 py-0.5 rounded transition-all ${
+                  mode === 'drift'
+                    ? 'bg-brand-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Set annual percentage drift rate"
+              >
+                % p.a.
+              </button>
+            </div>
+
+            <div className="flex items-center px-2 py-0.5 rounded border border-slate-700 bg-slate-800 focus-within:border-brand-500">
+              {mode === 'target' && (
+                <span className="font-mono font-bold text-xs text-slate-400 mr-1">$</span>
+              )}
+              <input
+                type="number"
+                step={mode === 'target' ? 0.01 : 0.1}
+                value={textVal}
+                onChange={handleTextChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={handleBlur}
+                className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              {mode === 'drift' && (
+                <span className="font-mono font-bold text-xs text-slate-400 ml-1">%</span>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Scenario Pills */}
+          <div className="grid grid-cols-4 gap-1">
+            {quickPills.map((pill) => {
+              const isSelected = Math.abs(currentTarget5Y - pill.target) < 0.01;
+              return (
+                <button
+                  key={pill.label}
+                  type="button"
+                  onClick={() => handleTargetSliderChange(pill.target)}
+                  className={`text-[9.5px] py-1 px-0.5 rounded border text-center font-medium transition-all ${
+                    isSelected
+                      ? 'bg-brand-900/60 border-brand-500 text-brand-200 font-bold'
+                      : 'bg-slate-800/80 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Slider */}
+          {mode === 'target' ? (
+            <div className="space-y-1">
+              <input
+                type="range"
+                min={0.95}
+                max={1.30}
+                step={0.01}
+                value={currentTarget5Y}
+                onChange={(e) => handleTargetSliderChange(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              />
+              <div className="flex justify-between text-[9.5px] text-slate-500 font-mono">
+                <span>$0.95 (Strong $)</span>
+                <span>${spotUsdPerEur.toFixed(2)} (Spot)</span>
+                <span>$1.30 (Weak $)</span>
               </div>
-            }
-          />
-        </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <input
+                type="range"
+                min={-0.05}
+                max={0.05}
+                step={0.005}
+                value={yearlyDrift}
+                onChange={(e) => handleDriftSliderChange(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-slate-400"
+              />
+              <div className="flex justify-between text-[9.5px] text-slate-500 font-mono">
+                <span>-5% (USD Weaker)</span>
+                <span>0%</span>
+                <span>+5% (USD Stronger)</span>
+              </div>
+            </div>
+          )}
 
-        {/* Mode Toggle & Input */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700 text-[10px] font-semibold">
-            <button
-              type="button"
-              onClick={() => setMode('target')}
-              className={`px-1.5 py-0.5 rounded transition-all ${
-                mode === 'target'
-                  ? 'bg-brand-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Set terminal 5-year target exchange rate"
-            >
-              5Y Rate
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('drift')}
-              className={`px-1.5 py-0.5 rounded transition-all ${
-                mode === 'drift'
-                  ? 'bg-brand-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Set annual percentage drift rate"
-            >
-              % p.a.
-            </button>
-          </div>
+          {/* Trajectory Milestone Strip */}
+          <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 space-y-1.5 text-[11px]">
+            <div className="flex justify-between items-center text-[10px]">
+              <span className="text-slate-400 font-semibold uppercase">Implied Annual Drift:</span>
+              <span
+                className={`font-mono font-bold ${
+                  Math.abs(yearlyDrift) < 0.001
+                    ? 'text-slate-300'
+                    : yearlyDrift < 0
+                    ? 'text-rose-400'
+                    : 'text-emerald-400'
+                }`}
+              >
+                {yearlyDrift > 0 ? '+' : ''}
+                {(yearlyDrift * 100).toFixed(1)}% p.a.{' '}
+                <span className="font-normal text-slate-400">
+                  ({yearlyDrift < -0.001 ? 'USD weakens' : yearlyDrift > 0.001 ? 'USD strengthens' : 'flat'})
+                </span>
+              </span>
+            </div>
 
-          <div className="flex items-center px-2 py-0.5 rounded border border-slate-700 bg-slate-800 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-500/40">
-            {mode === 'target' && (
-              <span className="font-mono font-bold text-xs text-slate-400 mr-0.5">$</span>
-            )}
-            <input
-              type="number"
-              step={mode === 'target' ? 0.01 : 0.1}
-              value={textVal}
-              onChange={handleTextChange}
-              onFocus={() => setIsFocused(true)}
-              onBlur={handleBlur}
-              className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              title={mode === 'target' ? '5-Year Target EUR/USD rate' : 'Annual drift %'}
-            />
-            {mode === 'drift' && (
-              <span className="font-mono font-bold text-xs text-slate-400 ml-0.5">%</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Scenario Quick-Pill Chips */}
-      <div className="grid grid-cols-4 gap-1">
-        {quickPills.map((pill) => {
-          const isSelected = Math.abs(currentTarget5Y - pill.target) < 0.01;
-          return (
-            <button
-              key={pill.label}
-              type="button"
-              onClick={() => handleTargetSliderChange(pill.target)}
-              className={`text-[10px] py-1 px-1 rounded border text-center font-medium transition-all ${
-                isSelected
-                  ? 'bg-brand-900/60 border-brand-500 text-brand-200 font-bold'
-                  : 'bg-slate-800/80 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-            >
-              {pill.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Slider */}
-      {mode === 'target' ? (
-        <div className="space-y-1">
-          <input
-            type="range"
-            min={0.95}
-            max={1.30}
-            step={0.01}
-            value={currentTarget5Y}
-            onChange={(e) => handleTargetSliderChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500"
-          />
-          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-            <span>$0.95 (Strong $)</span>
-            <span>${spotUsdPerEur.toFixed(2)} (Spot)</span>
-            <span>$1.30 (Weak $)</span>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <input
-            type="range"
-            min={-0.05}
-            max={0.05}
-            step={0.005}
-            value={yearlyDrift}
-            onChange={(e) => handleDriftSliderChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-slate-400"
-          />
-          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-            <span>-5% (USD Weaker)</span>
-            <span>0%</span>
-            <span>+5% (USD Stronger)</span>
+            <div className="grid grid-cols-3 gap-1 text-center font-mono text-[10px]">
+              <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
+                <span className="text-slate-400 block text-[9px]">Today</span>
+                <span className="font-bold text-slate-200">${milestones.now.toFixed(2)}</span>
+              </div>
+              <div className="bg-amber-950/30 p-1 rounded border border-amber-500/30">
+                <span className="text-amber-400 block text-[9px]">Month 24</span>
+                <span className="font-bold text-amber-300">${milestones.year2.toFixed(2)}</span>
+              </div>
+              <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
+                <span className="text-slate-400 block text-[9px]">Year 5</span>
+                <span className="font-bold text-slate-200">${milestones.year5.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Trajectory Milestone Strip */}
-      <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800/80 space-y-1.5 text-[11px]">
-        <div className="flex justify-between items-center">
-          <span className="text-slate-400 text-[10px] font-semibold uppercase">Implied Annual Drift:</span>
-          <span
-            className={`font-mono font-bold ${
-              Math.abs(yearlyDrift) < 0.001
-                ? 'text-slate-300'
-                : yearlyDrift < 0
-                ? 'text-rose-400'
-                : 'text-emerald-400'
-            }`}
-          >
-            {yearlyDrift > 0 ? '+' : ''}
-            {(yearlyDrift * 100).toFixed(1)}% p.a.{' '}
-            <span className="text-[10px] font-normal text-slate-400">
-              ({yearlyDrift < -0.001 ? 'USD weakens' : yearlyDrift > 0.001 ? 'USD strengthens' : 'flat'})
-            </span>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-1 text-center font-mono text-[10px]">
-          <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
-            <span className="text-slate-400 block text-[9px]">Today</span>
-            <span className="font-bold text-slate-200">${milestones.now.toFixed(2)}</span>
-          </div>
-          <div className="bg-amber-950/30 p-1 rounded border border-amber-500/30">
-            <span className="text-amber-400 block text-[9px]">Month 24</span>
-            <span className="font-bold text-amber-300">${milestones.year2.toFixed(2)}</span>
-          </div>
-          <div className="bg-slate-800/70 p-1 rounded border border-slate-750">
-            <span className="text-slate-400 block text-[9px]">Year 5</span>
-            <span className="font-bold text-slate-200">${milestones.year5.toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 });
@@ -439,7 +441,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
   const [isMortgageCardOpen, setIsMortgageCardOpen] = useState<boolean>(true);
   const [isMacroCardOpen, setIsMacroCardOpen] = useState<boolean>(true);
 
-  // Local state for immediate slider/input feedback
+  // Local state for immediate input feedback
   const [stockRate, setStockRate] = useState(config.equity_engine.stock_yearly_growth_rate);
   const [propRate, setPropRate] = useState(config.property.yearly_growth_rate);
   const [invRate, setInvRate] = useState(config.liquid_assets.investments_yearly_growth_rate);
@@ -517,40 +519,107 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
     config.mortgage.approval_in_principle_amount_eur !== null &&
     config.mortgage.approval_in_principle_amount_eur > 0;
 
+  // Deposit Strategy Mode tracking ('ftb10' | 'std20' | 'max_loan' | 'max_usable' | 'custom_pct' | 'custom_sum')
+  const [depositMode, setDepositMode] = useState<'ftb10' | 'std20' | 'max_loan' | 'max_usable' | 'custom_pct' | 'custom_sum'>(() => {
+    const pct = config.property.minimum_deposit_pct ?? 0.10;
+    if (Math.abs(pct - 0.10) < 0.005) return 'ftb10';
+    if (Math.abs(pct - 0.20) < 0.005) return 'std20';
+    return 'custom_pct';
+  });
+
+  // Effective Max Loan based on custom AIP override or CBI 4.0x income limit
+  const effectiveMaxLoan = useMemo(() => {
+    if (hasCustomAip && config.mortgage.approval_in_principle_amount_eur) {
+      return config.mortgage.approval_in_principle_amount_eur;
+    }
+    return cbiCalculatedLoan;
+  }, [hasCustomAip, config.mortgage.approval_in_principle_amount_eur, cbiCalculatedLoan]);
+
+  // Max Loan Deposit calculation (Price minus Max Bank Loan, clamped to minimum 10% FTB)
+  const maxLoanDeposit = useMemo(() => {
+    const minFtbDeposit = Math.round(targetPrice * 0.10);
+    const shortfallDeposit = Math.max(0, targetPrice - effectiveMaxLoan);
+    return Math.max(minFtbDeposit, shortfallDeposit);
+  }, [targetPrice, effectiveMaxLoan]);
+
   // Usable liquid cash calculation for "Max Usable" quick-pill
-  const maxUsableDeposit = useMemo(() => {
+  const totalLiquidCashAndInvestments = useMemo(() => {
     const spot = config.macro.eur_usd_spot || 0.92;
     const sharePrice = config.equity_engine.current_share_price_usd || 200;
     const vestedShares = config.equity_engine.initial_vested_shares_held || 0;
-    const totalLiquid =
+    return (
       (config.liquid_assets.cash_eur || 0) +
       (config.liquid_assets.cash_usd || 0) * spot +
       (config.liquid_assets.investments_eur || 0) +
       (config.liquid_assets.investments_usd || 0) * spot +
-      vestedShares * sharePrice * spot;
-    const safetyBuffer =
+      vestedShares * sharePrice * spot
+    );
+  }, [config.liquid_assets, config.equity_engine, config.macro.eur_usd_spot]);
+
+  const safetyBufferTotal = useMemo(() => {
+    const spot = config.macro.eur_usd_spot || 0.92;
+    return (
       (config.liquid_assets.cash_safety_buffer_eur || 0) +
-      (config.liquid_assets.cash_safety_buffer_usd || 0) * spot;
-    const availableForDeposit = Math.max(0, totalLiquid - safetyBuffer - stampDuty - legalFees);
+      (config.liquid_assets.cash_safety_buffer_usd || 0) * spot
+    );
+  }, [config.liquid_assets, config.macro.eur_usd_spot]);
+
+  const maxUsableDeposit = useMemo(() => {
+    const availableForDeposit = Math.max(0, totalLiquidCashAndInvestments - safetyBufferTotal - stampDuty - legalFees);
     return Math.min(targetPrice, Math.round(availableForDeposit));
-  }, [config, stampDuty, legalFees, targetPrice]);
+  }, [totalLiquidCashAndInvestments, safetyBufferTotal, stampDuty, legalFees, targetPrice]);
 
   // Handlers for Property & Deposit changes
   const handlePropertyPriceChange = useCallback((price: number) => {
     const clampedPrice = Math.max(0, price);
-    const depEur = Math.round(clampedPrice * depositPct);
+    let newDepEur = depositSum;
+    let newDepPct = depositPct;
+
+    if (depositMode === 'max_loan') {
+      const minFtb = Math.round(clampedPrice * 0.10);
+      newDepEur = Math.max(minFtb, clampedPrice - effectiveMaxLoan);
+      newDepPct = clampedPrice > 0 ? newDepEur / clampedPrice : 0.10;
+    } else if (depositMode === 'custom_sum') {
+      const minFtb = Math.round(clampedPrice * 0.10);
+      newDepEur = Math.min(clampedPrice, Math.max(minFtb, depositSum));
+      newDepPct = clampedPrice > 0 ? newDepEur / clampedPrice : 0.10;
+    } else if (depositMode === 'max_usable') {
+      const minFtb = Math.round(clampedPrice * 0.10);
+      const newStamp = calculateStampDuty(clampedPrice, config.property.stamp_duty_tiers);
+      const newMaxUsable = Math.max(0, totalLiquidCashAndInvestments - safetyBufferTotal - newStamp - legalFees);
+      newDepEur = Math.min(clampedPrice, Math.max(minFtb, Math.round(newMaxUsable)));
+      newDepPct = clampedPrice > 0 ? newDepEur / clampedPrice : 0.10;
+    } else if (depositMode === 'std20') {
+      newDepPct = 0.20;
+      newDepEur = Math.round(clampedPrice * 0.20);
+    } else {
+      // 'ftb10' or 'custom_pct'
+      newDepPct = depositMode === 'ftb10' ? 0.10 : depositPct;
+      newDepEur = Math.round(clampedPrice * newDepPct);
+    }
+
     startTransition(() => {
       onChange({
         ...config,
         property: {
           ...config.property,
           target_price_eur: clampedPrice,
-          deposit_eur: depEur,
-          minimum_deposit_pct: depositPct,
+          deposit_eur: newDepEur,
+          minimum_deposit_pct: newDepPct,
         },
       });
     });
-  }, [config, depositPct, onChange]);
+  }, [
+    config,
+    depositMode,
+    depositSum,
+    depositPct,
+    effectiveMaxLoan,
+    totalLiquidCashAndInvestments,
+    safetyBufferTotal,
+    legalFees,
+    onChange,
+  ]);
 
   const handleDepositPctChange = useCallback((pct: number) => {
     const clampedPct = Math.max(0.0, Math.min(1.0, pct));
@@ -712,584 +781,595 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
     });
   }, [config, onChange]);
 
-  const propertyPricePresets = [
-    { label: '€650k', val: 650000 },
-    { label: '€850k', val: 850000 },
-    { label: '€1.0M', val: 1000000 },
-    { label: '€1.25M', val: 1250000 },
-    { label: '€1.5M', val: 1500000 },
-  ];
-
   return (
-    <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20 space-y-4">
-      {/* CARD A: 🏡 Target Property & Acquisition */}
-      <div className="bg-slate-900 border-2 border-brand-500/40 rounded-2xl shadow-xl overflow-hidden transition-all">
-        {/* Card Header (Collapsible Toggle) */}
-        <button
-          type="button"
-          onClick={() => setIsPropertyCardOpen((prev) => !prev)}
-          className="w-full p-3.5 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-brand-500/20 text-brand-400 border border-brand-500/30 shadow-sm">
-              <Home className="w-4 h-4" />
+    <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start z-20">
+      {/* Scrollable Container with Custom Scrollbar */}
+      <div className="max-h-[calc(100vh-5.5rem)] overflow-y-auto custom-scrollbar space-y-3 pr-1 pb-4">
+        
+        {/* CARD A: 🏡 Target Property & Acquisition */}
+        <div className="bg-slate-900 border-2 border-brand-500/40 rounded-2xl shadow-xl overflow-hidden transition-all">
+          {/* Card Header (Collapsible Toggle) */}
+          <button
+            type="button"
+            onClick={() => setIsPropertyCardOpen((prev) => !prev)}
+            className="w-full p-3 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                <Home className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                  Target Property & Deposit
+                </h3>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
-                Target Property & Deposit
-              </h3>
-              <p className="text-[10px] text-brand-300 font-medium">Acquisition Scenario Controls</p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-bold text-brand-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                €{(targetPrice / 1000000).toFixed(2)}M
+              </span>
+              {isPropertyCardOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-              €{(targetPrice / 1000000).toFixed(2)}M
-            </span>
-            {isPropertyCardOpen ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            )}
-          </div>
-        </button>
+          </button>
 
-        {isPropertyCardOpen && (
-          <div className="p-4 space-y-3.5 text-xs">
-            {/* 1. Target Property Price */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-slate-300 font-medium flex items-center gap-1">
-                  <span>Target Property Price (€)</span>
+          {isPropertyCardOpen && (
+            <div className="p-3.5 space-y-3 text-xs">
+              {/* 1. Target Property Price */}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300 font-medium text-xs flex items-center gap-1 font-semibold">
+                  <span>Target Property Price</span>
                   <InfoTooltip
                     title="Target Property Price"
-                    content="The purchase price of the target Irish property. Changing this dynamically scales the required deposit %, stamp duty, and mortgage loan."
+                    content="The purchase price of the target Irish property. Scales required deposit %, stamp duty, and mortgage loan."
                   />
                 </span>
-                <span className="text-brand-300 font-mono font-bold text-xs">
-                  €{targetPrice.toLocaleString()}
-                </span>
+                <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-brand-500 w-36">
+                  <span className="text-slate-400 font-mono text-xs mr-1">€</span>
+                  <input
+                    type="number"
+                    step="25000"
+                    min="100000"
+                    value={targetPrice}
+                    onChange={(e) => handlePropertyPriceChange(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-transparent text-white font-mono font-bold text-xs text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
               </div>
 
-              <input
-                type="number"
-                step="25000"
-                min="100000"
-                value={targetPrice}
-                onChange={(e) => handlePropertyPriceChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40"
-              />
+              {/* 2. Deposit Strategy (% and € Dual Synchronized Inputs) */}
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <div className="flex justify-between items-center text-slate-300 font-medium">
+                  <span className="flex items-center gap-1 text-slate-200 font-semibold">
+                    <Coins className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Deposit Strategy</span>
+                    <InfoTooltip
+                      title="Deposit Strategy"
+                      content="First-Time Buyers (FTBs) in Ireland require a minimum 10% statutory deposit. Standard Green mortgages benchmark at 20% (80% LTV)."
+                    />
+                  </span>
+                </div>
 
-              {/* Quick Price Preset Buttons */}
-              <div className="grid grid-cols-5 gap-1 mt-1.5">
-                {propertyPricePresets.map((preset) => (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-400 block text-[10px] mb-1">Deposit %</label>
+                    <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-brand-500">
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        max="100"
+                        value={Math.round(depositPct * 100)}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val)) {
+                            setDepositMode('custom_pct');
+                            handleDepositPctChange(val / 100);
+                          }
+                        }}
+                        className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-slate-400 text-xs font-bold font-mono ml-1">%</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block text-[10px] mb-1">Deposit Sum (€)</label>
+                    <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-brand-500">
+                      <span className="text-slate-400 text-xs font-bold mr-1">€</span>
+                      <input
+                        type="number"
+                        step="5000"
+                        min="0"
+                        value={depositSum}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val)) {
+                            setDepositMode('custom_sum');
+                            handleDepositSumChange(val);
+                          }
+                        }}
+                        className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Quick Deposit Strategy Preset Pills */}
+                <div className="grid grid-cols-4 gap-1">
                   <button
-                    key={preset.label}
                     type="button"
-                    onClick={() => handlePropertyPriceChange(preset.val)}
-                    className={`text-[10px] py-1 px-0.5 rounded border text-center font-mono font-bold transition-all ${
-                      targetPrice === preset.val
+                    onClick={() => {
+                      setDepositMode('ftb10');
+                      handleDepositPctChange(0.10);
+                    }}
+                    className={`text-[9.5px] py-1 px-0.5 rounded border text-center font-bold transition-all ${
+                      depositMode === 'ftb10' || (depositMode !== 'custom_sum' && Math.abs(depositPct - 0.10) < 0.005)
                         ? 'bg-brand-900/60 border-brand-500 text-brand-200'
-                        : 'bg-slate-800/80 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                     }`}
+                    title="Central Bank of Ireland FTB Minimum 10% Deposit"
                   >
-                    {preset.label}
+                    10% FTB
                   </button>
-                ))}
-              </div>
-            </div>
 
-            {/* 2. Deposit Strategy (% and € Dual Synchronized) */}
-            <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2">
-              <div className="flex justify-between items-center text-slate-300 font-medium">
-                <span className="flex items-center gap-1 text-slate-200">
-                  <Coins className="w-3.5 h-3.5 text-brand-400" />
-                  <span>Deposit Strategy</span>
-                  <InfoTooltip
-                    title="Deposit Strategy"
-                    content="First-Time Buyers (FTBs) in Ireland require a minimum 10% statutory deposit. You can increase deposit to reduce borrowing, or choose Max Usable to put all available liquid funds (excluding your safety pot)."
-                  />
-                </span>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDepositMode('std20');
+                      handleDepositPctChange(0.20);
+                    }}
+                    className={`text-[9.5px] py-1 px-0.5 rounded border text-center font-bold transition-all ${
+                      depositMode === 'std20' || (depositMode !== 'custom_sum' && Math.abs(depositPct - 0.20) < 0.005)
+                        ? 'bg-brand-900/60 border-brand-500 text-brand-200'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
+                    title="Standard 20% Deposit (80% LTV Green Mortgage Rate)"
+                  >
+                    20% Std
+                  </button>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 block text-[10px] mb-1">Deposit %</label>
-                  <div className="flex items-center bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 focus-within:border-brand-500">
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={Math.round(depositPct * 100)}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (!isNaN(val)) {
-                          handleDepositPctChange(val / 100);
-                        }
-                      }}
-                      className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
-                    />
-                    <span className="text-slate-400 text-xs font-bold font-mono ml-0.5">%</span>
-                  </div>
-                </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDepositMode('max_loan');
+                      handleDepositSumChange(maxLoanDeposit);
+                    }}
+                    className={`text-[9.5px] py-1 px-0.5 rounded border text-center font-bold transition-all truncate ${
+                      depositMode === 'max_loan' || Math.abs(depositSum - maxLoanDeposit) < 50
+                        ? 'bg-emerald-900/60 border-emerald-500 text-emerald-200'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
+                    title={`Max Bank Loan (€${Math.round(effectiveMaxLoan / 1000)}k): Puts down minimum deposit needed (€${maxLoanDeposit.toLocaleString()}) to borrow at your maximum mortgage capacity.`}
+                  >
+                    ⚡ Max Loan
+                  </button>
 
-                <div>
-                  <label className="text-slate-400 block text-[10px] mb-1">Deposit Sum (€)</label>
-                  <div className="flex items-center bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 focus-within:border-brand-500">
-                    <span className="text-slate-400 text-xs font-bold mr-0.5">€</span>
-                    <input
-                      type="number"
-                      step="5000"
-                      min="10000"
-                      value={depositSum}
-                      onChange={(e) => handleDepositSumChange(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDepositMode('max_usable');
+                      handleDepositSumChange(maxUsableDeposit);
+                    }}
+                    className={`text-[9.5px] py-1 px-0.5 rounded border text-center font-bold transition-all truncate ${
+                      depositMode === 'max_usable' || Math.abs(depositSum - maxUsableDeposit) < 50
+                        ? 'bg-sky-900/60 border-sky-500 text-sky-200'
+                        : 'bg-sky-950/40 border-sky-500/30 text-sky-300 hover:bg-sky-900/50'
+                    }`}
+                    title={`Max Usable Deposit from liquid funds (leaving safety buffer): €${maxUsableDeposit.toLocaleString()}`}
+                  >
+                    ⚡ Max Usable
+                  </button>
                 </div>
               </div>
 
-              {/* Quick Deposit Preset Pills */}
-              <div className="grid grid-cols-3 gap-1 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleDepositPctChange(0.10)}
-                  className={`text-[10px] py-1 px-1 rounded border text-center font-bold transition-all ${
-                    Math.abs(depositPct - 0.10) < 0.005
-                      ? 'bg-brand-900/60 border-brand-500 text-brand-200'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                  }`}
-                  title="Central Bank of Ireland FTB Minimum 10%"
-                >
-                  10% FTB Min
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDepositPctChange(0.20)}
-                  className={`text-[10px] py-1 px-1 rounded border text-center font-bold transition-all ${
-                    Math.abs(depositPct - 0.20) < 0.005
-                      ? 'bg-brand-900/60 border-brand-500 text-brand-200'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                  }`}
-                  title="Standard 20% Deposit (80% LTV Green Rate)"
-                >
-                  20% Standard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDepositSumChange(maxUsableDeposit)}
-                  className="text-[10px] py-1 px-1 rounded border text-center font-bold bg-sky-950/40 border-sky-500/30 text-sky-300 hover:bg-sky-900/50 transition-all truncate"
-                  title={`Max Usable Deposit from liquid funds (leaving safety buffer): €${maxUsableDeposit.toLocaleString()}`}
-                >
-                  ⚡ Max Usable
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Approval in Principle (AIP) Explicit Loan Cap */}
-            <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-200 font-medium flex items-center gap-1">
-                  <Landmark className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>AIP Borrowing Cap (€)</span>
-                  <InfoTooltip
-                    title="Approval in Principle (AIP) Limit"
-                    content="By default, borrowing capacity is calculated automatically using Central Bank of Ireland rules (4.0x total income). If your bank gave an explicit AIP letter or exemption, enter the cap here."
-                  />
-                </span>
-                {hasCustomAip && (
+              {/* 3. Approval in Principle (AIP) Explicit Loan Cap */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 font-medium text-xs flex items-center gap-1 font-semibold">
+                    <Landmark className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>AIP Borrowing Cap</span>
+                    <InfoTooltip
+                      title="Approval in Principle (AIP) Limit"
+                      content={
+                        <div className="space-y-1 text-xs">
+                          <p>Central Bank of Ireland limit: 4.0x Total Gross Salary (€{totalSalary.toLocaleString()}) = <strong>€{cbiCalculatedLoan.toLocaleString()}</strong>.</p>
+                          <p>If your bank gave an explicit AIP letter or exemption, enter the cap here.</p>
+                        </div>
+                      }
+                    />
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleAipChange(null)}
-                    className="text-[10px] text-brand-400 hover:text-brand-300 underline font-medium"
+                    className={`text-[9.5px] px-1.5 py-0.5 rounded font-bold border transition-colors ${
+                      !hasCustomAip
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
                     title="Reset to automated CBI 4.0x loan"
                   >
-                    Reset to CBI 4.0x
+                    ⚡ CBI: €{Math.round(cbiCalculatedLoan / 1000)}k
                   </button>
-                )}
-              </div>
+                </div>
 
-              <div className="relative">
-                <input
-                  type="number"
-                  step="10000"
-                  placeholder={`Auto CBI 4.0x: €${cbiCalculatedLoan.toLocaleString()}`}
-                  value={config.mortgage.approval_in_principle_amount_eur ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value ? parseFloat(e.target.value) : null;
-                    handleAipChange(val);
-                  }}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-emerald-300 font-bold placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono text-xs"
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                <span>
-                  {hasCustomAip ? (
-                    <strong className="text-brand-300">✓ Custom Bank AIP active</strong>
-                  ) : (
-                    '✓ Using CBI 4.0x income limit'
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleAipChange(null)}
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-colors ${
-                    !hasCustomAip
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                  }`}
-                  title={`CBI 4.0x: 4.0 × €${totalSalary.toLocaleString()} = €${cbiCalculatedLoan.toLocaleString()}`}
-                >
-                  ⚡ CBI 4.0x: €{Math.round(cbiCalculatedLoan / 1000)}k
-                </button>
-              </div>
-            </div>
-
-            {/* 4. Legal & Closing Fees */}
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                <span>Legal & Closing Fees (€)</span>
-                <InfoTooltip
-                  title="Legal & Conveyancing Fees"
-                  content="Estimated solicitor fees, land registry, search fees, and structural survey required at purchase (Irish standard: €2,500 – €3,500)."
-                />
-              </span>
-              <div className="flex items-center bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 w-24">
-                <span className="text-slate-400 text-xs font-bold mr-0.5">€</span>
-                <input
-                  type="number"
-                  step="500"
-                  value={legalFees}
-                  onChange={(e) => handleLegalFeesChange(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-transparent text-white font-mono font-bold text-xs text-right focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* 5. Live Acquisition Cash Breakdown Box */}
-            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-1.5 text-[11px]">
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Deposit ({Math.round(depositPct * 100)}%):</span>
-                <span className="text-white font-mono font-bold">€{depositSum.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span className="flex items-center gap-1">
-                  <span>Stamp Duty:</span>
-                  <span className="text-[9px] text-slate-500">(1% up to €1M, 2% excess)</span>
-                </span>
-                <span className="text-amber-300 font-mono font-bold">€{stampDuty.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Legal / Surveyor Fees:</span>
-                <span className="text-slate-300 font-mono">€{legalFees.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center pt-1.5 border-t border-slate-800 text-white font-bold">
-                <span className="text-emerald-400">⚡ Total Cash to Close:</span>
-                <span className="text-emerald-300 font-mono text-xs">€{totalUpfrontRequired.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* CARD B: 🏦 Mortgage Loan Setup */}
-      <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-xl overflow-hidden transition-all">
-        {/* Card Header (Collapsible Toggle) */}
-        <button
-          type="button"
-          onClick={() => setIsMortgageCardOpen((prev) => !prev)}
-          className="w-full p-3.5 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm">
-              <Landmark className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
-                Mortgage Loan Setup
-              </h3>
-              <p className="text-[10px] text-emerald-300 font-medium">Interest, Term & Irish Stress Buffer</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-bold text-emerald-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-              {(mortgageRate * 100).toFixed(2)}% • {termYears}y
-            </span>
-            {isMortgageCardOpen ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            )}
-          </div>
-        </button>
-
-        {isMortgageCardOpen && (
-          <div className="p-4 space-y-3.5 text-xs">
-            {/* 1. Mortgage Interest Rate & Slider */}
-            <div className="bg-slate-850/80 p-3 rounded-xl border border-emerald-500/20 space-y-2.5">
-              <div className="flex justify-between items-center text-slate-300 font-medium">
-                <span className="text-emerald-300 flex items-center gap-1">
-                  <span>Mortgage Rate (AIB 2026)</span>
-                  <InfoTooltip
-                    title="AIB Green Benchmark"
-                    content="Fixed Green Mortgage rate benchmark (~3.50% for A-rated energy efficient Irish homes)."
-                  />
-                </span>
-                <div className="flex items-center px-2 py-0.5 rounded border transition-all bg-emerald-950/40 border-emerald-500/30 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400/40">
+                <div className="relative">
                   <input
                     type="number"
-                    step={0.05}
-                    value={(mortgageRate * 100).toFixed(2)}
+                    step="10000"
+                    placeholder={`Auto CBI 4.0x: €${cbiCalculatedLoan.toLocaleString()}`}
+                    value={config.mortgage.approval_in_principle_amount_eur ?? ''}
                     onChange={(e) => {
-                      const parsed = parseFloat(e.target.value);
-                      if (!isNaN(parsed) && parsed > 0) {
-                        handleMortgageChange(parsed / 100);
-                      }
+                      const val = e.target.value ? parseFloat(e.target.value) : null;
+                      handleAipChange(val);
                     }}
-                    className="w-14 bg-transparent text-right font-mono font-bold text-xs text-emerald-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    title="Click to type a custom percentage value directly"
+                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-emerald-300 font-bold placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <span className="font-mono font-bold text-xs ml-0.5 text-emerald-400">%</span>
                 </div>
               </div>
 
-              <input
-                type="range"
-                min={0.02}
-                max={0.07}
-                step={0.001}
-                value={mortgageRate}
-                onChange={(e) => handleMortgageChange(parseFloat(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                <span>2.0%</span>
-                <span>3.5% (Green)</span>
-                <span>7.0%</span>
+              {/* 4. Legal Fees & Property Maintenance */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <div>
+                  <label className="text-slate-400 flex items-center gap-1 text-[10px] mb-1 font-medium">
+                    <span>Legal Fees (€)</span>
+                    <InfoTooltip
+                      title="Legal & Conveyancing Fees"
+                      content="Solicitor conveyancing fees, property survey, land registry, and commissioner for oaths (standard benchmark: €3,000)."
+                    />
+                  </label>
+                  <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-brand-500">
+                    <span className="text-slate-400 font-mono text-xs mr-1">€</span>
+                    <input
+                      type="number"
+                      step="500"
+                      min="0"
+                      value={legalFees}
+                      onChange={(e) => handleLegalFeesChange(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 flex items-center gap-1 text-[10px] mb-1 font-medium">
+                    <span>Maint (%/yr)</span>
+                    <InfoTooltip
+                      title="Property Maintenance & Sinking Fund"
+                      content="Estimated annual upkeep, insurance, and sinking fund reserve as a percentage of property value (industry standard: 1.0%/yr of property price)."
+                    />
+                  </label>
+                  <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-brand-500">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="5"
+                      value={(maintRate * 100).toFixed(1)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          handleMaintRateChange(val / 100);
+                        }
+                      }}
+                      className="w-full bg-transparent text-white font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-slate-400 text-xs font-bold font-mono ml-1">%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Live Cash to Close Pill with Rich Hover Breakdown */}
+              <div className="pt-2 border-t border-slate-800">
+                <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs transition-all hover:border-brand-500/40">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-emerald-400 font-bold text-[11px]">⚡ Cash to Close:</span>
+                    <span className="text-emerald-300 font-mono font-extrabold text-xs">
+                      €{totalUpfrontRequired.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                    <InfoTooltip
+                      title="Total Cash to Close Breakdown"
+                      content={
+                        <div className="space-y-1.5 text-xs font-sans">
+                          <div className="flex justify-between gap-4 text-slate-300">
+                            <span>Deposit ({Math.round(depositPct * 100)}%):</span>
+                            <strong className="font-mono text-white">€{depositSum.toLocaleString()}</strong>
+                          </div>
+                          <div className="flex justify-between gap-4 text-slate-300">
+                            <span>Stamp Duty (1% / 2% excess):</span>
+                            <strong className="font-mono text-amber-300">€{stampDuty.toLocaleString()}</strong>
+                          </div>
+                          <div className="flex justify-between gap-4 text-slate-300">
+                            <span>Legal & Closing Fees:</span>
+                            <strong className="font-mono text-slate-200">€{legalFees.toLocaleString()}</strong>
+                          </div>
+                          <div className="flex justify-between gap-4 pt-1 border-t border-slate-800 text-white font-bold">
+                            <span className="text-emerald-400">Total Wire on Closing:</span>
+                            <span className="font-mono text-emerald-300">€{totalUpfrontRequired.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* 2. Mortgage Term (Years) */}
-            <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2">
+        {/* CARD B: 🏦 Mortgage Loan Setup */}
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-xl overflow-hidden transition-all">
+          {/* Card Header (Collapsible Toggle) */}
+          <button
+            type="button"
+            onClick={() => setIsMortgageCardOpen((prev) => !prev)}
+            className="w-full p-3 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <Landmark className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                  Mortgage Loan Setup
+                </h3>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-bold text-emerald-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                {(mortgageRate * 100).toFixed(2)}% • {termYears}y
+              </span>
+              {isMortgageCardOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </div>
+          </button>
+
+          {isMortgageCardOpen && (
+            <div className="p-3.5 space-y-3 text-xs">
+              {/* 1. Mortgage Term on TOP (clean input) */}
               <div className="flex justify-between items-center">
-                <span className="text-slate-300 font-medium">Mortgage Term (Years)</span>
-                <div className="flex items-center bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 w-20">
+                <span className="text-slate-300 font-medium text-xs flex items-center gap-1 font-semibold">
+                  <span>Mortgage Term</span>
+                  <InfoTooltip
+                    title="Mortgage Term"
+                    content="Standard mortgage repayment duration in Ireland (typically 25 to 30 years for primary residences)."
+                  />
+                </span>
+                <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-emerald-500 w-24">
                   <input
                     type="number"
                     min="5"
                     max="40"
                     value={termYears}
                     onChange={(e) => handleTermYearsChange(parseInt(e.target.value, 10) || 25)}
-                    className="w-full bg-transparent text-white font-mono font-bold text-xs text-right focus:outline-none"
+                    className="w-full bg-transparent text-white font-mono font-bold text-xs text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <span className="text-slate-400 text-[10px] ml-1">yrs</span>
+                  <span className="text-slate-400 text-xs font-mono ml-1">yrs</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-1">
-                {[20, 25, 30, 35].map((y) => (
-                  <button
-                    key={y}
-                    type="button"
-                    onClick={() => handleTermYearsChange(y)}
-                    className={`text-[10px] py-1 px-1 rounded border text-center font-mono font-bold transition-all ${
-                      termYears === y
-                        ? 'bg-emerald-900/60 border-emerald-500 text-emerald-200'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                    }`}
-                  >
-                    {y} yrs
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Irish Fixed Lockout & Variable Rate Shock */}
-            <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 space-y-2.5">
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-slate-400 text-[10px]">Fixed Lockout</span>
-                    <span className="text-sky-400 font-mono font-bold text-[10px]">{fixedRateYears} yrs</span>
-                  </div>
-                  <div className="flex items-center bg-slate-900 border border-slate-750 rounded px-2 py-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={fixedRateYears}
-                      onChange={(e) => handleFixedRateYearsChange(parseInt(e.target.value, 10) || 0)}
-                      className="w-full bg-transparent text-white font-mono text-xs focus:outline-none"
-                    />
-                    <span className="text-slate-500 text-[10px]">yrs</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-slate-400 text-[10px]">Variable Shock</span>
-                    <span className={`font-mono font-bold text-[10px] ${rateShockPct === 0 ? 'text-slate-400' : 'text-amber-400'}`}>
-                      {rateShockPct > 0 ? `+${rateShockPct}%` : `${rateShockPct}%`}
-                    </span>
-                  </div>
-                  <div className="flex items-center bg-slate-900 border border-slate-750 rounded px-2 py-1">
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="-1"
-                      max="5"
-                      value={rateShockPct}
-                      onChange={(e) => handleRateShockChange(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-transparent text-amber-300 font-mono text-xs focus:outline-none"
-                    />
-                    <span className="text-slate-500 text-[10px]">%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-[10px] text-slate-400 flex justify-between items-center font-mono pt-1 border-t border-slate-800">
-                <span className="text-slate-500">Post-lock rate:</span>
-                <span className="text-emerald-400 font-bold">{(mortgageRate * 100 + rateShockPct).toFixed(2)}%</span>
-              </div>
-            </div>
-
-            {/* 4. Yearly Maintenance Rate (%) */}
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                <span>Property Maintenance (%/yr)</span>
-                <InfoTooltip
-                  title="Annual Property Maintenance & Sinking Fund"
-                  content="Estimated annual upkeep, insurance, and long-term maintenance cost as a % of property value (standard benchmark: 1.0%/yr)."
-                />
-              </span>
-              <div className="flex items-center bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 w-20">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="5"
-                  value={(maintRate * 100).toFixed(1)}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) {
-                      handleMaintRateChange(val / 100);
+              {/* 2. Compact Mortgage Rate (No slider, no quick buttons, direct input + AIB benchmark hints) */}
+              <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                <span className="text-slate-300 font-medium text-xs flex items-center gap-1 font-semibold">
+                  <span>Mortgage Interest Rate</span>
+                  <InfoTooltip
+                    title="Irish Mortgage Rate Benchmarks (2026)"
+                    content={
+                      <div className="space-y-2 text-xs">
+                        <p>Current representative Irish lender rates (AIB, BOI, PTSB):</p>
+                        <div className="p-2 rounded bg-slate-950 border border-slate-800 space-y-1 font-mono text-[11px]">
+                          <div className="flex justify-between text-emerald-300">
+                            <span>🌿 AIB Green Fixed (≤80% LTV, BER A):</span>
+                            <strong>3.45% - 3.55%</strong>
+                          </div>
+                          <div className="flex justify-between text-slate-300">
+                            <span>🏠 Standard Fixed (≤80% LTV, BER B-G):</span>
+                            <strong>3.75% - 4.15%</strong>
+                          </div>
+                          <div className="flex justify-between text-amber-300">
+                            <span>📊 High LTV Fixed (&gt;80% to 90% LTV):</span>
+                            <strong>4.15% - 4.45%</strong>
+                          </div>
+                          <div className="flex justify-between text-rose-300">
+                            <span>🔄 Standard Variable Rate (SVR):</span>
+                            <strong>4.15% - 4.75%</strong>
+                          </div>
+                        </div>
+                        <p className="text-slate-400 text-[10.5px]">
+                          Type your quoted mortgage rate directly.
+                        </p>
+                      </div>
                     }
-                  }}
-                  className="w-full bg-transparent text-white font-mono font-bold text-xs text-right focus:outline-none"
-                />
-                <span className="text-slate-400 text-xs font-bold font-mono ml-0.5">%</span>
+                  />
+                </span>
+                <div className="flex items-center bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 focus-within:border-emerald-500 w-24">
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="1"
+                    max="15"
+                    value={(mortgageRate * 100).toFixed(2)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        handleMortgageChange(val / 100);
+                      }
+                    }}
+                    className="w-full bg-transparent text-emerald-300 font-mono font-bold text-xs text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-slate-400 text-xs font-mono ml-1">%</span>
+                </div>
+              </div>
+
+              {/* 3. Irish Structure: Fixed Lockout & Rate Shock with Hints */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <label className="text-slate-400 flex items-center gap-0.5 text-[9.5px] mb-1 font-medium">
+                      <span>Fixed Lock</span>
+                      <InfoTooltip
+                        title="Fixed Rate Lock Period"
+                        content="Duration of the initial fixed-interest period (e.g. 2, 3, or 5 years) during which your interest rate and monthly repayment are strictly locked."
+                      />
+                    </label>
+                    <div className="flex items-center bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 focus-within:border-slate-500">
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={fixedRateYears}
+                        onChange={(e) => handleFixedRateYearsChange(parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-white font-mono text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-slate-500 text-[10px] ml-1">yrs</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 flex items-center gap-0.5 text-[9.5px] mb-1 font-medium">
+                      <span>Rate Shock</span>
+                      <InfoTooltip
+                        title="Variable Rate Shock Stress Buffer"
+                        content="The projected interest rate increase after the fixed lock period expires and transitions to the lender's Standard Variable Rate (central bank stress benchmark: +1.50%)."
+                      />
+                    </label>
+                    <div className="flex items-center bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 focus-within:border-amber-500">
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="-1"
+                        max="5"
+                        value={rateShockPct}
+                        onChange={(e) => handleRateShockChange(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-transparent text-amber-300 font-mono text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-slate-500 text-[10px] ml-1">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[10.5px] text-slate-400 flex justify-between items-center font-mono pt-1 border-t border-slate-800/60">
+                  <span className="text-slate-500">Post-lock rate:</span>
+                  <span className="text-emerald-400 font-bold">{(mortgageRate * 100 + rateShockPct).toFixed(2)}%</span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* CARD C: 📈 Market & Macro Drivers */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all">
-        {/* Card Header (Collapsible Toggle) */}
-        <button
-          type="button"
-          onClick={() => setIsMacroCardOpen((prev) => !prev)}
-          className="w-full p-3.5 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-sm">
-              <TrendingUp className="w-4 h-4" />
+        {/* CARD C: 📈 Market & Macro Drivers */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all">
+          {/* Card Header (Collapsible Toggle) */}
+          <button
+            type="button"
+            onClick={() => setIsMacroCardOpen((prev) => !prev)}
+            className="w-full p-3 bg-slate-850 flex items-center justify-between border-b border-slate-800 text-left hover:bg-slate-800/80 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                <TrendingUp className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                  Market & Macro Drivers
+                </h3>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
-                Market & Macro Drivers
-              </h3>
-              <p className="text-[10px] text-purple-300 font-medium">Stock, Housing Inflation & FX Drift</p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                Live
+              </span>
+              {isMacroCardOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 animate-pulse">
-              Live
-            </span>
-            {isMacroCardOpen ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            )}
-          </div>
-        </button>
+          </button>
 
-        {isMacroCardOpen && (
-          <div className="p-4 space-y-3.5 text-xs">
-            {/* 1. Google GSU Stock Growth */}
-            <SliderControl
-              label="Google Stock Growth (p.a.)"
-              tooltipTitle="Alphabet Stock Growth"
-              tooltipContent="Annual nominal growth rate of Alphabet Inc. equity. Governs how fast unvested and retained GSU shares compound."
-              value={stockRate}
-              min={-0.10}
-              max={0.30}
-              step={0.005}
-              inputStep={0.1}
-              precision={1}
-              colorTheme="purple"
-              ticks={['-10%', '+10%', '+30%']}
-              onChange={handleStockChange}
-            />
+          {isMacroCardOpen && (
+            <div className="p-3.5 space-y-3 text-xs">
+              {/* 1. Google Stock Growth */}
+              <SliderControl
+                label="Google Stock Growth (p.a.)"
+                tooltipTitle="Alphabet Stock Growth"
+                tooltipContent="Annual nominal growth rate of Alphabet Inc. equity (GOOGL)."
+                value={stockRate}
+                min={-0.10}
+                max={0.30}
+                step={0.005}
+                inputStep={0.1}
+                precision={1}
+                colorTheme="purple"
+                ticks={['-10%', '+10%', '+30%']}
+                onChange={handleStockChange}
+              />
 
-            {/* 2. Ireland Property Inflation */}
-            <SliderControl
-              label="Property Inflation (p.a.)"
-              tooltipTitle="Ireland Property Inflation"
-              tooltipContent="Annual Irish housing price appreciation. Higher rates increase the future deposit and borrowing requirements if waiting."
-              value={propRate}
-              min={0.0}
-              max={0.15}
-              step={0.005}
-              inputStep={0.1}
-              precision={1}
-              colorTheme="brand"
-              ticks={['0%', '+5%', '+15%']}
-              onChange={handlePropChange}
-            />
+              {/* 2. Property Inflation */}
+              <SliderControl
+                label="Property Inflation (p.a.)"
+                tooltipTitle="Ireland Property Inflation"
+                tooltipContent="Annual Irish housing price appreciation."
+                value={propRate}
+                min={0.0}
+                max={0.15}
+                step={0.005}
+                inputStep={0.1}
+                precision={1}
+                colorTheme="brand"
+                ticks={['0%', '+5%', '+15%']}
+                onChange={handlePropChange}
+              />
 
-            {/* 3. Base Index Investments Return */}
-            <SliderControl
-              label="Base Investment Yield (p.a.)"
-              tooltipTitle="Trading Account Yield"
-              tooltipContent="Annual nominal return on non-GSU personal trading investments (e.g. global index funds / ETFs)."
-              value={invRate}
-              min={0.0}
-              max={0.20}
-              step={0.005}
-              inputStep={0.1}
-              precision={1}
-              colorTheme="sky"
-              ticks={['0%', '+8%', '+20%']}
-              onChange={handleInvChange}
-            />
+              {/* 3. Base Investment Return */}
+              <SliderControl
+                label="Base Investment Yield (p.a.)"
+                tooltipTitle="Trading Account Yield"
+                tooltipContent="Annual nominal return on non-GSU personal trading investments (ETFs)."
+                value={invRate}
+                min={0.0}
+                max={0.20}
+                step={0.005}
+                inputStep={0.1}
+                precision={1}
+                colorTheme="sky"
+                ticks={['0%', '+8%', '+20%']}
+                onChange={handleInvChange}
+              />
 
-            {/* 4. Ireland Rent Inflation (RPZ) */}
-            <SliderControl
-              label="Rent Inflation (Irish RPZ)"
-              tooltipTitle="RPZ Statutory Rent Cap"
-              tooltipContent="Irish Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
-              value={rentRate}
-              min={0.0}
-              max={0.08}
-              step={0.005}
-              inputStep={0.1}
-              precision={1}
-              colorTheme="rose"
-              ticks={['0%', '2.0% (Cap)', '8.0%']}
-              onChange={handleRentChange}
-            />
+              {/* 4. Rent Inflation (RPZ) */}
+              <SliderControl
+                label="Rent Inflation (Irish RPZ)"
+                tooltipTitle="RPZ Statutory Rent Cap"
+                tooltipContent="Irish Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
+                value={rentRate}
+                min={0.0}
+                max={0.08}
+                step={0.005}
+                inputStep={0.1}
+                precision={1}
+                colorTheme="rose"
+                ticks={['0%', '2.0% (Cap)', '8.0%']}
+                onChange={handleRentChange}
+              />
 
-            {/* 5. EUR/USD Drift & 5-Year Target */}
-            <CurrencyDriftControl
-              yearlyDrift={driftRate}
-              spotEurPerUsd={config.macro.eur_usd_spot}
-              onChange={handleDriftChange}
-            />
-          </div>
-        )}
+              {/* 5. Rich Collapsible EUR/USD Drift Widget (Collapsed by default) */}
+              <CurrencyDriftControl
+                yearlyDrift={driftRate}
+                spotEurPerUsd={config.macro.eur_usd_spot}
+                onChange={handleDriftChange}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );
