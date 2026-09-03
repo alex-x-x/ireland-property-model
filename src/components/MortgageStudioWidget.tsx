@@ -83,6 +83,14 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
 
   // Synchronize state when config properties update externally
   useEffect(() => {
+    setInterestRatePct(config.mortgage.mortgage_interest_rate * 100);
+  }, [config.mortgage.mortgage_interest_rate]);
+
+  useEffect(() => {
+    setTermYears(config.mortgage.mortgage_term_years);
+  }, [config.mortgage.mortgage_term_years]);
+
+  useEffect(() => {
     if (config.mortgage.variable_rate_shock_pct !== undefined) {
       setRateShockPct(config.mortgage.variable_rate_shock_pct);
     }

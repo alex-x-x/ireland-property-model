@@ -724,4 +724,26 @@ describe('Simulation Engine', () => {
     expect(gsuLossM24).toBeGreaterThan(9500);
     expect(gsuLossM60).toBeGreaterThan(40000);
   });
+
+  it('correctly models dynamic deposit percentage scaling and upfront acquisition capital', () => {
+    // €850,000 property with 20% standard deposit and €3,000 legal fees
+    const config20 = {
+      ...DEFAULT_CONFIG,
+      property: {
+        ...DEFAULT_CONFIG.property,
+        target_price_eur: 850000,
+        minimum_deposit_pct: 0.20,
+        deposit_eur: 170000,
+        legal_and_closing_fees_eur: 3000,
+      },
+    };
+
+    const sim = runSimulation(config20);
+    expect(sim[0].propertyPrice).toBe(850000);
+    // Stamp duty: 1% of €850,000 = €8,500
+    expect(sim[0].stampDuty).toBe(8500);
+    // Target capital at Month 0: 20% deposit (€170,000) + €8,500 stamp duty + €3,000 legal fees = €181,500 (since max loan €920k > €680k loan)
+    expect(sim[0].targetCapital).toBe(170000 + 8500 + 3000);
+  });
 });
+
