@@ -1345,21 +1345,33 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ config, onChange }) => {
                 onChange={handleInvChange}
               />
 
-              {/* 4. Rent Inflation (RPZ) */}
-              <SliderControl
-                label="Rent Inflation (Irish RPZ)"
-                tooltipTitle="RPZ Statutory Rent Cap"
-                tooltipContent="Irish Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum."
-                value={rentRate}
-                min={0.0}
-                max={0.08}
-                step={0.005}
-                inputStep={0.1}
-                precision={1}
-                colorTheme="rose"
-                ticks={['0%', '2.0% (Cap)', '8.0%']}
-                onChange={handleRentChange}
-              />
+              {/* 4. Rent Inflation (Irish RPZ) - Clean Compact Input */}
+              <div className="flex justify-between items-center bg-slate-850/60 p-2.5 rounded-xl border border-rose-500/20">
+                <span className="text-rose-300 flex items-center gap-1 text-xs font-semibold">
+                  <span>Rent Inflation (Irish RPZ)</span>
+                  <InfoTooltip
+                    title="Irish RPZ Statutory Rent Cap"
+                    content="Irish Rent Pressure Zone (RPZ) statutory cap limits annual rent increases to 2.0% per annum (or Harmonised Index of Consumer Prices inflation, whichever is lower)."
+                  />
+                </span>
+                <div className="flex items-center px-2 py-0.5 rounded border bg-rose-950/40 border-rose-500/30 focus-within:border-rose-400 focus-within:ring-1 focus-within:ring-rose-400/40">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="20"
+                    value={(rentRate * 100).toFixed(1)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        handleRentChange(val / 100);
+                      }
+                    }}
+                    className="w-14 bg-transparent text-right font-mono font-bold text-xs text-rose-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="font-mono font-bold text-xs ml-0.5 text-rose-400">%</span>
+                </div>
+              </div>
 
               {/* 5. Rich Collapsible EUR/USD Drift Widget (Collapsed by default) */}
               <CurrencyDriftControl
