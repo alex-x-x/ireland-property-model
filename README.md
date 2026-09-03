@@ -140,10 +140,10 @@ Follow this **5-step decision-making playbook** to transform complex financial t
 5. **Step 5: Optimize Your Mortgage Structure on the 2D Pareto Frontier**
    * Once you choose a purchase month, consult the **2D Pareto Frontier (Lifetime Interest Paid vs. Terminal Net Wealth M60)**.
    * Choose among the 4 curated strategy archetypes:
-     * 🏆 **Wealth Maximizer:** Minimizes cash down, maximizes liquid equity compounding.
-     * 🌿 **Green Arbitrageur:** Unlocks Irish $\le 80\%$ LTV discounted Green rates.
-     * 🎯 **Balanced Sweet Spot:** Knee of the Pareto curve (highest marginal wealth per euro of interest paid).
-     * 🛡️ **Debt-Free Crusher:** Aggressive cashflow-derived overpayments to extinguish debt early.
+      * 🏆 **Wealth Maximizer:** Minimizes cash down, maximizes liquid equity compounding.
+      * ⚖️ **Balanced Leverage (80% LTV):** Targets an 80% LTV (20% deposit) to balance borrowing reduction with liquid compounding.
+      * 🎯 **Balanced Sweet Spot:** Knee of the Pareto curve (highest marginal wealth per euro of interest paid).
+      * 🛡️ **Debt-Free Crusher:** Aggressive cashflow-derived overpayments to extinguish debt early.
    * Set your **Comfortable Monthly Ceiling** to filter out over-budget options and check the **Pre-Tax Stock Hurdle Rate** to verify if equity investing beats mortgage prepayments.
 
 ---
@@ -270,7 +270,7 @@ Before making a binding bidding offer on a property, run through these 3 sanity 
   * **The Purple Frontier Curve:** Connects all non-dominated, Pareto-optimal strategies. Points below the curve are mathematically dominated.
 * **4 Curated Strategy Archetypes:**
   1. 🏆 **Wealth Maximizer:** Highest possible terminal net wealth at Month 60 (leverages low-rate mortgage debt to leave maximum capital compounding in equity).
-  2. 🌿 **Green Arbitrageur:** Best wealth strategy that unlocks Irish $\le 80\%$ LTV Green mortgage rates.
+  2. ⚖️ **Balanced Leverage (80% LTV):** Targets an 80% LTV (20% deposit) to manage debt size while leaving surplus liquid capital compounding in investments.
   3. 🎯 **Balanced Sweet Spot:** Knee of the Pareto curve providing the highest marginal wealth per euro of interest paid.
   4. 🛡️ **Debt-Free Crusher:** Fastest debt payoff with the lowest lifetime interest paid.
 * **Contractual Budget Ceiling & "Only Show Affordable" Toggle:**

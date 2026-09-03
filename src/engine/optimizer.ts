@@ -53,7 +53,7 @@ export function generateCandidateStrategies(
   const usableLiquidFunds = activePoint.usableLiquidWealth ?? Math.max(0, activePoint.totalLiquidWealth - totalSafetyBufferEur);
   const maxUsableForDeposit = Math.max(minRequiredDeposit, usableLiquidFunds - (stampDuty + legalFees));
 
-  const baseRatePct = config.mortgage.mortgage_interest_rate * 100;
+  const baseRatePct = Math.round(config.mortgage.mortgage_interest_rate * 10000) / 100;
   const activeSalary = getSalaryAtDate(activePoint.date, config.mortgage);
   const grossBonusEur = activeSalary.bonusEur;
   const netBonusEur = Math.round(grossBonusEur * (1 - config.equity_engine.marginal_tax_rate_ireland));
@@ -66,14 +66,14 @@ export function generateCandidateStrategies(
       type: 'min_deposit',
     },
     {
-      label: '80% LTV Green Tier',
+      label: '20% Deposit (80% LTV)',
       deposit: Math.round(propertyPrice * 0.20),
-      type: 'green_80',
+      type: 'deposit_20',
     },
     {
-      label: '70% LTV Super-Green Tier',
+      label: '30% Deposit (70% LTV)',
       deposit: Math.round(propertyPrice * 0.30),
-      type: 'super_green_70',
+      type: 'deposit_30',
     },
   ];
 
@@ -116,15 +116,8 @@ export function generateCandidateStrategies(
     const ltvPct = propertyPrice > 0 ? (loanAmount / propertyPrice) * 100 : 0;
     const depositPct = propertyPrice > 0 ? depositAmount / propertyPrice : 0;
 
-    // Irish tiered Green interest rate modeling
-    let interestRatePct = baseRatePct;
-    if (ltvPct <= 70) {
-      interestRatePct = Math.max(1.0, baseRatePct - 0.20); // 70% Super Green discount
-    } else if (ltvPct <= 80) {
-      interestRatePct = baseRatePct; // Standard Green rate
-    } else {
-      interestRatePct = baseRatePct + 0.35; // Standard non-green / high LTV margin
-    }
+    // Rely exclusively on the user-configured mortgage interest rate
+    const interestRatePct = baseRatePct;
 
     for (const termYears of termsToTest) {
       // Calculate mandatory contractual monthly payment for this specific loan amount & term
@@ -409,7 +402,7 @@ export function computeParetoFrontier(results: MortgageStrategyResult[]): Mortga
 /**
  * Extracts the 4 curated strategic archetypes from the evaluated results:
  * 1. 🏆 Wealth Maximizer (Highest Terminal Net Wealth)
- * 2. 🌿 Green LTV Arbitrageur (Optimal 80% or 70% LTV efficiency)
+ * 2. ⚖️ Balanced Leverage (Optimal 80% LTV balance preserving liquidity)
  * 3. 🎯 Algorithmic Sweet Spot (Knee-point / Maximum efficiency per euro committed)
  * 4. 🛡️ Debt-Free Accelerator (Lowest payoff time and lifetime interest)
  */
@@ -431,7 +424,7 @@ export function identifyCuratedArchetypes(
     curr.terminalNetWealthM60 > best.terminalNetWealthM60 ? curr : best
   );
 
-  // 2. 🌿 Green LTV Arbitrageur: Best LTV <= 80% strategy with minimal upfront cash drag
+  // 2. ⚖️ Balanced Leverage (80% LTV): Best LTV <= 80% strategy balancing net wealth and liquidity
   const greenCandidates = fundable.filter((r) => r.candidate.ltvPct <= 80);
   const greenArbitrageur =
     greenCandidates.length > 0

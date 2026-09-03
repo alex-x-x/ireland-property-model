@@ -39,6 +39,40 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
         expect(c.id).toBeTruthy();
       });
     });
+
+    it('strictly uses the user-configured mortgage interest rate without hidden LTV tier adjustments', () => {
+      // Test with default 3.5%
+      const candidates35 = generateCandidateStrategies(config, activePoint);
+      candidates35.forEach((c) => {
+        expect(c.interestRatePct).toBe(3.5);
+      });
+
+      // Test with custom 3.25%
+      const config325: SimulationConfig = {
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          mortgage_interest_rate: 0.0325,
+        },
+      };
+      const candidates325 = generateCandidateStrategies(config325, activePoint);
+      candidates325.forEach((c) => {
+        expect(c.interestRatePct).toBe(3.25);
+      });
+
+      // Test with custom 4.80%
+      const config48: SimulationConfig = {
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          mortgage_interest_rate: 0.048,
+        },
+      };
+      const candidates48 = generateCandidateStrategies(config48, activePoint);
+      candidates48.forEach((c) => {
+        expect(c.interestRatePct).toBe(4.8);
+      });
+    });
   });
 
   describe('evaluateMortgageStrategy', () => {

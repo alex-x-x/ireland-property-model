@@ -491,7 +491,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           </div>
         )}
 
-        {/* Card 2: Green LTV Arbitrageur */}
+        {/* Card 2: Balanced Leverage (80% LTV) */}
         {curated.greenArbitrageur && (
           <div className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
             isStrategyActive(curated.greenArbitrageur)
@@ -502,22 +502,22 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Target className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="font-bold text-white text-xs truncate">Green Arbitrageur</span>
+                  <span className="font-bold text-white text-xs truncate">Balanced Leverage</span>
                 </div>
                 <InfoTooltip
-                  title="🌿 Green LTV Arbitrageur Strategy"
+                  title="⚖️ Balanced Leverage Strategy (80% LTV)"
                   content={
                     <div className="space-y-1.5 text-[11px]">
-                      <p><strong>Goal:</strong> Secure the bank's discounted Green Mortgage margin with minimum cash drag.</p>
-                      <p><strong>Mechanism:</strong> Allocates just enough deposit to qualify for the 80% or 70% LTV Green band ({curated.greenArbitrageur.candidate.interestRatePct.toFixed(2)}% rate), keeping the remainder of liquid funds free to compound.</p>
+                      <p><strong>Goal:</strong> Balance borrowing reduction with liquid wealth compounding.</p>
+                      <p><strong>Mechanism:</strong> Commits a 20% deposit (80% LTV) to manage debt size while leaving the majority of liquid reserves invested in high-return assets.</p>
                       {curated.wealthMaximizer?.candidate.id === curated.greenArbitrageur.candidate.id && (
-                        <p className="text-amber-300"><strong>Note:</strong> In this specific scenario, the 80% Green Tier loan delivers the highest overall wealth, so this recipe matches Wealth Maximizer.</p>
+                        <p className="text-amber-300"><strong>Note:</strong> In this specific scenario, the 80% LTV loan delivers the highest overall wealth, so this recipe matches Wealth Maximizer.</p>
                       )}
                     </div>
                   }
                 >
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 cursor-help transition-colors whitespace-nowrap">
-                    Rate Discount
+                    80% LTV
                   </span>
                 </InfoTooltip>
               </div>
@@ -528,7 +528,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                   {formatK(curated.greenArbitrageur.terminalNetWealthM60)}
                 </span>
                 <span className="text-[10px] text-slate-400 block font-mono truncate">
-                  LTV: {curated.greenArbitrageur.candidate.ltvPct.toFixed(0)}% (Green Tier)
+                  LTV: {curated.greenArbitrageur.candidate.ltvPct.toFixed(0)}% (20% Deposit)
                   {curated.wealthMaximizer?.candidate.id === curated.greenArbitrageur.candidate.id && (
                     <span className="text-amber-300 ml-1 font-sans">• Matches #1</span>
                   )}
@@ -855,10 +855,10 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                         <span className="font-bold text-white text-xs">
                           {c.strategyType === 'min_deposit'
                             ? 'Min Deposit Strategy'
-                            : c.strategyType === 'green_80'
-                            ? '80% LTV Green Strategy'
-                            : c.strategyType === 'super_green_70'
-                            ? '70% LTV Super-Green Strategy'
+                            : c.strategyType === 'deposit_20' || c.strategyType === 'green_80'
+                            ? '20% Deposit (80% LTV) Strategy'
+                            : c.strategyType === 'deposit_30' || c.strategyType === 'super_green_70'
+                            ? '30% Deposit (70% LTV) Strategy'
                             : c.strategyType === 'max_deposit'
                             ? 'Max Liquid Strategy'
                             : `${(c.depositPct * 100).toFixed(0)}% Deposit Strategy`}

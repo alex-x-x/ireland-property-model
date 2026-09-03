@@ -21,4 +21,5 @@ Conventions (lightweight [MADR](https://adr.github.io/madr/) style):
 | [0005](0005-multidimensional-mortgage-frontier-optimizer.md) | Multidimensional Mortgage & Terminal Net Wealth Frontier Optimizer | Accepted |
 | [0006](0006-github-actions-market-data-sync.md) | GitHub Actions Market Data Snapshot & Previous-Day Close Sync | Accepted |
 | [0007](0007-sensitivity-matrix-wait-time-and-dynamic-rate-injection.md) | Sensitivity Matrix Wait Time Strategy Controller & Dynamic Axis Rate Injection | Accepted |
+| [0008](0008-remove-hidden-mortgage-rate-assumptions.md) | Removal of Hidden Mortgage Rate Assumptions in Favor of Explicit User Rates | Accepted |
 

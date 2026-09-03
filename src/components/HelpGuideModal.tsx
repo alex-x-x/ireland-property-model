@@ -685,13 +685,13 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
                   <div className="p-4 rounded-xl bg-slate-850 border border-emerald-500/30 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold font-mono text-xs flex items-center justify-center">2</span>
-                      <h5 className="font-bold text-white text-xs sm:text-sm">🌿 The Green LTV Arbitrageur</h5>
+                      <h5 className="font-bold text-white text-xs sm:text-sm">⚖️ The Balanced Leverage (80% LTV)</h5>
                     </div>
                     <p className="text-xs text-slate-300">
-                      <strong>Philosophy:</strong> Target the exact 80% or 70% LTV threshold to unlock the lowest bank margin (Green Mortgage rate), while keeping the rest of your cash invested.
+                      <strong>Philosophy:</strong> Target the standard 80% LTV (20% deposit) tier to reduce overall debt size and interest burden, while keeping substantial liquid reserves compounding.
                     </p>
                     <p className="text-xs text-slate-400">
-                      👉 <strong>Best When:</strong> You want a lower interest rate on the entire loan balance without starving your liquid reserves.
+                      👉 <strong>Best When:</strong> You want a balanced borrowing level without over-committing all liquid capital.
                     </p>
                   </div>
 

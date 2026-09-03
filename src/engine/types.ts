@@ -206,7 +206,7 @@ export interface MortgageStrategyCandidate {
   monthlyOverpayment: number;
   overpaymentSurplusPct?: number; // % of free monthly disposable cashflow (e.g. 0.25 = 25%)
   annualBonusLumpSum: number;
-  strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'max_deposit' | 'custom';
+  strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'deposit_20' | 'deposit_30' | 'max_deposit' | 'custom';
 }
 
 export interface MortgageStrategyResult {
