@@ -2,7 +2,6 @@ import React, { useState, memo } from 'react';
 import {
   Lock,
   Unlock,
-  Home,
   Landmark,
   Wallet,
   Building,
@@ -11,12 +10,10 @@ import {
   ChevronUp,
   Plus,
   Trash2,
-  CheckCircle2,
-  Clock,
-  Info,
   Edit3,
   TrendingUp,
   ShieldCheck,
+  Calendar,
 } from 'lucide-react';
 import { SimulationConfig, Grant, SalaryAdjustment } from '../engine/types';
 import {
@@ -63,16 +60,26 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
     marketContext
   );
   const totalSalary = getTotalGrossSalary(config.mortgage);
-  const cbiCalculatedLoan = totalSalary * config.mortgage.cbi_max_lti_multiple;
+  const cbiCalculatedLoan = totalSalary * (config.mortgage.cbi_max_lti_multiple || 4.0);
   const effectiveMaxLoan = getEffectiveMaxMortgage(config.mortgage);
   const hasCustomAip =
     config.mortgage.approval_in_principle_amount_eur !== undefined &&
     config.mortgage.approval_in_principle_amount_eur !== null &&
     config.mortgage.approval_in_principle_amount_eur > 0;
 
-  const updateProperty = (field: keyof SimulationConfig['property'], value: any) => {
-    onChange({ ...config, property: { ...config.property, [field]: value } });
-  };
+  const spot = config.macro.eur_usd_spot || 0.92;
+  const stockPrice = config.equity_engine.current_share_price_usd || 200;
+  const vestedSharesHeld = config.equity_engine.initial_vested_shares_held || 0;
+  const totalStartingLiquid =
+    (config.liquid_assets.cash_eur || 0) +
+    (config.liquid_assets.cash_usd || 0) * spot +
+    (config.liquid_assets.investments_eur || 0) +
+    (config.liquid_assets.investments_usd || 0) * spot +
+    vestedSharesHeld * stockPrice * spot;
+
+  const totalSafetyPot =
+    (config.liquid_assets.cash_safety_buffer_eur || 0) +
+    (config.liquid_assets.cash_safety_buffer_usd || 0) * spot;
 
   const updateMortgage = (field: keyof SimulationConfig['mortgage'], value: any) => {
     onChange({ ...config, mortgage: { ...config.mortgage, [field]: value } });
@@ -112,6 +119,18 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
   const derivedMonthlySavings = Math.max(0, taxBreakdown.netMonthlyTakeHome - currentRent - livingExpenses);
   const isNetPayDerived = config.tax?.savings_calculation_mode !== 'explicit';
   const activeMonthlySavings = isNetPayDerived ? derivedMonthlySavings : config.liquid_assets.monthly_salary_savings_eur;
+
+  // Date Presets
+  const getTodayDateStr = () => new Date().toISOString().slice(0, 10);
+  const getFirstOfCurrentMonthStr = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  };
+  const getFirstOfNextMonthStr = () => {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+  };
 
   const handleAddInitialGrant = () => {
     const newGrant: Grant = {
@@ -232,20 +251,16 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Your personal assets, salary, rent, and GSU grants remain stable while stress-testing economic drivers
+              Your personal assets, salary, tax band, rent, and GSU grants remain stable while stress-testing economic drivers
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* Quick Summary Pill Tags when collapsed or locked */}
+          {/* Quick Summary Pill Tags when collapsed */}
           {!isExpanded && (
             <div className="hidden xl:flex items-center gap-2 text-xs font-mono">
-              <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
-                <span className="text-slate-400 text-[11px] font-sans">Home: </span>
-                <span className="font-bold text-white">€{(config.property.target_price_eur / 1000000).toFixed(2)}M</span>
-              </div>
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
                 <span className="text-slate-400 text-[11px] font-sans">Income: </span>
                 <span className="font-bold text-emerald-400">€{Math.round(totalSalary / 1000)}k</span>
@@ -262,22 +277,37 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                   </span>
                 )}
               </div>
+
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
-                <span className="text-slate-400 text-[11px] font-sans">AIP Loan: </span>
+                <span className="text-slate-400 text-[11px] font-sans">CBI 4.0x: </span>
                 <span className="font-bold text-emerald-300">€{Math.round(effectiveMaxLoan / 1000)}k</span>
-                {hasCustomAip && <span className="text-[9px] px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 ml-1">AIP</span>}
+                {hasCustomAip && <span className="text-[9px] px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 ml-1 font-sans font-bold">AIP</span>}
               </div>
+
+              <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
+                <span className="text-slate-400 text-[11px] font-sans">Liquid Net: </span>
+                <span className="font-bold text-sky-400">€{Math.round(totalStartingLiquid / 1000)}k</span>
+              </div>
+
               <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
                 <span className="text-slate-400 text-[11px] font-sans">Rent: </span>
                 <span className="font-bold text-rose-400">€{config.macro.current_monthly_rent_eur.toLocaleString()}/mo</span>
               </div>
+
               <div
                 className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300"
-                title={`Monthly Savings: €${Math.round(activeMonthlySavings).toLocaleString()}/mo (${isNetPayDerived ? 'Dynamic Net-Pay Derived: Net Pay €' + Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString() + ' - Rent €' + currentRent.toLocaleString() + ' - Living €' + livingExpenses.toLocaleString() : 'Fixed Explicit'})`}
+                title={`Monthly Savings: €${Math.round(activeMonthlySavings).toLocaleString()}/mo (${isNetPayDerived ? 'Dynamic Net-Pay Derived' : 'Fixed Explicit'})`}
               >
                 <span className="text-slate-400 text-[11px] font-sans">Savings: </span>
-                <span className="font-bold text-sky-400">€{Math.round(activeMonthlySavings).toLocaleString()}/mo</span>
+                <span className="font-bold text-sky-300">€{Math.round(activeMonthlySavings).toLocaleString()}/mo</span>
                 {isNetPayDerived && <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/20 text-sky-300 ml-1 font-sans">auto</span>}
+              </div>
+
+              {/* Start Date Indicator in Banner */}
+              <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-purple-500/30 text-purple-200 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 text-purple-400" />
+                <span className="text-slate-400 text-[11px] font-sans">Start: </span>
+                <span className="font-bold">{config.meta.start_date}</span>
               </div>
             </div>
           )}
@@ -312,7 +342,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
             onClick={() => setIsExpanded(!isExpanded)}
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1"
           >
-            <span>{isExpanded ? 'Collapse Profile' : 'View / Edit Inputs'}</span>
+            <span>{isExpanded ? 'Collapse Profile' : 'View / Edit Baseline'}</span>
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
@@ -325,7 +355,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
           {isProfileLocked && (
             <div className="px-4 py-2.5 bg-emerald-950/30 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
               <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                 <span>Profile inputs are in read-only mode. Click "Unlock to Edit Profile" above to modify your baseline financial facts.</span>
               </div>
               <button
@@ -337,132 +367,18 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
             </div>
           )}
 
-          {/* 4-Column Grid for Personal Profile Inputs */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${isProfileLocked ? 'opacity-85 pointer-events-none' : ''}`}>
-            {/* Column 1: Target Home & Deposit */}
-            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4 text-brand-400" />
-                  <h4 className="font-bold text-slate-200">Target Home & Deposit</h4>
-                </div>
-                <InfoTooltip
-                  title="Target Property & Deposit"
-                  content="Enter the purchase price and deposit. First-Time Buyers in Ireland require a minimum 10% deposit. Tiered Stamp Duty (1% up to €1M, 2% excess) and €3,000 legal fees are automatically computed."
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Target Property Price (€)</label>
-                <input
-                  type="number"
-                  step="25000"
-                  disabled={isProfileLocked}
-                  value={config.property.target_price_eur}
-                  onChange={(e) => {
-                    const price = parseFloat(e.target.value) || 0;
-                    const pct = config.property.minimum_deposit_pct ?? 0.10;
-                    const depEur = Math.round(price * pct);
-                    onChange({
-                      ...config,
-                      property: {
-                        ...config.property,
-                        target_price_eur: price,
-                        deposit_eur: depEur,
-                      },
-                    });
-                  }}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
-                />
-              </div>
-
-              {/* Dual Synchronized Deposit % and Deposit Sum (€) */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 block mb-1">Deposit %</label>
-                  <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                    <input
-                      type="number"
-                      step="1"
-                      min="5"
-                      max="100"
-                      disabled={isProfileLocked}
-                      value={
-                        config.property.minimum_deposit_pct !== undefined
-                          ? Math.round(config.property.minimum_deposit_pct * 100)
-                          : config.property.target_price_eur > 0
-                          ? Math.round(((config.property.deposit_eur || 0) / config.property.target_price_eur) * 100)
-                          : 10
-                      }
-                      onChange={(e) => {
-                        const pct = (parseFloat(e.target.value) || 10) / 100;
-                        const depEur = Math.round(config.property.target_price_eur * pct);
-                        onChange({
-                          ...config,
-                          property: {
-                            ...config.property,
-                            minimum_deposit_pct: pct,
-                            deposit_eur: depEur,
-                          },
-                        });
-                      }}
-                      className="w-full bg-transparent text-white font-bold focus:outline-none"
-                    />
-                    <span className="text-slate-400 font-medium">%</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-slate-400 block mb-1">Deposit Sum (€)</label>
-                  <input
-                    type="number"
-                    step="5000"
-                    disabled={isProfileLocked}
-                    value={Math.round(
-                      config.property.deposit_eur ??
-                        config.property.target_price_eur * (config.property.minimum_deposit_pct || 0.10)
-                    )}
-                    onChange={(e) => {
-                      const depEur = parseFloat(e.target.value) || 0;
-                      const price = config.property.target_price_eur || 0;
-                      const pct = price > 0 ? depEur / price : 0.10;
-                      onChange({
-                        ...config,
-                        property: {
-                          ...config.property,
-                          deposit_eur: depEur,
-                          minimum_deposit_pct: pct,
-                        },
-                      });
-                    }}
-                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Legal / Fees (€)</label>
-                <input
-                  type="number"
-                  step="500"
-                  disabled={isProfileLocked}
-                  value={config.property.legal_and_closing_fees_eur}
-                  onChange={(e) => updateProperty('legal_and_closing_fees_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Column 2: Income Breakdown & AIP Borrowing Capacity */}
-            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+          {/* 3-Column Grid for Personal Profile Baseline */}
+          <div className={`grid grid-cols-1 lg:grid-cols-3 gap-5 ${isProfileLocked ? 'opacity-85 pointer-events-none' : ''}`}>
+            {/* COLUMN 1: Employment & Income Baseline */}
+            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3.5 text-xs">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Landmark className="w-4 h-4 text-emerald-400" />
-                  <h4 className="font-bold text-slate-200">Income & AIP Borrowing</h4>
+                  <h4 className="font-bold text-slate-200">Employment & Income Baseline</h4>
                 </div>
                 <InfoTooltip
                   title="Income & Borrowing Limits"
-                  content="Enter Base Salary and Annual Bonus. Central Bank of Ireland rules cap standard borrowing at 4.0x Loan-To-Income (LTI). You can also type an explicit bank Approval in Principle (AIP) limit."
+                  content="Enter Base Salary and Annual Bonus. Central Bank of Ireland rules cap standard borrowing at 4.0x Loan-To-Income (LTI). Future career promotions can be planned via Step-Ups below."
                 />
               </div>
 
@@ -488,7 +404,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                       },
                     });
                   }}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
+                  className="w-full bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-white font-bold disabled:bg-slate-900 focus:outline-none"
                 />
               </div>
 
@@ -559,75 +475,9 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
               </div>
 
               {/* Income & CBI Summary */}
-              <div className="flex justify-between text-[11px] text-slate-400 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
-                <span>Total: <strong className="text-white">€{totalSalary.toLocaleString()}</strong></span>
-                <span>CBI 4.0x: <strong className="text-emerald-400">€{cbiCalculatedLoan.toLocaleString()}</strong></span>
-              </div>
-
-              {/* Approval in Principle (AIP) Explicit Input */}
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-slate-400 block">Approval in Principle (AIP) (€)</label>
-                  {!isProfileLocked && hasCustomAip && (
-                    <button
-                      onClick={() => updateMortgage('approval_in_principle_amount_eur', null)}
-                      className="text-[10px] text-brand-400 hover:text-brand-300 underline"
-                      title="Reset to automated CBI 4.0x loan"
-                    >
-                      Reset to CBI 4.0x
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="10000"
-                    disabled={isProfileLocked}
-                    placeholder={`CBI 4.0x: €${cbiCalculatedLoan.toLocaleString()}`}
-                    value={config.mortgage.approval_in_principle_amount_eur ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value ? parseFloat(e.target.value) : null;
-                      updateMortgage('approval_in_principle_amount_eur', val);
-                    }}
-                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-emerald-300 font-bold placeholder-slate-500 focus:outline-none"
-                  />
-                </div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {hasCustomAip ? '✓ Using explicit bank AIP loan cap' : '✓ Defaults to CBI 4.0x loan limit'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 block mb-1">Mortgage Term</label>
-                  <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                    <input
-                      type="number"
-                      min="10"
-                      max="35"
-                      disabled={isProfileLocked}
-                      value={config.mortgage.mortgage_term_years}
-                      onChange={(e) => updateMortgage('mortgage_term_years', parseInt(e.target.value) || 25)}
-                      className="w-full bg-transparent text-white font-bold focus:outline-none"
-                    />
-                    <span className="text-slate-400 text-[10px]">yrs</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-slate-400 block mb-1">Maint. Rate</label>
-                  <div className="flex items-center bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                    <input
-                      type="number"
-                      step="0.1"
-                      disabled={isProfileLocked}
-                      value={(config.mortgage.yearly_maintenance_rate * 100).toFixed(1)}
-                      onChange={(e) => updateMortgage('yearly_maintenance_rate', (parseFloat(e.target.value) || 1) / 100)}
-                      className="w-full bg-transparent text-white font-bold focus:outline-none"
-                    />
-                    <span className="text-slate-400 font-medium">%</span>
-                  </div>
-                </div>
+              <div className="flex justify-between text-[11px] text-slate-400 bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                <span>Total Gross: <strong className="text-white">€{totalSalary.toLocaleString()}</strong></span>
+                <span>CBI 4.0x Limit: <strong className="text-emerald-400">€{cbiCalculatedLoan.toLocaleString()}</strong></span>
               </div>
 
               {/* Planned Future Salary Increases & Step-Ups */}
@@ -635,7 +485,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[11px] font-bold text-slate-300">Future Salary Step-Ups ({salaryAdjustments.length})</span>
+                    <span className="text-[11px] font-bold text-slate-300">Future Career Step-Ups ({salaryAdjustments.length})</span>
                   </div>
                   {!isProfileLocked && (
                     <button
@@ -657,7 +507,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                       const offsetMonths = getCalendarMonthOffset(config.meta.start_date, new Date(adj.effective_date));
                       const bonusEur = adj.bonus_eur ?? adj.base_salary_eur * (adj.bonus_pct ?? 0.20);
                       const adjTotal = adj.base_salary_eur + bonusEur;
-                      const adjCbi = adjTotal * config.mortgage.cbi_max_lti_multiple;
+                      const adjCbi = adjTotal * (config.mortgage.cbi_max_lti_multiple || 4.0);
                       return (
                         <div
                           key={adj.id}
@@ -741,16 +591,211 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
               </div>
             </div>
 
-            {/* Column 3: Cash & Liquid Investments */}
-            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+            {/* COLUMN 2: Irish Tax & Cost of Living */}
+            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3.5 text-xs">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-slate-800">
+                <Building className="w-4 h-4 text-rose-400" />
+                <h4 className="font-bold text-slate-200">Irish Tax & Living Baseline</h4>
+              </div>
+
+              {/* Current Monthly Rent */}
+              <div>
+                <label className="text-slate-400 block mb-1">Current Monthly Rent (€)</label>
+                <input
+                  type="number"
+                  step="100"
+                  disabled={isProfileLocked}
+                  value={config.macro.current_monthly_rent_eur}
+                  onChange={(e) => updateMacro('current_monthly_rent_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-rose-400 font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Standard Rate Cut-Off Point (SRCOP) with Quick Presets */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 block">Standard Rate Cut-Off (20% Band) (€)</label>
+                  {!isProfileLocked && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => updateTax('standard_rate_cutoff_eur', 44000)}
+                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        title="Single Person: €44,000"
+                      >
+                        Single €44k
+                      </button>
+                      <button
+                        onClick={() => updateTax('standard_rate_cutoff_eur', 53000)}
+                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        title="Married (1 Earner): €53,000"
+                      >
+                        Married €53k
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  step="1000"
+                  disabled={isProfileLocked}
+                  value={config.tax?.standard_rate_cutoff_eur ?? 53000}
+                  onChange={(e) => updateTax('standard_rate_cutoff_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Annual Tax Credits */}
+              <div>
+                <label className="text-slate-400 block mb-1">Annual Tax Credits (€)</label>
+                <input
+                  type="number"
+                  step="500"
+                  disabled={isProfileLocked}
+                  value={config.tax?.tax_credits_eur ?? 9000}
+                  onChange={(e) => updateTax('tax_credits_eur', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Monthly Living Expenses & Dynamic Savings Mode */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1">
+                    Monthly Living Expenses (€)
+                    <InfoTooltip
+                      title="Monthly Living Spend"
+                      content="Groceries, dining, utilities, broadband, transport, gym, subscriptions (excluding rent and mortgage)."
+                    />
+                  </label>
+                  {!isProfileLocked && (
+                    <button
+                      onClick={() =>
+                        updateTax(
+                          'savings_calculation_mode',
+                          isNetPayDerived ? 'explicit' : 'net_pay_derived'
+                        )
+                      }
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold border transition-colors ${
+                        isNetPayDerived
+                          ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                      }`}
+                      title={
+                        isNetPayDerived
+                          ? 'Click to switch to manual fixed savings input'
+                          : 'Click to switch to automatic net-pay derived savings'
+                      }
+                    >
+                      {isNetPayDerived ? '⚡ Auto-Derived' : 'Fixed Manual'}
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  type="number"
+                  step="100"
+                  min="0"
+                  disabled={isProfileLocked}
+                  value={config.tax?.monthly_living_expenses_eur ?? 2500}
+                  onChange={(e) =>
+                    updateTax('monthly_living_expenses_eur', parseFloat(e.target.value) || 0)
+                  }
+                  className="w-full bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
+                  placeholder="e.g. 2500"
+                />
+
+                {isNetPayDerived ? (
+                  <div className="bg-slate-900/90 p-2 rounded-lg border border-sky-500/20 space-y-1 text-[11px] font-sans">
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Net Base Pay:</span>
+                      <span className="text-emerald-300 font-mono">€{Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Rent Paid:</span>
+                      <span className="text-rose-400 font-mono">-€{currentRent.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Living Expenses:</span>
+                      <span className="text-amber-300 font-mono">-€{livingExpenses.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-white font-bold">
+                      <span className="text-sky-300">⚡ Dynamic Monthly Savings:</span>
+                      <span className="text-sky-300 font-mono text-xs">€{Math.round(derivedMonthlySavings).toLocaleString()}/mo</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-slate-400 block mb-1">Fixed Manual Savings (€)</label>
+                    <input
+                      type="number"
+                      step="250"
+                      disabled={isProfileLocked}
+                      value={config.liquid_assets.monthly_salary_savings_eur}
+                      onChange={(e) =>
+                        updateLiquidAssets('monthly_salary_savings_eur', parseFloat(e.target.value) || 0)
+                      }
+                      className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-amber-500/30 text-amber-200 font-bold focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Model Start Date with Quick Presets */}
+              <div className="pt-2 border-t border-slate-800/80">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 block font-semibold text-purple-300 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Model Start Date</span>
+                  </label>
+                  {!isProfileLocked && (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...config, meta: { ...config.meta, start_date: getTodayDateStr() } })}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                        title="Set to today's date"
+                      >
+                        ⚡ Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...config, meta: { ...config.meta, start_date: getFirstOfCurrentMonthStr() } })}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                        title="Set to 1st of current month"
+                      >
+                        ⚡ 1st Mth
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...config, meta: { ...config.meta, start_date: getFirstOfNextMonthStr() } })}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                        title="Set to 1st of next month"
+                      >
+                        ⚡ Next Mth
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="date"
+                  disabled={isProfileLocked}
+                  value={config.meta.start_date}
+                  onChange={(e) => onChange({ ...config, meta: { ...config.meta, start_date: e.target.value } })}
+                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 text-xs focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* COLUMN 3: Cash, Liquid Investments & Safety Pot */}
+            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3.5 text-xs">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-sky-400" />
-                  <h4 className="font-bold text-slate-200">Cash, Trading & Vested Shares</h4>
+                  <h4 className="font-bold text-slate-200">Liquid Assets & Safety Pot</h4>
                 </div>
                 <InfoTooltip
                   title="Liquid Wealth Portfolio"
-                  content="Separates liquid bank cash, personal trading accounts (ETFs/stocks), and already-vested company shares (held at 0% tax). These form your upfront purchasing power."
+                  content="Bank cash, personal trading accounts (ETFs/stocks), and already-vested company shares held at 0% tax. The safety pot is reserved and never spent on purchase."
                 />
               </div>
 
@@ -781,7 +826,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                 </div>
               </div>
 
-              {/* Separate Trading Accounts (Mix of Instruments) */}
+              {/* Separate Trading Accounts */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-slate-400 block mb-1">Trading Inv EUR (€)</label>
@@ -810,11 +855,11 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                 </div>
               </div>
 
-              {/* Currently Held Vested RSUs / GOOGL Shares at Model Start Date */}
+              {/* Currently Held Vested RSUs / GOOGL Shares */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-slate-400 block font-semibold text-purple-300">
-                    Vested {config.meta.stock_symbol || 'GOOGL'} Shares Held (at Start)
+                    Vested {config.meta.stock_symbol || 'GOOGL'} Held (at Start)
                   </label>
                   <span className="text-[10px] text-purple-300 font-mono font-bold">
                     €{Math.round((config.equity_engine.initial_vested_shares_held ?? 0) * config.equity_engine.current_share_price_usd * config.macro.eur_usd_spot).toLocaleString()}
@@ -832,15 +877,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                   />
                   <span className="text-slate-400 text-[10px] ml-1">shares</span>
                 </div>
-                <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
-                  {(config.equity_engine.initial_vested_shares_held ?? 0)} shs × ${config.equity_engine.current_share_price_usd.toFixed(1)} × {config.macro.eur_usd_spot.toFixed(3)} €/$ (0% tax, already vested)
-                </span>
               </div>
 
-              {/* Cash Safety Pot (Untouchable Emergency Reserve) */}
+              {/* Cash Safety Pot (Untouchable Emergency Buffer) */}
               <div className="pt-2 border-t border-slate-800 space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-1">
-                  <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1">
                     <span className="text-sky-300">🛡️ Cash Safety Pot</span>
                     <InfoTooltip
                       title="Cash Safety Pot (Emergency Buffer)"
@@ -861,10 +903,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                             },
                           });
                         }}
-                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 transition-colors flex items-center gap-1"
-                        title={`Set emergency fund to 6 months of Total Essential Burn: 6 × (€${livingExpenses.toLocaleString()} living + €${currentRent.toLocaleString()} rent) = €${Math.round(((config.tax?.monthly_living_expenses_eur ?? 2500) + currentRent) * 6).toLocaleString()}`}
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 transition-colors"
+                        title="Set emergency buffer to 6 months essential burn"
                       >
-                        ⚡ 6M Burn (€{Math.round(((config.tax?.monthly_living_expenses_eur ?? 2500) + currentRent) * 6 / 1000)}k)
+                        ⚡ 6M Burn
                       </button>
 
                       <button
@@ -878,10 +920,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                             },
                           });
                         }}
-                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30 transition-colors flex items-center gap-1"
-                        title={`Set emergency fund to 6 months of Net Take-Home Pay: 6 × €${Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}/mo = €${Math.round(taxBreakdown.netMonthlyTakeHome * 6).toLocaleString()}`}
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold border bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30 transition-colors"
+                        title="Set emergency buffer to 6 months net take-home pay"
                       >
-                        ⚡ 6M Net Pay (€{Math.round(taxBreakdown.netMonthlyTakeHome * 6 / 1000)}k)
+                        ⚡ 6M Net Pay
                       </button>
                     </div>
                   )}
@@ -919,193 +961,12 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
 
                 {((config.liquid_assets.cash_safety_buffer_eur || 0) > 0 || (config.liquid_assets.cash_safety_buffer_usd || 0) > 0) && (
                   <div className="flex justify-between items-center text-[10.5px] bg-sky-950/40 px-2 py-1 rounded border border-sky-800/40 text-sky-300">
-                    <span>Total Protected Buffer:</span>
+                    <span>Protected Reserve:</span>
                     <span className="font-mono font-bold">
-                      €{Math.round((config.liquid_assets.cash_safety_buffer_eur || 0) + (config.liquid_assets.cash_safety_buffer_usd || 0) * config.macro.eur_usd_spot).toLocaleString()}
+                      €{Math.round(totalSafetyPot).toLocaleString()}
                     </span>
                   </div>
                 )}
-              </div>
-
-              {/* Monthly Living Expenses & Dynamic Savings */}
-              <div className="pt-2 border-t border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-slate-300 font-semibold flex items-center gap-1.5">
-                    Monthly Living Expenses (€)
-                    <InfoTooltip
-                      title="Monthly Non-Housing Living Expenses"
-                      content="Groceries, dining, utilities, broadband, transport, insurance, gym, subscriptions, and discretionary leisure (excluding rent and mortgage). When in Dynamic Mode, your monthly cash savings automatically equals Net Take-Home minus Rent minus Living Expenses."
-                    />
-                  </label>
-                  {!isProfileLocked && (
-                    <button
-                      onClick={() =>
-                        updateTax(
-                          'savings_calculation_mode',
-                          isNetPayDerived ? 'explicit' : 'net_pay_derived'
-                        )
-                      }
-                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold border transition-colors ${
-                        isNetPayDerived
-                          ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
-                      }`}
-                      title={
-                        isNetPayDerived
-                          ? 'Click to switch to manual fixed savings input'
-                          : 'Click to switch to automatic net-pay derived savings'
-                      }
-                    >
-                      {isNetPayDerived ? '⚡ Auto-Derived' : 'Fixed Manual'}
-                    </button>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="100"
-                    min="0"
-                    disabled={isProfileLocked}
-                    value={config.tax?.monthly_living_expenses_eur ?? 2500}
-                    onChange={(e) =>
-                      updateTax('monthly_living_expenses_eur', parseFloat(e.target.value) || 0)
-                    }
-                    className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
-                    placeholder="e.g. 2500 (groceries, leisure, etc.)"
-                  />
-                </div>
-
-                {/* Dynamic Net Pay Breakdown or Fixed Manual Input */}
-                {isNetPayDerived ? (
-                  <div className="bg-slate-900/90 p-2 rounded-lg border border-sky-500/20 space-y-1 text-[11px] font-sans">
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span>Net Base Pay:</span>
-                      <span className="text-emerald-300 font-mono">€{Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span>Rent Paid:</span>
-                      <span className="text-rose-400 font-mono">-€{currentRent.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span>Living Expenses:</span>
-                      <span className="text-amber-300 font-mono">-€{livingExpenses.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-white font-bold">
-                      <span className="text-sky-300">⚡ Dynamic Monthly Savings:</span>
-                      <span className="text-sky-300 font-mono text-xs">€{Math.round(derivedMonthlySavings).toLocaleString()}/mo</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-slate-400 block mb-1">Fixed Manual Savings (€)</label>
-                    <input
-                      type="number"
-                      step="250"
-                      disabled={isProfileLocked}
-                      value={config.liquid_assets.monthly_salary_savings_eur}
-                      onChange={(e) =>
-                        updateLiquidAssets('monthly_salary_savings_eur', parseFloat(e.target.value) || 0)
-                      }
-                      className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-amber-500/30 text-amber-200 font-bold focus:outline-none"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Column 4: Irish Tax & Rent Baseline */}
-            <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3 text-xs">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Building className="w-4 h-4 text-rose-400" />
-                <h4 className="font-bold text-slate-200">Irish Tax & Rent Baseline</h4>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Current Monthly Rent (€)</label>
-                <input
-                  type="number"
-                  step="100"
-                  disabled={isProfileLocked}
-                  value={config.macro.current_monthly_rent_eur}
-                  onChange={(e) => updateMacro('current_monthly_rent_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-rose-400 font-bold focus:outline-none"
-                />
-              </div>
-
-              {/* Standard Rate Cut-Off Point (SRCOP) with Quick Presets */}
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-slate-400 block">Standard Rate Cut-Off (20% Band) (€)</label>
-                  {!isProfileLocked && (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => updateTax('standard_rate_cutoff_eur', 44000)}
-                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                        title="Single Person: €44,000"
-                      >
-                        Single €44k
-                      </button>
-                      <button
-                        onClick={() => updateTax('standard_rate_cutoff_eur', 53000)}
-                        className="text-[9px] px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                        title="Married (1 Earner): €53,000"
-                      >
-                        Married €53k
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <input
-                  type="number"
-                  step="1000"
-                  disabled={isProfileLocked}
-                  value={config.tax?.standard_rate_cutoff_eur ?? 53000}
-                  onChange={(e) => updateTax('standard_rate_cutoff_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
-                />
-              </div>
-
-              {/* Annual Tax Credits */}
-              <div>
-                <label className="text-slate-400 block mb-1">Annual Tax Credits (€)</label>
-                <input
-                  type="number"
-                  step="500"
-                  disabled={isProfileLocked}
-                  value={config.tax?.tax_credits_eur ?? 9000}
-                  onChange={(e) => updateTax('tax_credits_eur', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-white font-bold focus:outline-none"
-                />
-              </div>
-
-              {/* Live Irish Tax & Net Take-Home Summary Card */}
-              <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 space-y-1 text-[11px] font-sans">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Net Monthly Base Pay:</span>
-                  <strong className="text-emerald-400 font-mono text-xs">
-                    €{Math.round(taxBreakdown.netMonthlyTakeHome).toLocaleString()}/mo
-                  </strong>
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/60">
-                  <span>Effective Base Tax:</span>
-                  <span className="text-slate-300 font-mono">{(taxBreakdown.effectiveTaxRate * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400">
-                  <span>Marginal GSU/Bonus Tax:</span>
-                  <span className="text-purple-300 font-mono font-bold">52.0%</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Model Start Date</label>
-                <input
-                  type="date"
-                  disabled={isProfileLocked}
-                  value={config.meta.start_date}
-                  onChange={(e) => onChange({ ...config, meta: { ...config.meta, start_date: e.target.value } })}
-                  className="w-full bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-200 text-xs focus:outline-none"
-                />
               </div>
             </div>
           </div>
@@ -1452,7 +1313,7 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                         )}
                       </div>
 
-                      {/* Right Column: Date Reference Price ($) & FX (€/$) & Resulting Share Value (€) */}
+                      {/* Right Column: Date Reference Price ($) & FX (€/$) */}
                       <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1.5 flex flex-col justify-center">
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="text-slate-400 font-medium flex items-center gap-1">
@@ -1534,30 +1395,27 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                         return (
                           <div
                             key={idx}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] border font-medium ${
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10.5px] font-mono transition-all ${
                               isPast
-                                ? 'bg-slate-800/70 border-slate-700 text-slate-400'
-                                : 'bg-purple-950/40 border-purple-500/40 text-purple-200'
+                                ? 'bg-slate-900/60 border-slate-800 text-slate-500'
+                                : 'bg-slate-900 border-purple-500/30 text-slate-200'
                             }`}
-                            title={`${isPast ? 'Vested in past' : `Vests at Month ${offset}`} on ${milestoneDate.toISOString().slice(0, 10)}
-• Gross: ${Math.round(grossShares)} shs = €${milestoneGrossEur.toLocaleString()} ($${milestoneGrossUsd.toLocaleString()})
-• Net Retained (post-52% tax): ${milestoneNetShares} shs = €${milestoneNetEur.toLocaleString()}`}
+                            title={`Milestone ${idx + 1}: ${milestoneDate.toISOString().slice(0, 7)} (Month ${offset}) • ${grossShares} shs (${milestoneNetShares} net after 52% tax) = €${milestoneNetEur.toLocaleString()} net`}
                           >
-                            {isPast ? (
-                              <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" />
-                            ) : (
-                              <Clock className="w-2.5 h-2.5 text-purple-400" />
-                            )}
-                            <span>
-                              {grant.vest_frequency_months === 1
-                                ? `Yr ${idx + 1}`
-                                : `Q${idx + 1}`}: {Math.round(pct * 100)}% ({Math.round(grossShares)} shs • €{Math.round(milestoneGrossEur / 1000)}k)
+                            <span
+                              className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                                isPast ? 'bg-slate-800 text-slate-400' : 'bg-purple-500/20 text-purple-300'
+                              }`}
+                            >
+                              {isPast ? 'Past' : `M${offset}`}
                             </span>
-                            {isPast ? (
-                              <span className="text-[8.5px] text-slate-500 uppercase font-mono">Past</span>
-                            ) : (
-                              <span className="text-[8.5px] font-bold text-purple-300 font-mono">M{offset}</span>
-                            )}
+                            <span>{Math.round(pct * 100)}%:</span>
+                            <span className={isPast ? 'text-slate-400' : 'text-purple-300 font-bold'}>
+                              {Math.round(grossShares)} shs
+                            </span>
+                            <span className="text-slate-500 text-[9px]">
+                              (€{Math.round(milestoneNetEur / 1000)}k net)
+                            </span>
                           </div>
                         );
                       })}
@@ -1566,9 +1424,10 @@ export const PersonalProfileHeader: React.FC<PersonalProfileHeaderProps> = memo(
                 );
               })}
             </div>
+          </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 });
+export default PersonalProfileHeader;
