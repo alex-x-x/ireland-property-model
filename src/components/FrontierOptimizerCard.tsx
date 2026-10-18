@@ -11,6 +11,11 @@ import {
   ChevronUp,
   Check,
   Sliders,
+  Lock,
+  Unlock,
+  Layers,
+  Calendar,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,6 +33,7 @@ import {
   MonthlyDataPoint,
   MortgageStrategyResult,
   OptimizationAnalysis,
+  OptimizerOptions,
 } from '../engine/types';
 import { evaluateAllCandidateStrategies, applyOptimizationBudgetFilter } from '../engine/optimizer';
 import { InfoTooltip } from './InfoTooltip';
@@ -121,10 +127,83 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
     }
   };
 
-  // Stage 1: Expensive candidate generation & 60-month simulation (runs only when config/month changes)
+  // Active purchase point metrics & presets
+  const activePoint = monthlyPoints[selectedMonth] || monthlyPoints[0];
+  const propertyPrice = activePoint.propertyPrice;
+  const statutoryMinDepositPct = config.property.minimum_deposit_pct ?? 0.10;
+  const baseMinDeposit = propertyPrice * statutoryMinDepositPct;
+  const minRequiredDeposit = baseMinDeposit + activePoint.borrowingShortfall;
+  const maxStatutoryLoan = Math.max(0, propertyPrice - minRequiredDeposit);
+  const maxAipAvailable = activePoint.maxMortgageAvailable;
+  const maxAipLoan = Math.min(maxAipAvailable, maxStatutoryLoan);
+
+  const sidebarDeposit =
+    config.property.deposit_eur !== undefined && config.property.deposit_eur > 0
+      ? config.property.deposit_eur
+      : config.property.minimum_deposit_pct !== undefined
+      ? Math.round(propertyPrice * config.property.minimum_deposit_pct)
+      : Math.round(propertyPrice * 0.10);
+  const sidebarLoan = Math.min(maxAipAvailable, Math.max(0, propertyPrice - sidebarDeposit));
+
+  // Loan Strategy Mode: 'fixed_loan' (default) vs 'all_tiers'
+  const [loanMode, setLoanMode] = useState<'fixed_loan' | 'all_tiers'>('fixed_loan');
+  const [loanPresetType, setLoanPresetType] = useState<'sidebar' | 'max_aip' | 'custom'>('sidebar');
+  const [customLoanValue, setCustomLoanValue] = useState<number>(sidebarLoan);
+  const [isCustomLoanFocused, setIsCustomLoanFocused] = useState<boolean>(false);
+  const [customLoanText, setCustomLoanText] = useState<string>(String(sidebarLoan));
+
+  // Max mortgage term horizon (defaulting to 26 or configured term)
+  const initialMaxTerm = config.mortgage.max_mortgage_term_years ?? config.mortgage.mortgage_term_years ?? 26;
+  const [maxTermYears, setMaxTermYears] = useState<number>(initialMaxTerm);
+
+  // Fixed-rate annual overpayment allowance (free-form, defaulting to €5,000/yr)
+  const initialAllowance = config.mortgage.fixed_rate_annual_overpayment_allowance_eur ?? 5000;
+  const [fixedAnnualAllowanceEur, setFixedAnnualAllowanceEur] = useState<number>(initialAllowance);
+  const [allowanceText, setAllowanceText] = useState<string>(String(initialAllowance));
+  const [isAllowanceFocused, setIsAllowanceFocused] = useState<boolean>(false);
+
+  // Synchronize when config updates externally
+  useEffect(() => {
+    if (config.mortgage.max_mortgage_term_years !== undefined) {
+      setMaxTermYears(config.mortgage.max_mortgage_term_years ?? config.mortgage.mortgage_term_years ?? 26);
+    }
+  }, [config.mortgage.max_mortgage_term_years, config.mortgage.mortgage_term_years]);
+
+  useEffect(() => {
+    if (config.mortgage.fixed_rate_annual_overpayment_allowance_eur !== undefined) {
+      const val = config.mortgage.fixed_rate_annual_overpayment_allowance_eur ?? 5000;
+      setFixedAnnualAllowanceEur(val);
+      if (!isAllowanceFocused) {
+        setAllowanceText(String(val));
+      }
+    }
+  }, [config.mortgage.fixed_rate_annual_overpayment_allowance_eur, isAllowanceFocused]);
+
+  // Sync custom loan value when sidebar changes and user is on sidebar preset
+  useEffect(() => {
+    if (loanPresetType === 'sidebar' && !isCustomLoanFocused) {
+      setCustomLoanValue(sidebarLoan);
+      setCustomLoanText(String(sidebarLoan));
+    }
+  }, [sidebarLoan, loanPresetType, isCustomLoanFocused]);
+
+  const effectiveFixedLoan = useMemo(() => {
+    if (loanPresetType === 'sidebar') return sidebarLoan;
+    if (loanPresetType === 'max_aip') return maxAipLoan;
+    return Math.min(maxStatutoryLoan, Math.max(0, customLoanValue));
+  }, [loanPresetType, sidebarLoan, maxAipLoan, maxStatutoryLoan, customLoanValue]);
+
+  const optimizerOptions: OptimizerOptions = useMemo(() => ({
+    loanMode,
+    fixedLoanAmountEur: loanMode === 'fixed_loan' ? effectiveFixedLoan : null,
+    maxTermYears,
+    fixedAnnualAllowanceEur,
+  }), [loanMode, effectiveFixedLoan, maxTermYears, fixedAnnualAllowanceEur]);
+
+  // Stage 1: Candidate generation & 60-month simulation
   const baseEvaluations = useMemo(() => {
-    return evaluateAllCandidateStrategies(config, selectedMonth, monthlyPoints);
-  }, [config, selectedMonth, monthlyPoints]);
+    return evaluateAllCandidateStrategies(config, selectedMonth, monthlyPoints, optimizerOptions);
+  }, [config, selectedMonth, monthlyPoints, optimizerOptions]);
 
   // Stage 2: Instant budget filter & Pareto computation (<0.1ms, 60fps on slider drag)
   const analysis: OptimizationAnalysis = useMemo(() => {
@@ -133,9 +212,10 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
       config,
       selectedMonth,
       monthlyPoints,
-      maxMonthlyBudgetEur ?? undefined
+      maxMonthlyBudgetEur ?? undefined,
+      optimizerOptions
     );
-  }, [baseEvaluations, config, selectedMonth, monthlyPoints, maxMonthlyBudgetEur]);
+  }, [baseEvaluations, config, selectedMonth, monthlyPoints, maxMonthlyBudgetEur, optimizerOptions]);
 
   const {
     paretoFrontier,
@@ -251,6 +331,264 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
         <div className="shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-750 text-[11px] font-mono text-right">
           <span className="text-slate-400 block text-[10px]">Guaranteed Net Return</span>
           <span className="text-emerald-400 font-bold">+{(activeMortgageRate * 100).toFixed(2)}% tax-free</span>
+        </div>
+      </div>
+
+      {/* 1. Model Assumptions & Search Scope Summary */}
+      <div className="bg-slate-850/80 p-3 rounded-xl border border-slate-750 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] text-slate-400">
+          <span className="font-bold text-slate-300 flex items-center gap-1">
+            <Lock className="w-3 h-3 text-indigo-400" />
+            <span>Fixed Inputs:</span>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+            🏠 €{Math.round(propertyPrice).toLocaleString()}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+            🏦 {(activeMortgageRate * 100).toFixed(2)}%
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+            📜 AIP: €{Math.round(maxAipAvailable).toLocaleString()}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+            📈 Stocks: {(config.equity_engine.stock_yearly_growth_rate * 100).toFixed(1)}%
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono self-end md:self-auto">
+          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+            {allResults.length} recipes evaluated
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Loan Mode & Parameter Modeling Controls */}
+      <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-3.5 text-xs">
+        {/* Top: Mode Selection & Quick Presets */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-purple-400 shrink-0" />
+              <span className="font-bold text-white text-xs sm:text-sm">Loan Strategy & Modelling Scope</span>
+              <InfoTooltip
+                title="Loan Strategy Mode"
+                content="Choose whether to fix your loan size (e.g. to your sidebar preference or maximum AIP capacity) to evaluate repayment schedules, or explore across all LTV tiers simultaneously."
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {loanMode === 'fixed_loan'
+                ? `Loan fixed at €${Math.round(effectiveFixedLoan).toLocaleString()} (${((effectiveFixedLoan / propertyPrice) * 100).toFixed(0)}% LTV). Optimizer dynamically searches optimal term (up to ${maxTermYears}y) and overpayment allocations.`
+                : 'Sweeps across standard LTV tiers (Min deposit, 20%, 30%, Max AIP, Max liquid) to find global non-dominated trade-offs.'}
+            </p>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-750 shrink-0 self-start lg:self-auto">
+            <button
+              onClick={() => setLoanMode('fixed_loan')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                loanMode === 'fixed_loan'
+                  ? 'bg-purple-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Fixed Loan Mode</span>
+            </button>
+            <button
+              onClick={() => setLoanMode('all_tiers')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                loanMode === 'all_tiers'
+                  ? 'bg-purple-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>Explore All Tiers</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Fixed Loan Controls */}
+        {loanMode === 'fixed_loan' && (
+          <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-slate-400 font-semibold">Select Loan:</span>
+              <button
+                onClick={() => setLoanPresetType('sidebar')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
+                  loanPresetType === 'sidebar'
+                    ? 'bg-indigo-600 text-white border-indigo-500'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-750'
+                }`}
+              >
+                Sidebar Loan (€{Math.round(sidebarLoan).toLocaleString()})
+              </button>
+              <button
+                onClick={() => setLoanPresetType('max_aip')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
+                  loanPresetType === 'max_aip'
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-750'
+                }`}
+              >
+                Max AIP Leverage (€{Math.round(maxAipLoan).toLocaleString()})
+              </button>
+              <button
+                onClick={() => {
+                  setLoanPresetType('custom');
+                  setCustomLoanText(String(customLoanValue));
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
+                  loanPresetType === 'custom'
+                    ? 'bg-purple-600 text-white border-purple-500'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-750'
+                }`}
+              >
+                Custom Loan €
+              </button>
+            </div>
+
+            {loanPresetType === 'custom' && (
+              <div className="flex items-center bg-slate-900 px-2.5 py-1 rounded-lg border border-purple-500/50">
+                <span className="text-purple-400 font-mono font-bold text-xs mr-1">€</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={isCustomLoanFocused ? customLoanText : customLoanValue.toLocaleString()}
+                  onFocus={() => {
+                    setIsCustomLoanFocused(true);
+                    setCustomLoanText(String(customLoanValue));
+                  }}
+                  onBlur={() => {
+                    setIsCustomLoanFocused(false);
+                    const parsed = parseInt(customLoanText.replace(/[^0-9]/g, ''), 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      const clamped = Math.min(maxStatutoryLoan, Math.max(0, parsed));
+                      setCustomLoanValue(clamped);
+                      setCustomLoanText(String(clamped));
+                    } else {
+                      setCustomLoanValue(sidebarLoan);
+                      setCustomLoanText(String(sidebarLoan));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    setCustomLoanText(raw);
+                  }}
+                  className="w-24 bg-transparent text-left font-mono font-bold text-xs text-purple-200 focus:outline-none"
+                />
+                <span className="text-slate-500 text-[10px] ml-1.5 font-mono">
+                  (Deposit: €{Math.round(Math.max(0, propertyPrice - customLoanValue)).toLocaleString()} • {propertyPrice > 0 ? Math.round((customLoanValue / propertyPrice) * 100) : 0}% LTV)
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dynamic Horizon & Allowance Controls */}
+        <div className="pt-2 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Max Mortgage Term */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-300">Max Mortgage Term:</span>
+              <InfoTooltip
+                title="Max Mortgage Term Horizon"
+                content="Caps evaluated repayment terms to your personal ceiling (e.g. 26 years due to retirement age 65-70 limits). Filters out unrealistic 30 or 35 year horizons."
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              {[20, 25, 26, 30, 35].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setMaxTermYears(t)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                    maxTermYears === t
+                      ? 'bg-indigo-600 text-white border-indigo-500'
+                      : 'bg-slate-850 hover:bg-slate-800 text-slate-400 border-slate-750'
+                  }`}
+                >
+                  {t}y
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fixed-Rate Overpayment Allowance */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-300">Fixed-Rate Allowance:</span>
+              <InfoTooltip
+                title="Fixed-Rate Annual Overpayment Allowance"
+                content="Annual penalty-free overpayment limit during the initial fixed-rate period (e.g. €5,000/yr for lenders like AIB/Haven, or €0 for strict lockouts). Once the fixed term concludes, overpayments are completely unrestricted."
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center bg-slate-900 px-2 py-0.5 rounded border border-slate-750 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30">
+                <span className="text-emerald-400 font-mono font-bold text-[11px] mr-1">€</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={isAllowanceFocused ? allowanceText : fixedAnnualAllowanceEur.toLocaleString()}
+                  onFocus={() => {
+                    setIsAllowanceFocused(true);
+                    setAllowanceText(String(fixedAnnualAllowanceEur));
+                  }}
+                  onBlur={() => {
+                    setIsAllowanceFocused(false);
+                    const parsed = parseInt(allowanceText.replace(/[^0-9]/g, ''), 10);
+                    const val = !isNaN(parsed) && parsed >= 0 ? parsed : 5000;
+                    setFixedAnnualAllowanceEur(val);
+                    setAllowanceText(String(val));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    setAllowanceText(raw);
+                  }}
+                  className="w-16 bg-transparent text-left font-mono font-bold text-[11px] text-emerald-200 focus:outline-none"
+                />
+                <span className="text-slate-500 text-[10px] ml-0.5 font-mono">/yr</span>
+              </div>
+              <button
+                onClick={() => {
+                  setFixedAnnualAllowanceEur(0);
+                  setAllowanceText('0');
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                  fixedAnnualAllowanceEur === 0
+                    ? 'bg-slate-700 text-white border-slate-600'
+                    : 'bg-slate-850 hover:bg-slate-800 text-slate-400 border-slate-750'
+                }`}
+              >
+                Strict €0
+              </button>
+              <button
+                onClick={() => {
+                  setFixedAnnualAllowanceEur(5000);
+                  setAllowanceText('5000');
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                  fixedAnnualAllowanceEur === 5000
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-slate-850 hover:bg-slate-800 text-slate-400 border-slate-750'
+                }`}
+              >
+                €5k
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -773,11 +1111,18 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
       <div className="bg-slate-850 p-4 rounded-xl border border-slate-750 space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h4 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+            <h4 className="font-bold text-white text-xs sm:text-sm flex flex-wrap items-center gap-2">
               <span>2D Pareto Frontier: Lifetime Interest Paid vs. Terminal Net Wealth (M60)</span>
+              {paretoFrontier.length === 1 && (
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Single Dominant Recipe
+                </span>
+              )}
             </h4>
             <p className="text-[11px] text-slate-400">
-              Hover over points to inspect recipes. Purple points and connecting line represent the non-dominated Pareto Frontier.
+              {paretoFrontier.length === 1
+                ? 'With loan fixed and cash earning 0%, paying off 3.95% debt earlier strictly beats holding cash on both metrics (least interest & highest wealth), dominating slower alternatives. Switch to "Explore All Tiers" to see the equity-compounding trade-off curve across LTVs.'
+                : 'Hover over points to inspect recipes. Purple points and connecting line represent the non-dominated Pareto Frontier.'}
             </p>
           </div>
 

@@ -675,5 +675,66 @@ describe('Mortgage Engine', () => {
       expect(result.schedule[0].interestRate).toBeCloseTo(initialRate, 4);
       expect(result.schedule[fixedYears * 12 + 1].interestRate).toBeCloseTo(effectiveVarRate, 4);
     });
+
+    it('respects fixedAnnualOverpaymentAllowance during the fixed rate lockout period (AIB €5k rule)', () => {
+      const principal = 500000;
+      const initialRate = 0.035;
+      const termYears = 25;
+      const fixedYears = 2;
+
+      // 1. Strict lockout (0 allowance)
+      const strictResult = calculateMortgageWithOverpayments(
+        {
+          principal,
+          annualRate: initialRate,
+          termYears,
+          fixedRateYears: fixedYears,
+          monthlyOverpayment: 500, // €6,000/yr attempted
+          annualLumpSumOverpayment: 10000,
+          fixedAnnualOverpaymentAllowance: 0,
+        },
+        '2026-08-01'
+      );
+
+      // During first 24 months, overpaymentPaid must be strictly 0
+      for (let m = 0; m < fixedYears * 12; m++) {
+        expect(strictResult.schedule[m].overpaymentPaid).toBe(0);
+      }
+
+      // 2. AIB €5,000/year allowance
+      const aibResult = calculateMortgageWithOverpayments(
+        {
+          principal,
+          annualRate: initialRate,
+          termYears,
+          fixedRateYears: fixedYears,
+          monthlyOverpayment: 400, // €400/mo * 12 = €4,800/yr (within €5,000 cap)
+          annualLumpSumOverpayment: 5000,
+          fixedAnnualOverpaymentAllowance: 5000,
+        },
+        '2026-08-01'
+      );
+
+      // Overpayments should now be active in the fixed period
+      const fixedPeriodOverpayments = aibResult.schedule
+        .slice(0, fixedYears * 12)
+        .reduce((sum, pt) => sum + pt.overpaymentPaid, 0);
+
+      expect(fixedPeriodOverpayments).toBeGreaterThan(0);
+      // Balance at month 24 should be lower than strict lockout
+      expect(aibResult.schedule[23].balance).toBeLessThan(strictResult.schedule[23].balance);
+
+      // Verify that overpayment allowance tracks 12-month loan policy year (every 12 months from drawdown)
+      const year1Overpayments = aibResult.schedule
+        .slice(0, 12)
+        .reduce((sum, pt) => sum + pt.overpaymentPaid, 0);
+      const year2Overpayments = aibResult.schedule
+        .slice(12, 24)
+        .reduce((sum, pt) => sum + pt.overpaymentPaid, 0);
+
+      expect(year1Overpayments).toBeLessThanOrEqual(5000);
+      expect(year2Overpayments).toBeLessThanOrEqual(5000);
+      expect(year2Overpayments).toBeGreaterThan(0);
+    });
   });
 });

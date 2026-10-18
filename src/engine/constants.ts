@@ -41,6 +41,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
       },
     ],
     max_contractual_monthly_payment_eur: null,
+    fixed_rate_annual_overpayment_allowance_eur: 5000,
   },
   liquid_assets: {
     cash_eur: 50000,

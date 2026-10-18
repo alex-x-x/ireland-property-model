@@ -327,6 +327,116 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       expect(customAnalysis.compliantResults.every((r) => r.mandatoryMonthlyPayment <= 2800 + 0.01)).toBe(true);
     });
   });
+
+  describe('Optimizer Enhancements: Max Term, Fixed Loan Mode & Fixed Rate Allowance', () => {
+    it('caps candidate mortgage terms using maxTermYears (e.g. 26 years)', () => {
+      const candidates26 = generateCandidateStrategies(config, activePoint, { maxTermYears: 26 });
+      const terms = Array.from(new Set(candidates26.map((c) => c.termYears))).sort((a, b) => a - b);
+
+      expect(terms).toEqual([15, 20, 25, 26]);
+      expect(terms).not.toContain(30);
+      expect(terms).not.toContain(35);
+      candidates26.forEach((c) => {
+        expect(c.termYears).toBeLessThanOrEqual(26);
+      });
+    });
+
+    it('generates candidates exclusively for a fixed loan amount in fixed_loan mode', () => {
+      const targetLoan = 650000;
+      const candidatesFixed = generateCandidateStrategies(config, activePoint, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: targetLoan,
+        maxTermYears: 26,
+      });
+
+      expect(candidatesFixed.length).toBeGreaterThan(0);
+      // All candidates must have the exact target loan amount
+      candidatesFixed.forEach((c) => {
+        expect(c.loanAmount).toBe(targetLoan);
+        expect(c.depositAmount).toBe(activePoint.propertyPrice - targetLoan);
+      });
+
+      // Candidates should still vary across terms and overpayment surplus ratios
+      const terms = new Set(candidatesFixed.map((c) => c.termYears));
+      expect(terms.size).toBe(4); // 15, 20, 25, 26
+    });
+
+    it('includes Max AIP loan candidate in all_tiers mode', () => {
+      const candidatesAll = generateCandidateStrategies(config, activePoint, { loanMode: 'all_tiers' });
+      const statutoryMinDeposit = activePoint.propertyPrice * (config.property.minimum_deposit_pct ?? 0.10);
+      const expectedMaxAipLoan = Math.min(activePoint.maxMortgageAvailable, activePoint.propertyPrice - statutoryMinDeposit);
+
+      const hasMaxAip = candidatesAll.some(
+        (c) => Math.abs(c.loanAmount - expectedMaxAipLoan) < 500
+      );
+      expect(hasMaxAip).toBe(true);
+    });
+
+    it('clamps fixed loan amount so it never exceeds max AIP capacity or statutory minimum deposit', () => {
+      // Attempting €2,000,000 loan on a €950,000 property
+      const impossibleHighLoan = 2000000;
+      const candidates = generateCandidateStrategies(config, activePoint, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: impossibleHighLoan,
+      });
+
+      expect(candidates.length).toBeGreaterThan(0);
+      const statutoryMinDeposit = activePoint.propertyPrice * (config.property.minimum_deposit_pct ?? 0.10);
+      const expectedMaxLoan = Math.min(activePoint.maxMortgageAvailable, activePoint.propertyPrice - statutoryMinDeposit);
+
+      candidates.forEach((c) => {
+        expect(c.loanAmount).toBeLessThanOrEqual(expectedMaxLoan);
+        expect(c.depositAmount).toBeGreaterThanOrEqual(statutoryMinDeposit);
+      });
+    });
+
+    it('demonstrates single dominant Pareto point in fixed loan mode when debt paydown strictly beats uninvested cash', () => {
+      const fixedConfig: SimulationConfig = {
+        ...config,
+        liquid_assets: {
+          ...config.liquid_assets,
+          cash_eur: 300000,
+        },
+        property: {
+          ...config.property,
+          target_price_eur: 710000,
+          deposit_eur: 213000,
+        },
+        mortgage: {
+          ...config.mortgage,
+          max_mortgage_term_years: 26,
+          fixed_rate_annual_overpayment_allowance_eur: 0,
+        },
+      };
+
+      const pts = runSimulation(fixedConfig);
+      const analysis = runMortgageOptimization(fixedConfig, 0, pts, 2800, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: 497000,
+        maxTermYears: 26,
+        fixedAnnualAllowanceEur: 0,
+      });
+
+      // With cash earning 0%, paying off 3.95% debt earlier saves interest AND preserves/grows net worth,
+      // so the fastest affordable payoff strictly dominates slower alternatives in both dimensions.
+      expect(analysis.compliantResults.length).toBeGreaterThan(1);
+      expect(analysis.paretoFrontier.length).toBe(1);
+      expect(analysis.paretoFrontier[0].isParetoOptimal).toBe(true);
+      expect(analysis.curated.wealthMaximizer?.candidate.id).toBe(analysis.paretoFrontier[0].candidate.id);
+    });
+
+    it('evaluates fixed-rate overpayment allowance in runMortgageOptimization', () => {
+      const analysisStrict = runMortgageOptimization(config, purchaseMonth, monthlyPoints, undefined, {
+        fixedAnnualAllowanceEur: 0,
+      });
+      const analysisAib = runMortgageOptimization(config, purchaseMonth, monthlyPoints, undefined, {
+        fixedAnnualAllowanceEur: 5000,
+      });
+
+      expect(analysisAib.fixedAnnualAllowanceEur).toBe(5000);
+      expect(analysisStrict.fixedAnnualAllowanceEur).toBe(0);
+    });
+  });
 });
 
 

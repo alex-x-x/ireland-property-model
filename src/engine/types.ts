@@ -38,6 +38,8 @@ export interface MortgageConfig {
   monthly_overpayment_eur?: number;
   annual_lump_sum_eur?: number;
   max_contractual_monthly_payment_eur?: number | null;
+  max_mortgage_term_years?: number | null; // User ceiling on mortgage term (e.g. 26 years)
+  fixed_rate_annual_overpayment_allowance_eur?: number; // e.g. €5,000/yr for AIB, or 0 for strict lockout
 }
 
 export interface LiquidAssetsConfig {
@@ -206,7 +208,8 @@ export interface MortgageStrategyCandidate {
   monthlyOverpayment: number;
   overpaymentSurplusPct?: number; // % of free monthly disposable cashflow (e.g. 0.25 = 25%)
   annualBonusLumpSum: number;
-  strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'deposit_20' | 'deposit_30' | 'max_deposit' | 'custom';
+  fixedAnnualAllowanceEur?: number; // e.g. €5,000/yr for AIB during fixed lock
+  strategyType?: 'min_deposit' | 'green_80' | 'super_green_70' | 'deposit_20' | 'deposit_30' | 'max_deposit' | 'custom' | 'sidebar_deposit' | 'max_aip' | 'fixed_loan';
 }
 
 export interface MortgageStrategyResult {
@@ -236,12 +239,18 @@ export interface MortgageStrategyResult {
   isParetoOptimal?: boolean;
 }
 
-
 export interface CuratedStrategies {
   wealthMaximizer: MortgageStrategyResult | null;
   greenArbitrageur: MortgageStrategyResult | null;
   sweetSpot: MortgageStrategyResult | null;
   debtFreeAccelerator: MortgageStrategyResult | null;
+}
+
+export interface OptimizerOptions {
+  loanMode?: 'fixed_loan' | 'all_tiers';
+  fixedLoanAmountEur?: number | null;
+  maxTermYears?: number;
+  fixedAnnualAllowanceEur?: number;
 }
 
 export interface OptimizationAnalysis {
@@ -256,6 +265,10 @@ export interface OptimizationAnalysis {
   curated: CuratedStrategies;
   hurdleRateStockCrossover: number; // e.g. 0.035 (3.5%)
   activeMortgageRate: number;
+  loanMode?: 'fixed_loan' | 'all_tiers';
+  fixedLoanAmountEur?: number | null;
+  maxTermYears?: number;
+  fixedAnnualAllowanceEur?: number;
 }
 
 

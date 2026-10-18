@@ -5,6 +5,7 @@ import {
   MortgageStrategyResult,
   CuratedStrategies,
   OptimizationAnalysis,
+  OptimizerOptions,
 } from './types';
 import {
   calculateMortgageWithOverpayments,
@@ -39,7 +40,8 @@ export function calculateStockHurdleRate(
  */
 export function generateCandidateStrategies(
   config: SimulationConfig,
-  activePoint: MonthlyDataPoint
+  activePoint: MonthlyDataPoint,
+  options?: OptimizerOptions
 ): MortgageStrategyCandidate[] {
   const propertyPrice = activePoint.propertyPrice;
   const statutoryMinDepositPct = config.property.minimum_deposit_pct ?? 0.10;
@@ -58,24 +60,79 @@ export function generateCandidateStrategies(
   const grossBonusEur = activeSalary.bonusEur;
   const netBonusEur = Math.round(grossBonusEur * (1 - config.equity_engine.marginal_tax_rate_ireland));
 
-  // Determine dynamic deposit tiers
-  const depositPresets: { label: string; deposit: number; type: MortgageStrategyCandidate['strategyType'] }[] = [
-    {
+  const isFixedLoanMode =
+    options?.loanMode === 'fixed_loan' ||
+    (options?.fixedLoanAmountEur !== undefined && options?.fixedLoanAmountEur !== null);
+
+  const depositPresets: { label: string; deposit: number; type: MortgageStrategyCandidate['strategyType'] }[] = [];
+
+  if (isFixedLoanMode) {
+    // Mode A: Fixed Loan Amount (from sidebar, max AIP, or custom €)
+    const maxStatutoryLoan = Math.max(0, propertyPrice - minRequiredDeposit);
+    const targetLoan =
+      options?.fixedLoanAmountEur !== undefined && options?.fixedLoanAmountEur !== null
+        ? options.fixedLoanAmountEur
+        : propertyPrice - (config.property.deposit_eur ?? (propertyPrice * (config.property.minimum_deposit_pct ?? 0.10)));
+
+    const effectiveLoan = Math.min(maxStatutoryLoan, Math.max(0, targetLoan));
+    const effectiveDeposit = Math.max(minRequiredDeposit, propertyPrice - effectiveLoan);
+
+    depositPresets.push({
+      label: options?.fixedLoanAmountEur != null ? `Fixed Loan €${Math.round(effectiveLoan).toLocaleString()}` : 'Sidebar Configured Loan',
+      deposit: Math.round(effectiveDeposit),
+      type: 'fixed_loan',
+    });
+  } else {
+    // Mode B: All Tiers Sweep
+    depositPresets.push({
       label: 'Min Statutory Deposit (Max Leverage)',
       deposit: Math.round(minRequiredDeposit),
       type: 'min_deposit',
-    },
-    {
-      label: '20% Deposit (80% LTV)',
-      deposit: Math.round(propertyPrice * 0.20),
-      type: 'deposit_20',
-    },
-    {
-      label: '30% Deposit (70% LTV)',
-      deposit: Math.round(propertyPrice * 0.30),
-      type: 'deposit_30',
-    },
-  ];
+    });
+
+    // Max AIP Borrowing (100% of AIP Capacity)
+    const maxAipLoan = Math.min(activePoint.maxMortgageAvailable, propertyPrice - baseMinDeposit);
+    const maxAipDeposit = Math.max(minRequiredDeposit, propertyPrice - maxAipLoan);
+    if (!depositPresets.some((p) => Math.abs(p.deposit - maxAipDeposit) < 5000)) {
+      depositPresets.push({
+        label: 'Max AIP Borrowing',
+        deposit: Math.round(maxAipDeposit),
+        type: 'max_aip',
+      });
+    }
+
+    // Sidebar Configured Deposit (if distinct and affordable)
+    const sidebarDeposit =
+      config.property.deposit_eur !== undefined && config.property.deposit_eur > 0
+        ? config.property.deposit_eur
+        : config.property.minimum_deposit_pct !== undefined
+        ? Math.round(propertyPrice * config.property.minimum_deposit_pct)
+        : null;
+
+    if (
+      sidebarDeposit !== null &&
+      sidebarDeposit >= minRequiredDeposit &&
+      sidebarDeposit <= maxUsableForDeposit &&
+      !depositPresets.some((p) => Math.abs(p.deposit - sidebarDeposit) < 5000)
+    ) {
+      depositPresets.push({
+        label: 'Sidebar Deposit',
+        deposit: Math.round(sidebarDeposit),
+        type: 'sidebar_deposit',
+      });
+    }
+
+    // Standard 20% and 30% benchmarks
+    [0.20, 0.30].forEach((pct) => {
+      const dep = Math.round(propertyPrice * pct);
+      if (dep >= minRequiredDeposit && !depositPresets.some((p) => Math.abs(p.deposit - dep) < 5000)) {
+        depositPresets.push({
+          label: `${Math.round(pct * 100)}% Deposit (${Math.round((1 - pct) * 100)}% LTV)`,
+          deposit: dep,
+          type: pct === 0.20 ? 'deposit_20' : 'deposit_30',
+        });
+      }
+    });
 
   // Max Liquid Deposit (Deploying all unreserved liquid reserves)
   const maxLiquidDeposit = Math.round(Math.min(propertyPrice, maxUsableForDeposit));
@@ -101,11 +158,24 @@ export function generateCandidateStrategies(
       });
     }
   });
+  }
 
+  // Dynamic Term Selection capped at maxTermYears
+  const maxTerm =
+    options?.maxTermYears ??
+    config.mortgage.max_mortgage_term_years ??
+    35;
 
-  const termsToTest = [15, 20, 25, 30, 35];
+  const baseStandardSteps = [15, 20, 25, 30, 35].filter((t) => t < maxTerm);
+  const termsToTest = Array.from(new Set([...baseStandardSteps, maxTerm])).sort((a, b) => a - b);
+
   const bonusRatios = [0, 0.5, 1.0];
   const surplusRatios = [0, 0.25, 0.50, 0.75];
+
+  const fixedAllowance =
+    options?.fixedAnnualAllowanceEur !== undefined
+      ? options.fixedAnnualAllowanceEur
+      : config.mortgage.fixed_rate_annual_overpayment_allowance_eur ?? 0;
 
   const candidates: MortgageStrategyCandidate[] = [];
   let candidateIndex = 1;
@@ -148,6 +218,7 @@ export function generateCandidateStrategies(
             monthlyOverpayment,
             overpaymentSurplusPct: surplusRatio,
             annualBonusLumpSum,
+            fixedAnnualAllowanceEur: fixedAllowance,
             strategyType: depPreset.type,
           });
         }
@@ -186,6 +257,7 @@ export function evaluateMortgageStrategy(
   // Amortization simulation with Irish Fixed Rate Lockout & Variable Rate Shock
   const variableRateShock = mortgage.variable_rate_shock_pct ?? 0;
   const effectiveVariableRatePct = candidate.interestRatePct + variableRateShock;
+  const allowance = candidate.fixedAnnualAllowanceEur ?? mortgage.fixed_rate_annual_overpayment_allowance_eur ?? 0;
   const overpaymentResult = calculateMortgageWithOverpayments(
     {
       principal: candidate.loanAmount,
@@ -195,6 +267,7 @@ export function evaluateMortgageStrategy(
       variableRate: effectiveVariableRatePct / 100,
       monthlyOverpayment: candidate.monthlyOverpayment,
       annualLumpSumOverpayment: candidate.annualBonusLumpSum,
+      fixedAnnualOverpaymentAllowance: allowance,
     },
     buyPoint.date
   );
@@ -264,32 +337,44 @@ export function evaluateMortgageStrategy(
     currentGsu = currentGsu * stockMonthlyMult + netVestEur;
 
     const elapsedMonths = m - purchaseMonth;
-    const isPaidOff = elapsedMonths > overpaymentResult.actualPayoffMonths;
-    const isFixed = !isPaidOff && elapsedMonths <= candidate.fixedRateYears * 12;
+    const schedPt =
+      elapsedMonths > 0 && elapsedMonths <= overpaymentResult.schedule.length
+        ? overpaymentResult.schedule[elapsedMonths - 1]
+        : undefined;
 
     const monthlyMaintenance = (currentPropValue * mortgage.yearly_maintenance_rate) / 12;
-    const activeOverpayment = isFixed || isPaidOff ? 0 : candidate.monthlyOverpayment;
-    const scheduledMortgagePmt = isPaidOff
-      ? 0
-      : isFixed
-      ? overpaymentResult.standardMonthlyPayment
-      : (overpaymentResult.variableMonthlyPayment ?? overpaymentResult.standardMonthlyPayment);
-    const totalMortgagePayment = scheduledMortgagePmt + activeOverpayment;
+
+    // Exact debt service from schedule (0 if already paid off)
+    const scheduledMortgagePmt = schedPt ? schedPt.principalPaid + schedPt.interestPaid : 0;
+
+    // Separate regular monthly overpayment from bonus lump sum overpayment
+    let bonusLumpPaid = 0;
+    let regularOverpaymentPaid = 0;
+
+    if (schedPt && schedPt.overpaymentPaid > 0) {
+      if (schedPt.isLumpSumApplied && pt?.netBonusReceivedEur && pt.netBonusReceivedEur > 0) {
+        bonusLumpPaid = Math.min(pt.netBonusReceivedEur, schedPt.overpaymentPaid);
+        regularOverpaymentPaid = schedPt.overpaymentPaid - bonusLumpPaid;
+      } else {
+        regularOverpaymentPaid = schedPt.overpaymentPaid;
+      }
+    }
+
+    const totalMortgagePaymentFromSalary = scheduledMortgagePmt + regularOverpaymentPaid;
 
     let monthlySavings = liquid_assets.monthly_salary_savings_eur;
     if (tax && tax.savings_calculation_mode === 'net_pay_derived') {
       const stepSalary = getSalaryAtDate(pt ? pt.date : buyPoint.date, mortgage);
       const stepTax = calculateIrishTaxBreakdown(stepSalary.baseSalary, tax);
-      monthlySavings = Math.max(0, stepTax.netMonthlyTakeHome - (totalMortgagePayment + monthlyMaintenance) - livingExpenses);
+      monthlySavings = Math.max(0, stepTax.netMonthlyTakeHome - (totalMortgagePaymentFromSalary + monthlyMaintenance) - livingExpenses);
     } else {
-      const savingsDelta = (pt?.monthlyRent ?? 2500) - (totalMortgagePayment + monthlyMaintenance);
+      const savingsDelta = (pt?.monthlyRent ?? 2500) - (totalMortgagePaymentFromSalary + monthlyMaintenance);
       monthlySavings = Math.max(0, liquid_assets.monthly_salary_savings_eur + savingsDelta);
     }
     currentCash += monthlySavings;
 
-    // Bonus distribution: net bonus minus lump sum overpayment (applied only when off-fixed and debt is active)
+    // Bonus distribution: net bonus minus lump sum overpayment actually funded from bonus
     if (pt?.netBonusReceivedEur && pt.netBonusReceivedEur > 0) {
-      const bonusLumpPaid = isFixed || isPaidOff ? 0 : Math.min(pt.netBonusReceivedEur, candidate.annualBonusLumpSum);
       const netBonusRetained = Math.max(0, pt.netBonusReceivedEur - bonusLumpPaid);
       currentCash += netBonusRetained;
     }
@@ -485,15 +570,19 @@ export const BUDGET_EPSILON_EUR = 0.01;
 export function evaluateAllCandidateStrategies(
   config: SimulationConfig,
   purchaseMonth: number,
-  baseMonthlyPoints: MonthlyDataPoint[]
+  baseMonthlyPoints: MonthlyDataPoint[],
+  options?: OptimizerOptions
 ): MortgageStrategyResult[] {
   const activePoint = baseMonthlyPoints[purchaseMonth] || baseMonthlyPoints[0];
-  const candidates = generateCandidateStrategies(config, activePoint);
+  const candidates = generateCandidateStrategies(config, activePoint, options);
   const minDepositBaseline = candidates.find((c) => c.strategyType === 'min_deposit') || candidates[0];
   const baselineResult = evaluateMortgageStrategy(minDepositBaseline, config, baseMonthlyPoints, purchaseMonth);
 
   return candidates.map((c) => {
-    const res = evaluateMortgageStrategy(c, config, baseMonthlyPoints, purchaseMonth);
+    const res =
+      c.id === minDepositBaseline.id
+        ? { ...baselineResult }
+        : evaluateMortgageStrategy(c, config, baseMonthlyPoints, purchaseMonth);
     res.wealthDeltaVsMinDeposit = res.terminalNetWealthM60 - baselineResult.terminalNetWealthM60;
     return res;
   });
@@ -508,7 +597,8 @@ export function applyOptimizationBudgetFilter(
   config: SimulationConfig,
   purchaseMonth: number,
   baseMonthlyPoints: MonthlyDataPoint[],
-  maxMonthlyBudgetEur?: number
+  maxMonthlyBudgetEur?: number,
+  options?: OptimizerOptions
 ): OptimizationAnalysis {
   const activePoint = baseMonthlyPoints[purchaseMonth] || baseMonthlyPoints[0];
   const activeSalary = getSalaryAtDate(activePoint.date, config.mortgage);
@@ -550,6 +640,10 @@ export function applyOptimizationBudgetFilter(
     curated,
     hurdleRateStockCrossover: hurdle.preTaxStockGrowthRate,
     activeMortgageRate: config.mortgage.mortgage_interest_rate,
+    loanMode: options?.loanMode,
+    fixedLoanAmountEur: options?.fixedLoanAmountEur,
+    maxTermYears: options?.maxTermYears,
+    fixedAnnualAllowanceEur: options?.fixedAnnualAllowanceEur,
   };
 }
 
@@ -560,10 +654,11 @@ export function runMortgageOptimization(
   config: SimulationConfig,
   purchaseMonth: number,
   baseMonthlyPoints: MonthlyDataPoint[],
-  maxMonthlyBudgetEur?: number
+  maxMonthlyBudgetEur?: number,
+  options?: OptimizerOptions
 ): OptimizationAnalysis {
-  const allResults = evaluateAllCandidateStrategies(config, purchaseMonth, baseMonthlyPoints);
-  return applyOptimizationBudgetFilter(allResults, config, purchaseMonth, baseMonthlyPoints, maxMonthlyBudgetEur);
+  const allResults = evaluateAllCandidateStrategies(config, purchaseMonth, baseMonthlyPoints, options);
+  return applyOptimizationBudgetFilter(allResults, config, purchaseMonth, baseMonthlyPoints, maxMonthlyBudgetEur, options);
 }
 
 

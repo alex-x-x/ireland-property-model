@@ -166,6 +166,7 @@ export interface MortgageOverpaymentOptions {
   monthlyOverpayment?: number; // Regular monthly overpayment amount after fixed period
   annualLumpSumOverpayment?: number; // Optional annual lump sum after fixed period
   lumpSumMonth?: number; // Calendar month (1-12) when annual bonus lump sum is paid (default: 3 for March)
+  fixedAnnualOverpaymentAllowance?: number; // Optional allowance during fixed period (e.g. €5,000 for AIB)
 }
 
 export interface AmortizationSchedulePoint {
@@ -213,6 +214,7 @@ export function calculateMortgageWithOverpayments(
     monthlyOverpayment = 0,
     annualLumpSumOverpayment = 0,
     lumpSumMonth = 3, // Default March for Google/Irish tech annual bonuses
+    fixedAnnualOverpaymentAllowance = 0,
   } = options;
 
   const effectiveVariableRate =
@@ -285,12 +287,20 @@ export function calculateMortgageWithOverpayments(
   let activeVariablePayment = variableMonthlyPayment;
 
   const [startYear, startMonth] = startDateStr.split('-').map((v) => parseInt(v, 10));
+  let currentLoanYear = 0;
+  let currentFixedYearOverpayment = 0;
 
   for (let m = 1; m <= totalStandardMonths; m++) {
     // Date computation
     const curYear = startYear + Math.floor((startMonth - 1 + m) / 12);
     const curMonthNum = ((startMonth - 1 + m) % 12) + 1;
     const dateStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
+
+    const loanYear = Math.floor((m - 1) / 12);
+    if (loanYear !== currentLoanYear) {
+      currentFixedYearOverpayment = 0;
+      currentLoanYear = loanYear;
+    }
 
     const isFixedPeriod = fixedMonths > 0 && m <= fixedMonths;
     const activeRate = isFixedPeriod ? annualRate : effectiveVariableRate;
@@ -303,15 +313,37 @@ export function calculateMortgageWithOverpayments(
 
     const scheduledBasePayment = isFixedPeriod ? initialFixedPayment : activeVariablePayment;
 
-    const regularOverpayment = isFixedPeriod ? 0 : Math.max(0, monthlyOverpayment);
-    const isLumpSumMonth = !isFixedPeriod && curMonthNum === lumpSumMonth;
-    const lumpSumOverpayment = isLumpSumMonth ? Math.max(0, annualLumpSumOverpayment) : 0;
-    const targetOverpayment = regularOverpayment + lumpSumOverpayment;
+    let targetOverpayment = 0;
+    let isLumpSumApplied = false;
+
+    if (isFixedPeriod) {
+      if (fixedAnnualOverpaymentAllowance > 0) {
+        const remainingYearAllowance = Math.max(0, fixedAnnualOverpaymentAllowance - currentFixedYearOverpayment);
+        const monthlyAllowanceCap = fixedAnnualOverpaymentAllowance / 12;
+        const regPmt = Math.min(Math.max(0, monthlyOverpayment), monthlyAllowanceCap, remainingYearAllowance);
+        const isLumpMonth = curMonthNum === lumpSumMonth;
+        const lumpPmt = isLumpMonth ? Math.min(Math.max(0, annualLumpSumOverpayment), Math.max(0, remainingYearAllowance - regPmt)) : 0;
+        targetOverpayment = regPmt + lumpPmt;
+        isLumpSumApplied = isLumpMonth && lumpPmt > 0;
+      } else {
+        targetOverpayment = 0;
+      }
+    } else {
+      const regularOverpayment = Math.max(0, monthlyOverpayment);
+      const isLumpSumMonth = curMonthNum === lumpSumMonth;
+      const lumpSumOverpayment = isLumpSumMonth ? Math.max(0, annualLumpSumOverpayment) : 0;
+      targetOverpayment = regularOverpayment + lumpSumOverpayment;
+      isLumpSumApplied = isLumpSumMonth && annualLumpSumOverpayment > 0;
+    }
 
     const interest = balance * monthlyRate;
     const scheduledPrincipal = Math.min(balance, Math.max(0, scheduledBasePayment - interest));
     const extraPrincipal = Math.min(Math.max(0, balance - scheduledPrincipal), targetOverpayment);
     const principalPaidThisMonth = scheduledPrincipal + extraPrincipal;
+
+    if (isFixedPeriod) {
+      currentFixedYearOverpayment += extraPrincipal;
+    }
 
     balance -= principalPaidThisMonth;
     cumulativeInterestWithOverpayment += interest;
@@ -331,7 +363,7 @@ export function calculateMortgageWithOverpayments(
       isFixedPeriod,
       isVariableRate: !isFixedPeriod,
       interestRate: activeRate,
-      isLumpSumApplied: isLumpSumMonth && extraPrincipal > regularOverpayment,
+      isLumpSumApplied,
     });
 
     if (balance <= 0.001) {
