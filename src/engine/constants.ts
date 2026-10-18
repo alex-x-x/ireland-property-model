@@ -5,6 +5,8 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     start_date: '2026-08-29',
     forecast_months: 60,
     stock_symbol: 'GOOGL',
+    sensitivity_preset: 'optimal',
+    sensitivity_custom_wait_months: 18,
   },
   property: {
     target_price_eur: 1000000,
@@ -41,7 +43,14 @@ export const DEFAULT_CONFIG: SimulationConfig = {
       },
     ],
     max_contractual_monthly_payment_eur: null,
+    max_mortgage_term_years: 30,
     fixed_rate_annual_overpayment_allowance_eur: 5000,
+    invest_surplus_cashflow: true,
+    surplus_investment_yield_pct: 8.0,
+    optimizer_loan_mode: 'fixed_loan',
+    optimizer_loan_preset: 'sidebar',
+    optimizer_custom_loan_eur: null,
+    selected_purchase_month: null,
   },
   liquid_assets: {
     cash_eur: 50000,

@@ -147,11 +147,16 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
   const sidebarLoan = Math.min(maxAipAvailable, Math.max(0, propertyPrice - sidebarDeposit));
 
   // Loan Strategy Mode: 'fixed_loan' (default) vs 'all_tiers'
-  const [loanMode, setLoanMode] = useState<'fixed_loan' | 'all_tiers'>('fixed_loan');
-  const [loanPresetType, setLoanPresetType] = useState<'sidebar' | 'max_aip' | 'custom'>('sidebar');
-  const [customLoanValue, setCustomLoanValue] = useState<number>(sidebarLoan);
+  const [loanMode, setLoanMode] = useState<'fixed_loan' | 'all_tiers'>(
+    config.mortgage.optimizer_loan_mode ?? 'fixed_loan'
+  );
+  const [loanPresetType, setLoanPresetType] = useState<'sidebar' | 'max_aip' | 'custom'>(
+    config.mortgage.optimizer_loan_preset ?? 'sidebar'
+  );
+  const initialCustomLoan = config.mortgage.optimizer_custom_loan_eur ?? sidebarLoan;
+  const [customLoanValue, setCustomLoanValue] = useState<number>(initialCustomLoan);
   const [isCustomLoanFocused, setIsCustomLoanFocused] = useState<boolean>(false);
-  const [customLoanText, setCustomLoanText] = useState<string>(String(sidebarLoan));
+  const [customLoanText, setCustomLoanText] = useState<string>(String(initialCustomLoan));
 
   // Max mortgage term horizon (defaulting to 26 or configured term)
   const initialMaxTerm = config.mortgage.max_mortgage_term_years ?? config.mortgage.mortgage_term_years ?? 26;
@@ -162,6 +167,119 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
   const [fixedAnnualAllowanceEur, setFixedAnnualAllowanceEur] = useState<number>(initialAllowance);
   const [allowanceText, setAllowanceText] = useState<string>(String(initialAllowance));
   const [isAllowanceFocused, setIsAllowanceFocused] = useState<boolean>(false);
+
+  // Surplus cashflow allocation (Invest vs Overpay)
+  const initialYieldPct = config.mortgage.surplus_investment_yield_pct !== undefined && config.mortgage.surplus_investment_yield_pct !== null
+    ? config.mortgage.surplus_investment_yield_pct
+    : config.liquid_assets.investments_yearly_growth_rate !== undefined
+    ? Math.round(config.liquid_assets.investments_yearly_growth_rate * 1000) / 10
+    : 8.0;
+  const [investSurplusCashflow, setInvestSurplusCashflow] = useState<boolean>(
+    config.mortgage.invest_surplus_cashflow !== undefined ? config.mortgage.invest_surplus_cashflow : true
+  );
+  const [surplusInvestmentYieldPct, setSurplusInvestmentYieldPct] = useState<number>(initialYieldPct);
+  const [yieldText, setYieldText] = useState<string>(String(initialYieldPct));
+  const [isYieldFocused, setIsYieldFocused] = useState<boolean>(false);
+
+  // Persistence update handlers
+  const handleLoanModeChange = (mode: 'fixed_loan' | 'all_tiers') => {
+    setLoanMode(mode);
+    if (onChange && config.mortgage.optimizer_loan_mode !== mode) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          optimizer_loan_mode: mode,
+        },
+      });
+    }
+  };
+
+  const handleLoanPresetChange = (preset: 'sidebar' | 'max_aip' | 'custom') => {
+    setLoanPresetType(preset);
+    if (preset === 'custom') {
+      setCustomLoanText(String(customLoanValue));
+    }
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          optimizer_loan_preset: preset,
+          optimizer_custom_loan_eur: preset === 'custom' ? customLoanValue : config.mortgage.optimizer_custom_loan_eur,
+        },
+      });
+    }
+  };
+
+  const handleCustomLoanConfirm = (val: number) => {
+    setCustomLoanValue(val);
+    setCustomLoanText(String(val));
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          optimizer_loan_preset: 'custom',
+          optimizer_custom_loan_eur: val,
+        },
+      });
+    }
+  };
+
+  const handleMaxTermChange = (term: number) => {
+    setMaxTermYears(term);
+    if (onChange && config.mortgage.max_mortgage_term_years !== term) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          max_mortgage_term_years: term,
+        },
+      });
+    }
+  };
+
+  const handleAllowanceChange = (allowance: number) => {
+    setFixedAnnualAllowanceEur(allowance);
+    setAllowanceText(String(allowance));
+    if (onChange && config.mortgage.fixed_rate_annual_overpayment_allowance_eur !== allowance) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          fixed_rate_annual_overpayment_allowance_eur: allowance,
+        },
+      });
+    }
+  };
+
+  const handleInvestToggle = (invest: boolean) => {
+    setInvestSurplusCashflow(invest);
+    if (onChange && config.mortgage.invest_surplus_cashflow !== invest) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          invest_surplus_cashflow: invest,
+        },
+      });
+    }
+  };
+
+  const handleYieldChange = (val: number) => {
+    setSurplusInvestmentYieldPct(val);
+    setYieldText(String(val));
+    if (onChange && config.mortgage.surplus_investment_yield_pct !== val) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          surplus_investment_yield_pct: val,
+        },
+      });
+    }
+  };
 
   // Synchronize when config updates externally
   useEffect(() => {
@@ -180,36 +298,44 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
     }
   }, [config.mortgage.fixed_rate_annual_overpayment_allowance_eur, isAllowanceFocused]);
 
+  useEffect(() => {
+    if (config.mortgage.invest_surplus_cashflow !== undefined) {
+      setInvestSurplusCashflow(config.mortgage.invest_surplus_cashflow);
+    }
+  }, [config.mortgage.invest_surplus_cashflow]);
+
+  useEffect(() => {
+    if (config.mortgage.surplus_investment_yield_pct !== undefined && config.mortgage.surplus_investment_yield_pct !== null && !isYieldFocused) {
+      setSurplusInvestmentYieldPct(config.mortgage.surplus_investment_yield_pct);
+      setYieldText(String(config.mortgage.surplus_investment_yield_pct));
+    }
+  }, [config.mortgage.surplus_investment_yield_pct, isYieldFocused]);
+
+  useEffect(() => {
+    if (config.mortgage.optimizer_loan_mode !== undefined) {
+      setLoanMode(config.mortgage.optimizer_loan_mode);
+    }
+  }, [config.mortgage.optimizer_loan_mode]);
+
+  useEffect(() => {
+    if (config.mortgage.optimizer_loan_preset !== undefined) {
+      setLoanPresetType(config.mortgage.optimizer_loan_preset);
+    }
+  }, [config.mortgage.optimizer_loan_preset]);
+
   // Sync custom loan value when sidebar changes and user is on sidebar preset
   useEffect(() => {
-    if (loanPresetType === 'sidebar' && !isCustomLoanFocused) {
+    if (loanPresetType === 'sidebar' && !isCustomLoanFocused && config.mortgage.optimizer_custom_loan_eur == null) {
       setCustomLoanValue(sidebarLoan);
       setCustomLoanText(String(sidebarLoan));
     }
-  }, [sidebarLoan, loanPresetType, isCustomLoanFocused]);
+  }, [sidebarLoan, loanPresetType, isCustomLoanFocused, config.mortgage.optimizer_custom_loan_eur]);
 
   const effectiveFixedLoan = useMemo(() => {
     if (loanPresetType === 'sidebar') return sidebarLoan;
     if (loanPresetType === 'max_aip') return maxAipLoan;
     return Math.min(maxStatutoryLoan, Math.max(0, customLoanValue));
   }, [loanPresetType, sidebarLoan, maxAipLoan, maxStatutoryLoan, customLoanValue]);
-
-  // Surplus cashflow allocation (Invest vs Overpay)
-  const initialYieldPct = config.liquid_assets.investments_yearly_growth_rate !== undefined
-    ? Math.round(config.liquid_assets.investments_yearly_growth_rate * 1000) / 10
-    : 8.0;
-  const [investSurplusCashflow, setInvestSurplusCashflow] = useState<boolean>(true);
-  const [surplusInvestmentYieldPct, setSurplusInvestmentYieldPct] = useState<number>(initialYieldPct);
-  const [yieldText, setYieldText] = useState<string>(String(initialYieldPct));
-  const [isYieldFocused, setIsYieldFocused] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (config.liquid_assets.investments_yearly_growth_rate !== undefined && !isYieldFocused) {
-      const val = Math.round(config.liquid_assets.investments_yearly_growth_rate * 1000) / 10;
-      setSurplusInvestmentYieldPct(val);
-      setYieldText(String(val));
-    }
-  }, [config.liquid_assets.investments_yearly_growth_rate, isYieldFocused]);
 
   const optimizerOptions: OptimizerOptions = useMemo(() => ({
     loanMode,
@@ -405,7 +531,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
           {/* Mode Switcher */}
           <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-750 shrink-0 self-start lg:self-auto">
             <button
-              onClick={() => setLoanMode('fixed_loan')}
+              onClick={() => handleLoanModeChange('fixed_loan')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 loanMode === 'fixed_loan'
                   ? 'bg-purple-600 text-white shadow'
@@ -416,7 +542,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <span>Fixed Loan Mode</span>
             </button>
             <button
-              onClick={() => setLoanMode('all_tiers')}
+              onClick={() => handleLoanModeChange('all_tiers')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 loanMode === 'all_tiers'
                   ? 'bg-purple-600 text-white shadow'
@@ -435,7 +561,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] text-slate-400 font-semibold">Select Loan:</span>
               <button
-                onClick={() => setLoanPresetType('sidebar')}
+                onClick={() => handleLoanPresetChange('sidebar')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                   loanPresetType === 'sidebar'
                     ? 'bg-indigo-600 text-white border-indigo-500'
@@ -445,7 +571,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 Sidebar Loan (€{Math.round(sidebarLoan).toLocaleString()})
               </button>
               <button
-                onClick={() => setLoanPresetType('max_aip')}
+                onClick={() => handleLoanPresetChange('max_aip')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                   loanPresetType === 'max_aip'
                     ? 'bg-emerald-600 text-white border-emerald-500'
@@ -455,10 +581,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 Max AIP Leverage (€{Math.round(maxAipLoan).toLocaleString()})
               </button>
               <button
-                onClick={() => {
-                  setLoanPresetType('custom');
-                  setCustomLoanText(String(customLoanValue));
-                }}
+                onClick={() => handleLoanPresetChange('custom')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
                   loanPresetType === 'custom'
                     ? 'bg-purple-600 text-white border-purple-500'
@@ -485,11 +608,9 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                     const parsed = parseInt(customLoanText.replace(/[^0-9]/g, ''), 10);
                     if (!isNaN(parsed) && parsed >= 0) {
                       const clamped = Math.min(maxStatutoryLoan, parsed);
-                      setCustomLoanValue(clamped);
-                      setCustomLoanText(String(clamped));
+                      handleCustomLoanConfirm(clamped);
                     } else {
-                      setCustomLoanValue(sidebarLoan);
-                      setCustomLoanText(String(sidebarLoan));
+                      handleCustomLoanConfirm(sidebarLoan);
                     }
                   }}
                   onKeyDown={(e) => {
@@ -532,7 +653,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               {[20, 25, 26, 30, 35].map((t) => (
                 <button
                   key={t}
-                  onClick={() => setMaxTermYears(t)}
+                  onClick={() => handleMaxTermChange(t)}
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
                     maxTermYears === t
                       ? 'bg-indigo-600 text-white border-indigo-500'
@@ -570,8 +691,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                     setIsAllowanceFocused(false);
                     const parsed = parseInt(allowanceText.replace(/[^0-9]/g, ''), 10);
                     const val = !isNaN(parsed) && parsed >= 0 ? parsed : 5000;
-                    setFixedAnnualAllowanceEur(val);
-                    setAllowanceText(String(val));
+                    handleAllowanceChange(val);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -587,10 +707,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 <span className="text-slate-500 text-[10px] ml-0.5 font-mono">/yr</span>
               </div>
               <button
-                onClick={() => {
-                  setFixedAnnualAllowanceEur(0);
-                  setAllowanceText('0');
-                }}
+                onClick={() => handleAllowanceChange(0)}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
                   fixedAnnualAllowanceEur === 0
                     ? 'bg-slate-700 text-white border-slate-600'
@@ -600,10 +717,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 Strict €0
               </button>
               <button
-                onClick={() => {
-                  setFixedAnnualAllowanceEur(5000);
-                  setAllowanceText('5000');
-                }}
+                onClick={() => handleAllowanceChange(5000)}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
                   fixedAnnualAllowanceEur === 5000
                     ? 'bg-emerald-600 text-white border-emerald-500'
@@ -633,7 +747,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               <div className="flex items-center bg-slate-950 p-0.5 rounded-md border border-slate-750">
                 <button
                   type="button"
-                  onClick={() => setInvestSurplusCashflow(true)}
+                  onClick={() => handleInvestToggle(true)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                     investSurplusCashflow
                       ? 'bg-amber-600 text-white shadow'
@@ -644,7 +758,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInvestSurplusCashflow(false)}
+                  onClick={() => handleInvestToggle(false)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                     !investSurplusCashflow
                       ? 'bg-slate-700 text-white shadow'
@@ -675,8 +789,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                       setIsYieldFocused(false);
                       const parsed = parseFloat(yieldText);
                       const val = !isNaN(parsed) && parsed >= 0 ? Math.min(100, Math.max(0, Math.round(parsed * 10) / 10)) : initialYieldPct;
-                      setSurplusInvestmentYieldPct(val);
-                      setYieldText(String(val));
+                      handleYieldChange(val);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -705,10 +818,7 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                     <button
                       key={p.val}
                       type="button"
-                      onClick={() => {
-                        setSurplusInvestmentYieldPct(p.val);
-                        setYieldText(String(p.val));
-                      }}
+                      onClick={() => handleYieldChange(p.val)}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
                         surplusInvestmentYieldPct === p.val
                           ? 'bg-amber-600 text-white border-amber-500'

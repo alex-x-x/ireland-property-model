@@ -48,7 +48,12 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     return firstAffordable ? firstAffordable.month : 0;
   }, [monthlyPoints]);
 
-  const [selectedMonth, setSelectedMonth] = useState<number>(initialAffordableMonth);
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
+    if (config.mortgage.selected_purchase_month !== undefined && config.mortgage.selected_purchase_month !== null) {
+      return config.mortgage.selected_purchase_month;
+    }
+    return initialAffordableMonth;
+  });
   const [isLedgerModalOpen, setIsLedgerModalOpen] = useState<boolean>(false);
   const [chartViewMode, setChartViewMode] = useState<'all' | 'balance' | 'principal_interest'>('all');
 
@@ -75,13 +80,73 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
   const [fixedRateYears, setFixedRateYears] = useState<number>(
     config.mortgage.fixed_rate_years ?? 2
   ); // Irish benchmark: 2-year fixed lock
-  const [monthlyOverpayment, setMonthlyOverpayment] = useState<number>(0);
-  const [annualLumpSum, setAnnualLumpSum] = useState<number>(0);
+  const [monthlyOverpayment, setMonthlyOverpayment] = useState<number>(
+    config.mortgage.monthly_overpayment_eur ?? 0
+  );
+  const [annualLumpSum, setAnnualLumpSum] = useState<number>(
+    config.mortgage.annual_lump_sum_eur ?? 0
+  );
   const [rateShockPct, setRateShockPct] = useState<number>(
     config.mortgage.variable_rate_shock_pct ?? 1.5
   );
 
+  const handleMonthChange = (m: number) => {
+    setSelectedMonth(m);
+    if (onChange && config.mortgage.selected_purchase_month !== m) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          selected_purchase_month: m,
+        },
+      });
+    }
+  };
+
+  const handleMonthlyOverpaymentChange = (val: number) => {
+    setMonthlyOverpayment(val);
+    if (onChange && config.mortgage.monthly_overpayment_eur !== val) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          monthly_overpayment_eur: val,
+        },
+      });
+    }
+  };
+
+  const handleAnnualLumpSumChange = (val: number) => {
+    setAnnualLumpSum(val);
+    if (onChange && config.mortgage.annual_lump_sum_eur !== val) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          annual_lump_sum_eur: val,
+        },
+      });
+    }
+  };
+
   // Synchronize state when config properties update externally
+  useEffect(() => {
+    if (config.mortgage.selected_purchase_month !== undefined && config.mortgage.selected_purchase_month !== null) {
+      setSelectedMonth(config.mortgage.selected_purchase_month);
+    }
+  }, [config.mortgage.selected_purchase_month]);
+
+  useEffect(() => {
+    if (config.mortgage.monthly_overpayment_eur !== undefined) {
+      setMonthlyOverpayment(config.mortgage.monthly_overpayment_eur);
+    }
+  }, [config.mortgage.monthly_overpayment_eur]);
+
+  useEffect(() => {
+    if (config.mortgage.annual_lump_sum_eur !== undefined) {
+      setAnnualLumpSum(config.mortgage.annual_lump_sum_eur);
+    }
+  }, [config.mortgage.annual_lump_sum_eur]);
   useEffect(() => {
     setInterestRatePct(config.mortgage.mortgage_interest_rate * 100);
   }, [config.mortgage.mortgage_interest_rate]);
@@ -176,6 +241,8 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
           ...config.mortgage,
           fixed_rate_years: defaultFixed,
           variable_rate_shock_pct: defaultShock,
+          monthly_overpayment_eur: 0,
+          annual_lump_sum_eur: 0,
         },
       });
     }
@@ -189,7 +256,19 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
     setFixedRateYears(c.fixedRateYears);
     setMonthlyOverpayment(c.monthlyOverpayment);
     setAnnualLumpSum(c.annualBonusLumpSum);
-  }, []);
+    if (onChange) {
+      onChange({
+        ...config,
+        mortgage: {
+          ...config.mortgage,
+          monthly_overpayment_eur: c.monthlyOverpayment,
+          annual_lump_sum_eur: c.annualBonusLumpSum,
+          mortgage_term_years: c.termYears,
+          fixed_rate_years: c.fixedRateYears,
+        },
+      });
+    }
+  }, [config, onChange]);
 
   const effectiveVariableRatePct = interestRatePct + rateShockPct;
 
@@ -359,7 +438,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
             {[0, 6, 12, 18, 24, 36, 48].map((m) => (
               <button
                 key={m}
-                onClick={() => setSelectedMonth(m)}
+                onClick={() => handleMonthChange(m)}
                 className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold border transition-colors ${
                   selectedMonth === m
                     ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
@@ -378,7 +457,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
           max={config.meta.forecast_months}
           step="1"
           value={selectedMonth}
-          onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
+          onChange={(e) => handleMonthChange(parseInt(e.target.value, 10))}
           className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
         />
 
@@ -731,7 +810,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
               <label className="text-slate-400 text-[11px]">Monthly Overpayment</label>
               {freeCashflowBuffer > 0 && (
                 <button
-                  onClick={() => setMonthlyOverpayment(maxSafeOverpayment)}
+                  onClick={() => handleMonthlyOverpaymentChange(maxSafeOverpayment)}
                   className="px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-colors flex items-center gap-1"
                   title={`Fill 50% of free monthly cashflow buffer (safe discretionary margin: €${maxSafeOverpayment}/mo)`}
                 >
@@ -746,7 +825,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                 step="50"
                 min="0"
                 value={monthlyOverpayment}
-                onChange={(e) => setMonthlyOverpayment(parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleMonthlyOverpaymentChange(parseFloat(e.target.value) || 0)}
                 className="min-w-0 w-full bg-transparent text-emerald-300 font-mono font-bold text-xs focus:outline-none"
                 placeholder="e.g. 400"
               />
@@ -764,14 +843,14 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
               {grossBonusEur > 0 && (
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setAnnualLumpSum(netBonusEur)}
+                    onClick={() => handleAnnualLumpSumChange(netBonusEur)}
                     className="px-1.5 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[10px] font-bold border border-purple-500/30 transition-colors"
                     title={`Fill 100% Net Bonus (gross €${grossBonusEur.toLocaleString()} minus 52% Irish tax = net €${netBonusEur.toLocaleString()})`}
                   >
                     100% Net (€{Math.round(netBonusEur / 1000)}k)
                   </button>
                   <button
-                    onClick={() => setAnnualLumpSum(halfNetBonusEur)}
+                    onClick={() => handleAnnualLumpSumChange(halfNetBonusEur)}
                     className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors"
                     title={`Fill 50% Net Bonus (net €${halfNetBonusEur.toLocaleString()})`}
                   >
@@ -786,7 +865,7 @@ export const MortgageStudioWidget: React.FC<MortgageStudioWidgetProps> = memo(({
                 step="1000"
                 min="0"
                 value={annualLumpSum}
-                onChange={(e) => setAnnualLumpSum(parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleAnnualLumpSumChange(parseFloat(e.target.value) || 0)}
                 className="min-w-0 w-full bg-transparent text-purple-300 font-mono font-bold text-xs focus:outline-none"
                 placeholder="e.g. 10000"
               />

@@ -40,6 +40,12 @@ export interface MortgageConfig {
   max_contractual_monthly_payment_eur?: number | null;
   max_mortgage_term_years?: number | null; // User ceiling on mortgage term (e.g. 26 years)
   fixed_rate_annual_overpayment_allowance_eur?: number; // e.g. €5,000/yr for AIB, or 0 for strict lockout
+  invest_surplus_cashflow?: boolean; // Surplus cashflow: Invest in Market vs Hold in Cash
+  surplus_investment_yield_pct?: number | null; // Surplus investment expected yield %
+  optimizer_loan_mode?: 'fixed_loan' | 'all_tiers'; // Frontier optimizer loan mode
+  optimizer_loan_preset?: 'sidebar' | 'max_aip' | 'custom'; // Frontier optimizer preset selection
+  optimizer_custom_loan_eur?: number | null; // Frontier optimizer custom loan amount in EUR
+  selected_purchase_month?: number | null; // Selected purchase evaluation month along 60m timeline
 }
 
 export interface LiquidAssetsConfig {
@@ -93,6 +99,8 @@ export interface MetaConfig {
   start_date: string; // YYYY-MM-DD
   forecast_months: number;
   stock_symbol: string;
+  sensitivity_preset?: 'optimal' | '12m' | '24m' | '36m' | 'rent' | 'custom';
+  sensitivity_custom_wait_months?: number;
 }
 
 export interface IrishTaxConfig {

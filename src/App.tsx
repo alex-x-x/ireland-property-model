@@ -269,7 +269,7 @@ export const App: React.FC = () => {
             <MonthlyCashflowWidget data={monthlyPoints} config={debouncedConfig} />
 
             {/* 2D Sensitivity Heatmap (Web Worker Offloaded) */}
-            <SensitivityMatrix config={debouncedConfig} />
+            <SensitivityMatrix config={debouncedConfig} onChange={setConfig} />
 
             {/* Interactive Mortgage Studio & Loan Optimizer */}
             <MortgageStudioWidget config={debouncedConfig} monthlyPoints={monthlyPoints} onChange={setConfig} />

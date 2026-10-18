@@ -1,4 +1,4 @@
-import React, { useState, memo, useMemo } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Grid, Loader2, Clock, Sparkles, X, Compass } from 'lucide-react';
 import { SimulationConfig } from '../engine/types';
 import {
@@ -13,14 +13,57 @@ import { InfoTooltip } from './InfoTooltip';
 
 interface SensitivityMatrixProps {
   config: SimulationConfig;
+  onChange?: (updatedConfig: SimulationConfig) => void;
 }
 
 type PresetMode = 'optimal' | '12m' | '24m' | '36m' | 'rent' | 'custom';
 
-export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ config }) => {
-  const [activePreset, setActivePreset] = useState<PresetMode>('optimal');
-  const [customWaitMonths, setCustomWaitMonths] = useState<number>(18);
+export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ config, onChange }) => {
+  const [activePreset, setActivePreset] = useState<PresetMode>(
+    config.meta.sensitivity_preset ?? 'optimal'
+  );
+  const [customWaitMonths, setCustomWaitMonths] = useState<number>(
+    config.meta.sensitivity_custom_wait_months ?? 18
+  );
   const [selectedCoords, setSelectedCoords] = useState<{ stockRate: number; propRate: number } | null>(null);
+
+  const handlePresetChange = (preset: PresetMode) => {
+    setActivePreset(preset);
+    if (onChange && config.meta.sensitivity_preset !== preset) {
+      onChange({
+        ...config,
+        meta: {
+          ...config.meta,
+          sensitivity_preset: preset,
+        },
+      });
+    }
+  };
+
+  const handleCustomWaitChange = (months: number) => {
+    setCustomWaitMonths(months);
+    if (onChange && config.meta.sensitivity_custom_wait_months !== months) {
+      onChange({
+        ...config,
+        meta: {
+          ...config.meta,
+          sensitivity_custom_wait_months: months,
+        },
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (config.meta.sensitivity_preset !== undefined) {
+      setActivePreset(config.meta.sensitivity_preset);
+    }
+  }, [config.meta.sensitivity_preset]);
+
+  useEffect(() => {
+    if (config.meta.sensitivity_custom_wait_months !== undefined) {
+      setCustomWaitMonths(config.meta.sensitivity_custom_wait_months);
+    }
+  }, [config.meta.sensitivity_custom_wait_months]);
 
   // Derive effective wait mode from selected preset
   const effectiveWaitMode: SensitivityWaitMode = useMemo(() => {
@@ -146,7 +189,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
         <div className="flex flex-col items-start lg:items-end gap-2 shrink-0">
           <div className="flex flex-wrap items-center gap-1 bg-slate-850 p-1 rounded-xl border border-slate-800">
             <button
-              onClick={() => setActivePreset('optimal')}
+              onClick={() => handlePresetChange('optimal')}
               className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
                 activePreset === 'optimal'
                   ? 'bg-purple-600 text-white shadow-md'
@@ -159,7 +202,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
             </button>
 
             <button
-              onClick={() => setActivePreset('12m')}
+              onClick={() => handlePresetChange('12m')}
               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activePreset === '12m'
                   ? 'bg-brand-600 text-white shadow-md'
@@ -171,7 +214,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
             </button>
 
             <button
-              onClick={() => setActivePreset('24m')}
+              onClick={() => handlePresetChange('24m')}
               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activePreset === '24m'
                   ? 'bg-brand-600 text-white shadow-md'
@@ -183,7 +226,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
             </button>
 
             <button
-              onClick={() => setActivePreset('36m')}
+              onClick={() => handlePresetChange('36m')}
               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activePreset === '36m'
                   ? 'bg-brand-600 text-white shadow-md'
@@ -195,7 +238,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
             </button>
 
             <button
-              onClick={() => setActivePreset('rent')}
+              onClick={() => handlePresetChange('rent')}
               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activePreset === 'rent'
                   ? 'bg-amber-600 text-white shadow-md'
@@ -207,7 +250,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
             </button>
 
             <button
-              onClick={() => setActivePreset('custom')}
+              onClick={() => handlePresetChange('custom')}
               className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
                 activePreset === 'custom'
                   ? 'bg-emerald-600 text-white shadow-md'
@@ -230,7 +273,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = memo(({ confi
                 max="48"
                 step="1"
                 value={customWaitMonths}
-                onChange={(e) => setCustomWaitMonths(parseInt(e.target.value, 10) || 12)}
+                onChange={(e) => handleCustomWaitChange(parseInt(e.target.value, 10) || 12)}
                 className="w-24 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 title="Drag to select custom wait duration in months"
               />

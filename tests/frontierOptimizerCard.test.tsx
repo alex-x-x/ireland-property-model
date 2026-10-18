@@ -154,4 +154,112 @@ describe('FrontierOptimizerCard Component & Custom Loan Reproduction', () => {
 
     expect(screen.getByText(/Loan fixed at €498,000 \(70% LTV\)/i)).toBeTruthy();
   });
+
+  describe('Tier 1 Configuration Persistence via onChange', () => {
+    it('calls onChange with updated invest_surplus_cashflow when toggled to Cash', () => {
+      const onChange = vi.fn();
+      render(
+        <FrontierOptimizerCard
+          config={testConfig}
+          monthlyPoints={monthlyPoints}
+          selectedMonth={0}
+          currentLoanAmount={498000}
+          currentInterestRatePct={3.95}
+          currentTermYears={26}
+          currentMonthlyOverpayment={0}
+          currentAnnualLumpSum={0}
+          onApplyStrategy={vi.fn()}
+          onChange={onChange}
+        />
+      );
+
+      const cashBtn = screen.getByRole('button', { name: /Hold in Cash \(0%\)/i });
+      fireEvent.click(cashBtn);
+
+      expect(onChange).toHaveBeenCalled();
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.mortgage.invest_surplus_cashflow).toBe(false);
+    });
+
+    it('calls onChange with updated surplus_investment_yield_pct when yield preset is clicked', () => {
+      const onChange = vi.fn();
+      render(
+        <FrontierOptimizerCard
+          config={testConfig}
+          monthlyPoints={monthlyPoints}
+          selectedMonth={0}
+          currentLoanAmount={498000}
+          currentInterestRatePct={3.95}
+          currentTermYears={26}
+          currentMonthlyOverpayment={0}
+          currentAnnualLumpSum={0}
+          onApplyStrategy={vi.fn()}
+          onChange={onChange}
+        />
+      );
+
+      const yield12Btn = screen.getByRole('button', { name: '12%' });
+      fireEvent.click(yield12Btn);
+
+      expect(onChange).toHaveBeenCalled();
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.mortgage.surplus_investment_yield_pct).toBe(12.0);
+    });
+
+    it('calls onChange with updated loan preset and custom loan amount', () => {
+      const onChange = vi.fn();
+      render(
+        <FrontierOptimizerCard
+          config={testConfig}
+          monthlyPoints={monthlyPoints}
+          selectedMonth={0}
+          currentLoanAmount={498000}
+          currentInterestRatePct={3.95}
+          currentTermYears={26}
+          currentMonthlyOverpayment={0}
+          currentAnnualLumpSum={0}
+          onApplyStrategy={vi.fn()}
+          onChange={onChange}
+        />
+      );
+
+      const customLoanBtn = screen.getByRole('button', { name: /Custom Loan €/i });
+      fireEvent.click(customLoanBtn);
+
+      const input = screen.getByDisplayValue('498,000') as HTMLInputElement;
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '550000' } });
+      fireEvent.blur(input);
+
+      expect(onChange).toHaveBeenCalled();
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.mortgage.optimizer_loan_preset).toBe('custom');
+      expect(lastCall.mortgage.optimizer_custom_loan_eur).toBe(550000);
+    });
+
+    it('calls onChange when fixed-rate annual allowance changes', () => {
+      const onChange = vi.fn();
+      render(
+        <FrontierOptimizerCard
+          config={testConfig}
+          monthlyPoints={monthlyPoints}
+          selectedMonth={0}
+          currentLoanAmount={498000}
+          currentInterestRatePct={3.95}
+          currentTermYears={26}
+          currentMonthlyOverpayment={0}
+          currentAnnualLumpSum={0}
+          onApplyStrategy={vi.fn()}
+          onChange={onChange}
+        />
+      );
+
+      const strict0Btn = screen.getByRole('button', { name: /Strict €0/i });
+      fireEvent.click(strict0Btn);
+
+      expect(onChange).toHaveBeenCalled();
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.mortgage.fixed_rate_annual_overpayment_allowance_eur).toBe(0);
+    });
+  });
 });
