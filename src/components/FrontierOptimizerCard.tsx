@@ -16,6 +16,7 @@ import {
   Layers,
   Calendar,
   ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -130,10 +131,10 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
   // Active purchase point metrics & presets
   const activePoint = monthlyPoints[selectedMonth] || monthlyPoints[0];
   const propertyPrice = activePoint.propertyPrice;
-  const statutoryMinDepositPct = config.property.minimum_deposit_pct ?? 0.10;
-  const baseMinDeposit = propertyPrice * statutoryMinDepositPct;
-  const minRequiredDeposit = baseMinDeposit + activePoint.borrowingShortfall;
-  const maxStatutoryLoan = Math.max(0, propertyPrice - minRequiredDeposit);
+  // Central Bank of Ireland (CBI) statutory FTB minimum deposit floor is 10% (max 90% LTV ceiling)
+  const statutoryMinDepositPct = 0.10;
+  const baseMinDeposit = Math.round(propertyPrice * statutoryMinDepositPct);
+  const maxStatutoryLoan = Math.max(0, propertyPrice - baseMinDeposit);
   const maxAipAvailable = activePoint.maxMortgageAvailable;
   const maxAipLoan = Math.min(maxAipAvailable, maxStatutoryLoan);
 
@@ -193,12 +194,31 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
     return Math.min(maxStatutoryLoan, Math.max(0, customLoanValue));
   }, [loanPresetType, sidebarLoan, maxAipLoan, maxStatutoryLoan, customLoanValue]);
 
+  // Surplus cashflow allocation (Invest vs Overpay)
+  const initialYieldPct = config.liquid_assets.investments_yearly_growth_rate !== undefined
+    ? Math.round(config.liquid_assets.investments_yearly_growth_rate * 1000) / 10
+    : 8.0;
+  const [investSurplusCashflow, setInvestSurplusCashflow] = useState<boolean>(true);
+  const [surplusInvestmentYieldPct, setSurplusInvestmentYieldPct] = useState<number>(initialYieldPct);
+  const [yieldText, setYieldText] = useState<string>(String(initialYieldPct));
+  const [isYieldFocused, setIsYieldFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (config.liquid_assets.investments_yearly_growth_rate !== undefined && !isYieldFocused) {
+      const val = Math.round(config.liquid_assets.investments_yearly_growth_rate * 1000) / 10;
+      setSurplusInvestmentYieldPct(val);
+      setYieldText(String(val));
+    }
+  }, [config.liquid_assets.investments_yearly_growth_rate, isYieldFocused]);
+
   const optimizerOptions: OptimizerOptions = useMemo(() => ({
     loanMode,
     fixedLoanAmountEur: loanMode === 'fixed_loan' ? effectiveFixedLoan : null,
     maxTermYears,
     fixedAnnualAllowanceEur,
-  }), [loanMode, effectiveFixedLoan, maxTermYears, fixedAnnualAllowanceEur]);
+    investSurplusCashflow,
+    surplusInvestmentYieldPct: investSurplusCashflow ? surplusInvestmentYieldPct : 0,
+  }), [loanMode, effectiveFixedLoan, maxTermYears, fixedAnnualAllowanceEur, investSurplusCashflow, surplusInvestmentYieldPct]);
 
   // Stage 1: Candidate generation & 60-month simulation
   const baseEvaluations = useMemo(() => {
@@ -463,8 +483,8 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                   onBlur={() => {
                     setIsCustomLoanFocused(false);
                     const parsed = parseInt(customLoanText.replace(/[^0-9]/g, ''), 10);
-                    if (!isNaN(parsed) && parsed > 0) {
-                      const clamped = Math.min(maxStatutoryLoan, Math.max(0, parsed));
+                    if (!isNaN(parsed) && parsed >= 0) {
+                      const clamped = Math.min(maxStatutoryLoan, parsed);
                       setCustomLoanValue(clamped);
                       setCustomLoanText(String(clamped));
                     } else {
@@ -480,6 +500,11 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                   onChange={(e) => {
                     const raw = e.target.value.replace(/[^0-9]/g, '');
                     setCustomLoanText(raw);
+                    const parsed = parseInt(raw, 10);
+                    if (!isNaN(parsed) && parsed >= 0) {
+                      const clamped = Math.min(maxStatutoryLoan, parsed);
+                      setCustomLoanValue(clamped);
+                    }
                   }}
                   className="w-24 bg-transparent text-left font-mono font-bold text-xs text-purple-200 focus:outline-none"
                 />
@@ -589,6 +614,139 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Surplus Cashflow Allocation: Invest vs Overpay */}
+        <div className="pt-2 border-t border-slate-800 flex flex-col gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+            {/* Left title & mode toggle */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-300">Surplus Cashflow Strategy:</span>
+                <InfoTooltip
+                  title="Surplus Cashflow Allocation (Invest vs Overpay)"
+                  content="Simulates how unspent monthly salary savings and retained annual bonuses are deployed. When set to 'Invest in Market', surplus compounds at your chosen investment yield — revealing the Pareto trade-off between debt elimination (saving guaranteed mortgage interest) vs. market growth. When set to 'Hold in Cash (0%)', conservative debt paydown strictly dominates cash holding."
+                />
+              </div>
+
+              <div className="flex items-center bg-slate-950 p-0.5 rounded-md border border-slate-750">
+                <button
+                  type="button"
+                  onClick={() => setInvestSurplusCashflow(true)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    investSurplusCashflow
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Invest in Market
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInvestSurplusCashflow(false)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    !investSurplusCashflow
+                      ? 'bg-slate-700 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Hold in Cash (0%)
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Yield input & Presets (active when investSurplusCashflow is true) */}
+            {investSurplusCashflow ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 font-medium">Surplus Yield:</span>
+                <div className="flex items-center bg-slate-900 px-2 py-0.5 rounded border border-slate-750 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/30">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="50"
+                    value={isYieldFocused ? yieldText : surplusInvestmentYieldPct}
+                    onFocus={() => {
+                      setIsYieldFocused(true);
+                      setYieldText(String(surplusInvestmentYieldPct));
+                    }}
+                    onBlur={() => {
+                      setIsYieldFocused(false);
+                      const parsed = parseFloat(yieldText);
+                      const val = !isNaN(parsed) && parsed >= 0 ? Math.min(100, Math.max(0, Math.round(parsed * 10) / 10)) : initialYieldPct;
+                      setSurplusInvestmentYieldPct(val);
+                      setYieldText(String(val));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    onChange={(e) => {
+                      setYieldText(e.target.value);
+                      const parsed = parseFloat(e.target.value);
+                      if (!isNaN(parsed) && parsed >= 0) {
+                        setSurplusInvestmentYieldPct(Math.min(100, parsed));
+                      }
+                    }}
+                    className="w-12 bg-transparent text-left font-mono font-bold text-[11px] text-amber-200 focus:outline-none"
+                  />
+                  <span className="text-amber-400 font-mono font-bold text-[11px] select-none">%</span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {[
+                    { label: '6%', val: 6.0 },
+                    { label: '8%', val: 8.0 },
+                    { label: '10%', val: 10.0 },
+                    { label: '12%', val: 12.0 },
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => {
+                        setSurplusInvestmentYieldPct(p.val);
+                        setYieldText(String(p.val));
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                        surplusInvestmentYieldPct === p.val
+                          ? 'bg-amber-600 text-white border-amber-500'
+                          : 'bg-slate-850 hover:bg-slate-800 text-slate-400 border-slate-750'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                0.0% Cash Yield • Debt Elimination Dominates
+              </span>
+            )}
+          </div>
+
+          {/* Dynamic Insight Spread Callout */}
+          {investSurplusCashflow && (
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-slate-950/60 border border-slate-850 text-[10.5px]">
+              {surplusInvestmentYieldPct > (activeMortgageRate * 100) ? (
+                <div className="flex items-center gap-1.5 text-amber-300">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>
+                    Market yield (<strong>{surplusInvestmentYieldPct.toFixed(1)}%</strong>) beats mortgage rate (<strong>{(activeMortgageRate * 100).toFixed(2)}%</strong>) by <strong>+{(surplusInvestmentYieldPct - activeMortgageRate * 100).toFixed(2)}% spread</strong>. Multiple non-dominated Pareto frontier strategies emerge across the debt-vs-investment spectrum.
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>
+                    Mortgage rate (<strong>{(activeMortgageRate * 100).toFixed(2)}%</strong>) exceeds or matches market yield (<strong>{surplusInvestmentYieldPct.toFixed(1)}%</strong>). Aggressive debt paydown strictly dominates market investing.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1238,6 +1396,18 @@ export const FrontierOptimizerCard: React.FC<FrontierOptimizerCardProps> = memo(
                           <div className="flex justify-between text-emerald-400">
                             <span>Voluntary Overpay:</span>
                             <strong>+€{Math.round(res.discretionaryMonthlyOverpayment).toLocaleString()}/mo ({Math.round((c.overpaymentSurplusPct ?? 0) * 100)}% surplus)</strong>
+                          </div>
+                        )}
+                        {res.monthlyInvestedEur !== undefined && res.monthlyInvestedEur > 0 && (
+                          <div className="flex justify-between text-amber-300">
+                            <span>Market Invested:</span>
+                            <strong>+€{Math.round(res.monthlyInvestedEur).toLocaleString()}/mo ({(analysis.surplusInvestmentYieldPct !== undefined && analysis.surplusInvestmentYieldPct !== null ? analysis.surplusInvestmentYieldPct : (config.liquid_assets.investments_yearly_growth_rate * 100)).toFixed(1)}% yield)</strong>
+                          </div>
+                        )}
+                        {res.terminalInvestmentPortfolioM60 !== undefined && res.terminalInvestmentPortfolioM60 > 0 && (
+                          <div className="flex justify-between text-amber-200">
+                            <span>Investments (M60):</span>
+                            <span>{formatK(res.terminalInvestmentPortfolioM60)}</span>
                           </div>
                         )}
                         <div className="flex justify-between text-slate-300">

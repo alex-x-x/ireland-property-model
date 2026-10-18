@@ -390,6 +390,34 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
       });
     });
 
+    it('supports custom loan amounts distinct from sidebar deposit and AIP within statutory 90% LTV', () => {
+      const fixedConfig: SimulationConfig = {
+        ...config,
+        liquid_assets: {
+          ...config.liquid_assets,
+          cash_eur: 300000,
+        },
+        property: {
+          ...config.property,
+          target_price_eur: 710000,
+          deposit_eur: 213000, // Sidebar loan = 497,000
+        },
+      };
+
+      const pts = runSimulation(fixedConfig);
+      const customLoan = 550000; // Higher than sidebar loan €497k, within statutory 90% (€639k)
+      const analysis = runMortgageOptimization(fixedConfig, 0, pts, undefined, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: customLoan,
+      });
+
+      expect(analysis.allResults.length).toBeGreaterThan(0);
+      expect(analysis.compliantResults.length).toBeGreaterThan(0);
+      expect(analysis.compliantResults[0].candidate.loanAmount).toBe(customLoan);
+      expect(analysis.compliantResults[0].candidate.depositAmount).toBe(710000 - customLoan);
+      expect(analysis.compliantResults[0].isFundable).toBe(true);
+    });
+
     it('demonstrates single dominant Pareto point in fixed loan mode when debt paydown strictly beats uninvested cash', () => {
       const fixedConfig: SimulationConfig = {
         ...config,
@@ -415,6 +443,7 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
         fixedLoanAmountEur: 497000,
         maxTermYears: 26,
         fixedAnnualAllowanceEur: 0,
+        investSurplusCashflow: false,
       });
 
       // With cash earning 0%, paying off 3.95% debt earlier saves interest AND preserves/grows net worth,
@@ -435,6 +464,87 @@ describe('Mortgage & Terminal Net Wealth Frontier Optimizer', () => {
 
       expect(analysisAib.fixedAnnualAllowanceEur).toBe(5000);
       expect(analysisStrict.fixedAnnualAllowanceEur).toBe(0);
+    });
+  });
+
+  describe('Invest vs. Overpay Surplus Cashflow Allocation', () => {
+    const fixedConfig: SimulationConfig = {
+      ...config,
+      liquid_assets: {
+        ...config.liquid_assets,
+        cash_eur: 300000,
+      },
+      property: {
+        ...config.property,
+        target_price_eur: 710000,
+        deposit_eur: 213000,
+      },
+      mortgage: {
+        ...config.mortgage,
+        max_mortgage_term_years: 26,
+        fixed_rate_annual_overpayment_allowance_eur: 0,
+      },
+    };
+    const pts = runSimulation(fixedConfig);
+
+    it('generates a multi-point Pareto frontier in fixed loan mode when surplus cashflow is invested at market yield > mortgage rate', () => {
+      const analysisInvest = runMortgageOptimization(fixedConfig, 0, pts, 2800, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: 497000,
+        maxTermYears: 26,
+        fixedAnnualAllowanceEur: 0,
+        investSurplusCashflow: true,
+        surplusInvestmentYieldPct: 12.0,
+      });
+
+      // Investing at 12% > 3.95% mortgage rate must produce multiple non-dominated Pareto frontier points
+      expect(analysisInvest.compliantResults.length).toBeGreaterThan(1);
+      expect(analysisInvest.paretoFrontier.length).toBeGreaterThan(1);
+
+      // On a valid 2D Pareto frontier, higher interest paid must correspond to higher terminal net wealth
+      for (let i = 1; i < analysisInvest.paretoFrontier.length; i++) {
+        expect(analysisInvest.paretoFrontier[i].totalLifetimeInterest).toBeGreaterThanOrEqual(
+          analysisInvest.paretoFrontier[i - 1].totalLifetimeInterest
+        );
+        expect(analysisInvest.paretoFrontier[i].terminalNetWealthM60).toBeGreaterThanOrEqual(
+          analysisInvest.paretoFrontier[i - 1].terminalNetWealthM60
+        );
+      }
+    });
+
+    it('gracefully collapses to a single dominant recipe when investSurplusCashflow is false or yield is 0%', () => {
+      const analysisCash = runMortgageOptimization(fixedConfig, 0, pts, 2800, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: 497000,
+        maxTermYears: 26,
+        fixedAnnualAllowanceEur: 0,
+        investSurplusCashflow: false,
+        surplusInvestmentYieldPct: 0,
+      });
+
+      expect(analysisCash.paretoFrontier.length).toBe(1);
+    });
+
+    it('monotonically scales terminal net wealth with higher surplus investment yield', () => {
+      const analysis8 = runMortgageOptimization(fixedConfig, 0, pts, 2800, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: 497000,
+        maxTermYears: 26,
+        investSurplusCashflow: true,
+        surplusInvestmentYieldPct: 8.0,
+      });
+      const analysis12 = runMortgageOptimization(fixedConfig, 0, pts, 2800, {
+        loanMode: 'fixed_loan',
+        fixedLoanAmountEur: 497000,
+        maxTermYears: 26,
+        investSurplusCashflow: true,
+        surplusInvestmentYieldPct: 12.0,
+      });
+
+      // Terminal wealth for Wealth Maximizer should be strictly higher under 12% yield than 8% yield
+      expect(analysis12.curated.wealthMaximizer!.terminalNetWealthM60).toBeGreaterThan(
+        analysis8.curated.wealthMaximizer!.terminalNetWealthM60
+      );
     });
   });
 });

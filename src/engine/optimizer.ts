@@ -44,7 +44,8 @@ export function generateCandidateStrategies(
   options?: OptimizerOptions
 ): MortgageStrategyCandidate[] {
   const propertyPrice = activePoint.propertyPrice;
-  const statutoryMinDepositPct = config.property.minimum_deposit_pct ?? 0.10;
+  // Central Bank of Ireland (CBI) statutory FTB minimum deposit floor is 10% (max 90% LTV ceiling)
+  const statutoryMinDepositPct = 0.10;
   const baseMinDeposit = propertyPrice * statutoryMinDepositPct;
 
   const minRequiredDeposit = baseMinDeposit + activePoint.borrowingShortfall;
@@ -68,14 +69,14 @@ export function generateCandidateStrategies(
 
   if (isFixedLoanMode) {
     // Mode A: Fixed Loan Amount (from sidebar, max AIP, or custom €)
-    const maxStatutoryLoan = Math.max(0, propertyPrice - minRequiredDeposit);
+    const maxStatutoryLoan = Math.max(0, propertyPrice - baseMinDeposit);
     const targetLoan =
       options?.fixedLoanAmountEur !== undefined && options?.fixedLoanAmountEur !== null
         ? options.fixedLoanAmountEur
         : propertyPrice - (config.property.deposit_eur ?? (propertyPrice * (config.property.minimum_deposit_pct ?? 0.10)));
 
     const effectiveLoan = Math.min(maxStatutoryLoan, Math.max(0, targetLoan));
-    const effectiveDeposit = Math.max(minRequiredDeposit, propertyPrice - effectiveLoan);
+    const effectiveDeposit = Math.max(baseMinDeposit, propertyPrice - effectiveLoan);
 
     depositPresets.push({
       label: options?.fixedLoanAmountEur != null ? `Fixed Loan €${Math.round(effectiveLoan).toLocaleString()}` : 'Sidebar Configured Loan',
@@ -238,7 +239,8 @@ export function evaluateMortgageStrategy(
   config: SimulationConfig,
   baseMonthlyPoints: MonthlyDataPoint[],
   purchaseMonth: number,
-  maxMonthlyBudgetEur?: number
+  maxMonthlyBudgetEur?: number,
+  options?: OptimizerOptions
 ): MortgageStrategyResult {
   const { meta, property, mortgage, liquid_assets, equity_engine, macro, tax } = config;
   const forecastMonths = meta.forecast_months;
@@ -251,7 +253,7 @@ export function evaluateMortgageStrategy(
 
   const isFundable =
     buyPoint.totalLiquidWealth >= totalUpfrontPaid &&
-    candidate.loanAmount <= buyPoint.maxMortgageAvailable + 0.01;
+    (candidate.strategyType === 'fixed_loan' || candidate.loanAmount <= buyPoint.maxMortgageAvailable + 0.01);
   const postPurchaseLiquidLeft = Math.max(0, buyPoint.totalLiquidWealth - totalUpfrontPaid);
 
   // Amortization simulation with Irish Fixed Rate Lockout & Variable Rate Shock
@@ -274,7 +276,12 @@ export function evaluateMortgageStrategy(
 
   // Trajectory Simulation from purchaseMonth to forecastMonths (Month 60)
   const propMonthlyMult = Math.pow(1 + property.yearly_growth_rate, 1 / 12);
-  const invMonthlyMult = Math.pow(1 + liquid_assets.investments_yearly_growth_rate, 1 / 12);
+  const invRate =
+    options?.surplusInvestmentYieldPct !== undefined && options?.surplusInvestmentYieldPct !== null
+      ? options.surplusInvestmentYieldPct / 100
+      : liquid_assets.investments_yearly_growth_rate;
+  const shouldInvestSurplus = options?.investSurplusCashflow !== false && invRate > 0;
+  const invMonthlyMult = Math.pow(1 + invRate, 1 / 12);
   const stockMonthlyMult = Math.pow(1 + equity_engine.stock_yearly_growth_rate, 1 / 12);
 
   // Capital withdrawal waterfall at purchaseMonth
@@ -371,12 +378,20 @@ export function evaluateMortgageStrategy(
       const savingsDelta = (pt?.monthlyRent ?? 2500) - (totalMortgagePaymentFromSalary + monthlyMaintenance);
       monthlySavings = Math.max(0, liquid_assets.monthly_salary_savings_eur + savingsDelta);
     }
-    currentCash += monthlySavings;
+    if (shouldInvestSurplus) {
+      currentInv += monthlySavings;
+    } else {
+      currentCash += monthlySavings;
+    }
 
     // Bonus distribution: net bonus minus lump sum overpayment actually funded from bonus
     if (pt?.netBonusReceivedEur && pt.netBonusReceivedEur > 0) {
       const netBonusRetained = Math.max(0, pt.netBonusReceivedEur - bonusLumpPaid);
-      currentCash += netBonusRetained;
+      if (shouldInvestSurplus) {
+        currentInv += netBonusRetained;
+      } else {
+        currentCash += netBonusRetained;
+      }
     }
   }
 
@@ -435,6 +450,8 @@ export function evaluateMortgageStrategy(
     terminalNetWealthM60,
     terminalHomeEquityM60,
     terminalLiquidWealthM60,
+    terminalInvestmentPortfolioM60: currentInv,
+    monthlyInvestedEur: shouldInvestSurplus ? (tax?.savings_calculation_mode === 'net_pay_derived' ? freeCashflowBuffer : liquid_assets.monthly_salary_savings_eur) : 0,
     wealthDeltaVsMinDeposit: 0, // Assigned relative to min deposit baseline
     safetyScore,
   };
@@ -576,13 +593,13 @@ export function evaluateAllCandidateStrategies(
   const activePoint = baseMonthlyPoints[purchaseMonth] || baseMonthlyPoints[0];
   const candidates = generateCandidateStrategies(config, activePoint, options);
   const minDepositBaseline = candidates.find((c) => c.strategyType === 'min_deposit') || candidates[0];
-  const baselineResult = evaluateMortgageStrategy(minDepositBaseline, config, baseMonthlyPoints, purchaseMonth);
+  const baselineResult = evaluateMortgageStrategy(minDepositBaseline, config, baseMonthlyPoints, purchaseMonth, undefined, options);
 
   return candidates.map((c) => {
     const res =
       c.id === minDepositBaseline.id
         ? { ...baselineResult }
-        : evaluateMortgageStrategy(c, config, baseMonthlyPoints, purchaseMonth);
+        : evaluateMortgageStrategy(c, config, baseMonthlyPoints, purchaseMonth, undefined, options);
     res.wealthDeltaVsMinDeposit = res.terminalNetWealthM60 - baselineResult.terminalNetWealthM60;
     return res;
   });
@@ -644,6 +661,8 @@ export function applyOptimizationBudgetFilter(
     fixedLoanAmountEur: options?.fixedLoanAmountEur,
     maxTermYears: options?.maxTermYears,
     fixedAnnualAllowanceEur: options?.fixedAnnualAllowanceEur,
+    investSurplusCashflow: options?.investSurplusCashflow,
+    surplusInvestmentYieldPct: options?.surplusInvestmentYieldPct,
   };
 }
 

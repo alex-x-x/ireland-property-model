@@ -234,6 +234,8 @@ export interface MortgageStrategyResult {
   terminalNetWealthM60: number;
   terminalHomeEquityM60: number;
   terminalLiquidWealthM60: number;
+  terminalInvestmentPortfolioM60?: number;
+  monthlyInvestedEur?: number;
   wealthDeltaVsMinDeposit: number;
   safetyScore: number; // 0-100 score based on liquid buffer and cashflow
   isParetoOptimal?: boolean;
@@ -251,6 +253,8 @@ export interface OptimizerOptions {
   fixedLoanAmountEur?: number | null;
   maxTermYears?: number;
   fixedAnnualAllowanceEur?: number;
+  investSurplusCashflow?: boolean;
+  surplusInvestmentYieldPct?: number | null;
 }
 
 export interface OptimizationAnalysis {
@@ -269,6 +273,8 @@ export interface OptimizationAnalysis {
   fixedLoanAmountEur?: number | null;
   maxTermYears?: number;
   fixedAnnualAllowanceEur?: number;
+  investSurplusCashflow?: boolean;
+  surplusInvestmentYieldPct?: number | null;
 }
 
 
